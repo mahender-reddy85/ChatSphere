@@ -62,13 +62,13 @@ const MessageActions: React.FC<MessageActionsProps> = ({ message, currentUser, o
             </div>
             
             {isEmojiPickerOpen && (
-                <div className="absolute bottom-full right-0 mb-2 z-10">
+                <div className="absolute top-full right-0 mt-2 z-10">
                     <EmojiPicker onSelect={(emoji) => { onReact(emoji); setIsEmojiPickerOpen(false); }} onClose={() => setIsEmojiPickerOpen(false)} />
                 </div>
             )}
-            
+
             {isMenuOpen && (
-                <div className="absolute bottom-full right-0 mb-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-10">
+                <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-10">
                     <button onClick={handleCopy} className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm">
                         <IconCopy className="w-4 h-4" /> Copy Text
                     </button>
@@ -95,7 +95,7 @@ const MessageActions: React.FC<MessageActionsProps> = ({ message, currentUser, o
             )}
 
             {isDeleteMenuOpen && (
-                <div className="absolute bottom-full right-0 mb-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-10">
+                <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-10">
                     <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-600">
                         <span className="text-sm font-medium">Delete Message</span>
                         <button onClick={() => setIsDeleteMenuOpen(false)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600">
