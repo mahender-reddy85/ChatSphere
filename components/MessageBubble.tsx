@@ -143,7 +143,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
             <div className={`flex flex-col max-w-full ${isCurrentUserMessage ? 'items-end' : 'items-start'}`}>
                 {!isConsecutive && (
                     <div className="flex items-center gap-2 mb-1 px-1">
-                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">
                             {isCurrentUserMessage ? 'You' : message.author.name}
                         </span>
                     </div>
@@ -187,16 +187,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                 </div>
                 
                  <div className="flex flex-col gap-1 mt-1 px-1">
-                    {message.reactions.length > 0 && (
-                        <div className={reactionContainer}>
-                            {message.reactions.map(reaction => (
-                                <div key={reaction.emoji} className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded-full text-xs touch-manipulation">
-                                    <span>{reaction.emoji}</span>
-                                    <span className="font-semibold text-gray-700 dark:text-gray-200">{reaction.users.length}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
                     <div className={`flex items-center gap-2 ${isCurrentUserMessage ? 'justify-end' : 'justify-start'}`}>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                             {message.isEdited && "Edited "}
@@ -210,6 +200,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                             </div>
                         )}
                     </div>
+                    {message.reactions.length > 0 && (
+                        <div className={reactionContainer}>
+                            {message.reactions.map(reaction => (
+                                <div key={reaction.emoji} className="flex items-center gap-1 px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded-full text-sm touch-manipulation">
+                                    <span>{reaction.emoji}</span>
+                                    <span className="font-semibold text-gray-700 dark:text-gray-200">{reaction.users.length}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                  </div>
             </div>
 
