@@ -89,11 +89,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
             <IconMenu className="w-6 h-6" />
           </button>
         )}
-        {room.type === 'self' ? (
-          <>
-            <Avatar user={currentUser} size="md" />
-            <h2 className="text-lg font-semibold ml-3 text-gray-800 dark:text-gray-100">{room.name}</h2>
-          </>
+        {room.type === 'self' || room.type === 'ai' ? (
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{room.name}</h2>
         ) : (
           <>
             <RoomIcon room={room} />
