@@ -11,7 +11,6 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react()],
-
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
