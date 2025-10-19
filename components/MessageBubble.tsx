@@ -130,7 +130,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
         ? 'bg-primary-600 text-white rounded-br-lg' 
         : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-lg'
     } ${message.text || message.poll ? 'px-4 py-2.5' : 'p-1.5'}`;
-    const reactionContainer = `flex items-center gap-1 mt-1 ${isCurrentUserMessage ? 'flex-row-reverse' : ''}`;
+    const reactionContainer = `flex flex-wrap items-center gap-1 mt-1 ${isCurrentUserMessage ? 'justify-end' : 'justify-start'}`;
 
     return (
         <div id={`message-${message.id}`} className={containerClasses}>
@@ -197,7 +197,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                             ))}
                         </div>
                     )}
-                    <div className="flex items-center gap-2">
+                    <div className={`flex items-center gap-2 ${isCurrentUserMessage ? 'justify-end' : 'justify-start'}`}>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                             {message.isEdited && "Edited "}
                             {message.status === 'read' ? 'Seen' : 'Sent'}
