@@ -167,7 +167,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onCreatePoll, isSe
 
   return (
     <>
-      <div className="flex-shrink-0 p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex-shrink-0 p-2 md:p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         {editingMessage && (
           <div className="flex justify-between items-center mb-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
             <div>

@@ -81,7 +81,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
   const isUserInCall = room.activeCall?.participants.includes(currentUser.id) ?? false;
 
   return (
-    <div className="flex-1 flex flex-col h-screen">
+    <div className="flex-1 flex flex-col h-full md:h-screen">
       <header className="flex items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 z-10 flex-shrink-0">
         {room.type === 'self' ? (
           <>

@@ -40,7 +40,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`h-screen font-sans text-gray-800 dark:text-gray-200`}>
+    <div className={`h-screen font-sans text-gray-800 dark:text-gray-200 overflow-hidden`}>
       {/* Fix: Pass the login and logout functions to child components. */}
       {user && !showLoginPage ? <ChatRoom user={user} updateUser={updateUser} logout={logout} onOpenLogin={handleOpenLogin} {...settingProps} /> : <AuthForm onLogin={handleLogin} />}
     </div>

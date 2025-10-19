@@ -58,9 +58,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
   const isUserInCall = currentActiveRoom?.activeCall?.participants.includes(user.id) ?? false;
 
   return (
-    <div className={`flex h-screen bg-gray-50 dark:bg-gray-900`}>
+    <div className={`flex flex-col md:flex-row h-screen bg-gray-50 dark:bg-gray-900`}>
       {/* Left Sidebar */}
-      <aside className="w-80 flex-shrink-0 flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4">
+      <aside className="w-full md:w-80 flex-shrink-0 flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 md:h-screen md:overflow-hidden">
         <h1 className="text-2xl font-bold mb-4 px-2 text-gray-800 dark:text-gray-100">ChatSphere</h1>
         <RoomList
           rooms={rooms}
@@ -83,7 +83,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
       </aside>
 
       {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 h-full md:h-screen">
         {currentActiveRoom ? (
           <ChatWindow
             key={currentActiveRoom.id}
@@ -113,7 +113,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
 
       {/* Right Sidebar */}
       {currentActiveRoom && currentActiveRoom.type === 'group' && (
-         <aside className="w-72 flex-shrink-0 flex flex-col bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
+         <aside className="w-full md:w-72 flex-shrink-0 flex flex-col bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 md:h-screen md:overflow-hidden">
           <UserList users={activeRoomUsers} title="Members" roomId={currentActiveRoom.id} currentUser={user}/>
          </aside>
       )}

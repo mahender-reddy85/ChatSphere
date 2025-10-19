@@ -22,3 +22,22 @@
   font-size: var(--chat-font-size);
   line-height: var(--chat-line-height);
 }
+
+/* Mobile responsive enhancements */
+@media (max-width: 768px) {
+  .mobile-touch-friendly {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .mobile-padding {
+    padding: 0.5rem;
+  }
+  .mobile-text {
+    font-size: 0.875rem;
+  }
+}
+
+/* Smooth transitions for better UX */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
