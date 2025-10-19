@@ -198,7 +198,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                         </div>
                     )}
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {message.isEdited && "(Edited) "}
+                        {message.isEdited && "Edited "}
                         {message.status === 'read' ? 'Seen' : 'Sent'}
                     </span>
                     {isCurrentUserMessage && message.status && (
