@@ -136,6 +136,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
                 onReply={setReplyingMessage}
                 repliedToMessage={room.messages.find(m => m.id === message.replyTo)}
                 isHighlighted={message.id === highlightedMessageId}
+                roomType={room.type}
               />
             );
           })}

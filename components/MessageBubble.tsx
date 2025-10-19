@@ -18,6 +18,7 @@ interface MessageBubbleProps {
     onReply: (message: Message) => void;
     repliedToMessage?: Message;
     isHighlighted?: boolean;
+    roomType?: string;
 }
 
 const formatTimestamp = (timestamp: number) => {
@@ -71,7 +72,7 @@ const LocationAttachment = ({ location }: { location: MessageLocation }) => {
 };
 
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isConsecutive, onVote, onReaction, onDelete, onSetEditingMessage, onTogglePin, onReply, repliedToMessage, isHighlighted }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isConsecutive, onVote, onReaction, onDelete, onSetEditingMessage, onTogglePin, onReply, repliedToMessage, isHighlighted, roomType }) => {
     const isCurrentUserMessage = message.author.id === currentUser.id;
 
     // If message is deleted for everyone, show deleted message
@@ -133,9 +134,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
 
     return (
         <div id={`message-${message.id}`} className={containerClasses}>
-            <div className={`flex-shrink-0 self-end ${isConsecutive ? 'opacity-0' : ''}`}>
-                <Avatar user={isCurrentUserMessage ? currentUser : message.author} size="md" />
-            </div>
+            {(roomType !== 'self' && roomType !== 'ai') && (
+                <div className={`flex-shrink-0 self-end ${isConsecutive ? 'opacity-0' : ''}`}>
+                    <Avatar user={isCurrentUserMessage ? currentUser : message.author} size="md" />
+                </div>
+            )}
 
             <div className={`flex flex-col max-w-full ${isCurrentUserMessage ? 'items-end' : 'items-start'}`}>
                 {!isConsecutive && (
