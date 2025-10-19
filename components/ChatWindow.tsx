@@ -5,7 +5,7 @@ import ChatInput from './ChatInput';
 import TypingIndicator from './TypingIndicator';
 import PinnedMessagesBar from './PinnedMessagesBar';
 import Avatar from './Avatar';
-import { IconUsers, IconAI, IconUser, IconVideo } from './Icons';
+import { IconUsers, IconAI, IconUser, IconVideo, IconMenu } from './Icons';
 import type { Settings } from '../hooks/useSettings';
 import ActiveCallBanner from './ActiveCallBanner';
 
@@ -26,6 +26,7 @@ interface ChatWindowProps {
   onClearJump: () => void;
   onStartVideoCall: () => void;
   onJoinVideoCall: () => void;
+  onToggleSidebar?: () => void;
 }
 
 const RoomIcon = ({ room }: { room: Room }) => {
@@ -38,7 +39,7 @@ const RoomIcon = ({ room }: { room: Room }) => {
     return <IconUsers className="w-6 h-6 text-blue-500" />;
 };
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage, sendPoll, handleVote, handleReaction, deleteMessage, togglePinMessage, isSending, typingUsers, settings, onOpenSettings, jumpToMessageId, onClearJump, onStartVideoCall, onJoinVideoCall }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage, sendPoll, handleVote, handleReaction, deleteMessage, togglePinMessage, isSending, typingUsers, settings, onOpenSettings, jumpToMessageId, onClearJump, onStartVideoCall, onJoinVideoCall, onToggleSidebar }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
@@ -83,6 +84,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
   return (
     <div className="flex-1 flex flex-col h-full md:h-screen">
       <header className="flex items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 z-10 flex-shrink-0">
+        {onToggleSidebar && (
+          <button onClick={onToggleSidebar} className="md:hidden p-2 mr-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 dark:text-gray-400">
+            <IconMenu className="w-6 h-6" />
+          </button>
+        )}
         {room.type === 'self' ? (
           <>
             <Avatar user={currentUser} size="md" />

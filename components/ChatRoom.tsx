@@ -28,6 +28,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [jumpToMessageId, setJumpToMessageId] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Fix: Always get the latest room details from the `rooms` array to prevent stale state.
   const currentActiveRoom = activeRoom ? rooms.find(r => r.id === activeRoom.id) : null;
@@ -60,7 +61,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
   return (
     <div className={`flex flex-col md:flex-row h-screen bg-gray-50 dark:bg-gray-900`}>
       {/* Left Sidebar */}
-      <aside className="w-full md:w-80 flex-shrink-0 flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 md:h-screen md:overflow-hidden">
+      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-80 flex-shrink-0 flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 md:h-screen md:overflow-hidden transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
         <h1 className="text-2xl font-bold mb-4 px-2 text-gray-800 dark:text-gray-100">ChatSphere</h1>
         <RoomList
           rooms={rooms}
@@ -81,6 +82,11 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
             />
         </div>
       </aside>
+
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden" onClick={() => setIsSidebarOpen(false)}></div>
+      )}
 
       {/* Main Chat Area */}
       <main className="flex-1 flex flex-col min-w-0 h-full md:h-screen">
@@ -103,6 +109,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
             onClearJump={handleClearJump}
             onStartVideoCall={() => startVideoCall(currentActiveRoom.id)}
             onJoinVideoCall={() => joinVideoCall(currentActiveRoom.id)}
+            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400">
