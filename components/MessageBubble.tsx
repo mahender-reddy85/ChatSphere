@@ -186,7 +186,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                     />
                 </div>
                 
-                 <div className="flex items-center gap-2 mt-1">
+                 <div className="flex flex-col gap-1 mt-1">
                     {message.reactions.length > 0 && (
                         <div className={reactionContainer}>
                             {message.reactions.map(reaction => (
@@ -197,17 +197,19 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                             ))}
                         </div>
                     )}
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {message.isEdited && "Edited "}
-                        {message.status === 'read' ? 'Seen' : 'Sent'}
-                    </span>
-                    {isCurrentUserMessage && message.status && (
-                        <div className="flex items-center gap-1 ml-2">
-                            {message.status === 'sent' && <IconCheck className="w-3 h-3 text-gray-400" />}
-                            {message.status === 'delivered' && <IconDoubleCheck className="w-3 h-3 text-gray-400" />}
-                            {message.status === 'read' && <IconDoubleCheck className="w-3 h-3 text-blue-500" />}
-                        </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {message.isEdited && "Edited "}
+                            {message.status === 'read' ? 'Seen' : 'Sent'}
+                        </span>
+                        {isCurrentUserMessage && message.status && (
+                            <div className="flex items-center gap-1 ml-2">
+                                {message.status === 'sent' && <IconCheck className="w-3 h-3 text-gray-400" />}
+                                {message.status === 'delivered' && <IconDoubleCheck className="w-3 h-3 text-gray-400" />}
+                                {message.status === 'read' && <IconDoubleCheck className="w-3 h-3 text-blue-500" />}
+                            </div>
+                        )}
+                    </div>
                  </div>
             </div>
 
