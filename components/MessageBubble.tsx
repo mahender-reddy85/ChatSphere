@@ -142,9 +142,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
 
             <div className={`flex flex-col max-w-full ${isCurrentUserMessage ? 'items-end' : 'items-start'}`}>
                 {!isConsecutive && (
-                    <div className="flex justify-end w-full mb-1">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatTimestamp(message.timestamp)}
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            {isCurrentUserMessage ? 'You' : message.author.name}
                         </span>
                     </div>
                 )}
