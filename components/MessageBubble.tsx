@@ -124,13 +124,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
         setImageModalOpen(true);
     };
 
-    const containerClasses = `flex items-start gap-3 group transition-colors duration-1000 ${isCurrentUserMessage ? 'flex-row-reverse' : ''} ${isHighlighted ? 'bg-primary-100/50 dark:bg-primary-900/40 rounded-lg' : ''}`;
-    const bubbleClasses = `max-w-md lg:max-w-lg rounded-2xl ${
-        isCurrentUserMessage 
-        ? 'bg-primary-600 text-white rounded-br-lg' 
+    const containerClasses = `flex items-start gap-2 sm:gap-3 group transition-colors duration-1000 ${isCurrentUserMessage ? 'flex-row-reverse' : ''} ${isHighlighted ? 'bg-primary-100/50 dark:bg-primary-900/40 rounded-lg' : ''}`;
+    const bubbleClasses = `max-w-[280px] sm:max-w-md lg:max-w-lg rounded-2xl ${
+        isCurrentUserMessage
+        ? 'bg-primary-600 text-white rounded-br-lg'
         : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-lg'
-    } ${message.text || message.poll ? 'px-4 py-2.5' : 'p-1.5'}`;
-    const reactionContainer = `flex flex-wrap items-center gap-1 mt-1 ${isCurrentUserMessage ? 'justify-end' : 'justify-start'}`;
+    } ${message.text || message.poll ? 'px-3 py-2 sm:px-4 sm:py-2.5' : 'p-1.5'} text-sm sm:text-base`;
+    const reactionContainer = `flex flex-wrap items-center gap-1 mt-1 ${isCurrentUserMessage ? 'justify-end' : 'justify-start'} max-w-[280px] sm:max-w-md lg:max-w-lg`;
 
     return (
         <div id={`message-${message.id}`} className={containerClasses}>
@@ -142,7 +142,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
 
             <div className={`flex flex-col max-w-full ${isCurrentUserMessage ? 'items-end' : 'items-start'}`}>
                 {!isConsecutive && (
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 px-1">
                         <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                             {isCurrentUserMessage ? 'You' : message.author.name}
                         </span>
@@ -186,11 +186,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                     />
                 </div>
                 
-                 <div className="flex flex-col gap-1 mt-1">
+                 <div className="flex flex-col gap-1 mt-1 px-1">
                     {message.reactions.length > 0 && (
                         <div className={reactionContainer}>
                             {message.reactions.map(reaction => (
-                                <div key={reaction.emoji} className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded-full text-xs">
+                                <div key={reaction.emoji} className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded-full text-xs touch-manipulation">
                                     <span>{reaction.emoji}</span>
                                     <span className="font-semibold text-gray-700 dark:text-gray-200">{reaction.users.length}</span>
                                 </div>
