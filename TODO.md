@@ -1,0 +1,6 @@
+- [x] Update ChatWindow.tsx to add replyingMessage state and onReply handler
+- [x] Pass onReply prop to MessageBubble in ChatWindow.tsx
+- [x] Update MessageBubble.tsx to pass onReply to MessageActions
+- [x] Update ChatInput.tsx to accept replyingMessage prop and display replied message
+- [x] Modify sendMessage in ChatWindow to include replyTo when replying
+- [x] Update MessageBubble to display replied message if replyTo exists

@@ -1,0 +1,343 @@
+import { useState, useEffect, useCallback } from 'react';
+import type { User, Room, Message, Poll, SearchResult, MessageLocation } from '../types';
+import { MOCK_USERS } from '../constants';
+import { getAIBotResponse } from '../services/geminiService';
+
+const aiBot = MOCK_USERS['ai-bot'];
+
+export const useChat = (currentUser: User) => {
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [activeRoom, setActiveRoom] = useState<Room | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [activeTypingUsers, setActiveTypingUsers] = useState<User[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  
+  useEffect(() => {
+      const selfChatInitialMessage: Message = {
+        id: `msg-self-intro-${currentUser.id}`,
+        author: currentUser,
+        timestamp: Date.now(),
+        text: "This is your personal space. You can send messages, files, and notes to yourself here.",
+        reactions: [],
+      };
+      
+      const aiChatInitialMessage: Message = {
+        id: `msg-ai-intro-${currentUser.id}`,
+        author: aiBot,
+        timestamp: Date.now(),
+        text: "Hello! I'm your AI Assistant. How can I help you today?",
+        reactions: [],
+      };
+
+      // Fix: Explicitly type `allRooms` as `Room[]` to ensure its properties match the `Room` type,
+      // resolving assignment errors for `setRooms` and `setActiveRoom`.
+      const allRooms: Room[] = [
+        { id: `self-chat-${currentUser.id}`, name: '(You)', type: 'self', users: [currentUser.id], messages: [selfChatInitialMessage], privacy: 'private' },
+        { id: `ai-chat-${currentUser.id}`, name: 'AI Assistant', type: 'ai', users: [currentUser.id, 'ai-bot'], messages: [aiChatInitialMessage], privacy: 'private' },
+      ];
+      setRooms(allRooms);
+      if(!activeRoom){
+        const firstRoom = allRooms.find(r => r.type === 'self') || allRooms[0];
+        setActiveRoom(firstRoom);
+      }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser.id, currentUser]);
+
+  useEffect(() => {
+    if (activeRoom) {
+        setUnreadCounts(prev => ({...prev, [activeRoom.id]: 0}));
+    }
+  }, [activeRoom]);
+  
+  const createRoom = (name: string, privacy: 'public' | 'private', password?: string): string => {
+    const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const newRoomId = `${slug}-${Math.random().toString(36).substr(2, 4)}`;
+    const newRoom: Room = {
+      id: newRoomId,
+      name,
+      privacy,
+      type: 'group',
+      users: [currentUser.id],
+      messages: [],
+      ...(privacy === 'private' && password && { password }),
+    };
+    setRooms(prev => [...prev, newRoom]);
+    return newRoomId;
+  };
+  
+  const joinRoom = (roomId: string, password?: string): 'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined' => {
+    const roomToJoin = rooms.find(r => r.id === roomId);
+    
+    if (!roomToJoin) {
+        return 'not_found';
+    }
+
+    if (roomToJoin.users.includes(currentUser.id)) {
+        return 'already_joined';
+    }
+
+    if (roomToJoin.privacy === 'public') {
+        setRooms(prev => prev.map(r => r.id === roomId ? { ...r, users: [...r.users, currentUser.id] } : r));
+        return 'joined';
+    }
+
+    // Room is private
+    if (roomToJoin.password) {
+        if (!password) {
+            return 'needs_password';
+        }
+        if (password === roomToJoin.password) {
+            setRooms(prev => prev.map(r => r.id === roomId ? { ...r, users: [...r.users, currentUser.id] } : r));
+            return 'joined';
+        } else {
+            return 'invalid_password';
+        }
+    }
+    
+    // Private room without a password (legacy or other reason) can be joined.
+    setRooms(prev => prev.map(r => r.id === roomId ? { ...r, users: [...r.users, currentUser.id] } : r));
+    return 'joined';
+  };
+
+  const sendMessage = useCallback(async (payload: { text: string; audio?: { blob: Blob; duration: number }; file?: File, location?: MessageLocation }, editingMessageId?: string, replyTo?: string) => {
+    if (!activeRoom) return;
+
+    if (editingMessageId) {
+        // Edit existing message (audio/file/location not supported for edits)
+        if (!payload.text.trim()) return;
+        setRooms(prevRooms => prevRooms.map(r => 
+            r.id === activeRoom.id
+            ? { ...r, messages: r.messages.map(m => m.id === editingMessageId ? { ...m, text: payload.text.trim(), isEdited: true } : m) }
+            : r
+        ));
+        return;
+    }
+    
+    if (!payload.text.trim() && !payload.audio && !payload.file && !payload.location) return;
+
+    setIsSending(true);
+    const newMessage: Message = {
+      id: `msg-${Date.now()}`,
+      author: currentUser,
+      timestamp: Date.now(),
+      text: payload.text.trim(),
+      reactions: [],
+      ...(replyTo && { replyTo }),
+      ...(payload.audio && {
+          audio: {
+              url: URL.createObjectURL(payload.audio.blob),
+              duration: payload.audio.duration,
+          }
+      }),
+      ...(payload.file && {
+          file: {
+              url: URL.createObjectURL(payload.file),
+              name: payload.file.name,
+              type: payload.file.type,
+          }
+      }),
+      ...(payload.location && { location: payload.location })
+    };
+
+    setRooms(prev => prev.map(r => r.id === activeRoom.id ? { ...r, messages: [...r.messages, newMessage] } : r));
+
+    if (activeRoom.type === 'ai') {
+        const history = [...activeRoom.messages, newMessage];
+        const aiResponseText = await getAIBotResponse(history);
+        const aiMessage: Message = {
+          id: `msg-${Date.now() + 1}`,
+          author: aiBot,
+          timestamp: Date.now(),
+          text: aiResponseText,
+          reactions: [],
+        };
+        setRooms(prev => prev.map(r => r.id === activeRoom.id ? { ...r, messages: [...r.messages, aiMessage] } : r));
+    }
+    
+    setIsSending(false);
+  }, [activeRoom, currentUser]);
+
+  const deleteMessage = useCallback((messageId: string, scope: 'for_me' | 'for_everyone' = 'for_me') => {
+    if (!activeRoom) return;
+    if (scope === 'for_everyone') {
+      // Delete for everyone - mark as deleted for everyone
+      setRooms(prevRooms => prevRooms.map(r =>
+        ({ ...r, messages: r.messages.map(m =>
+          m.id === messageId
+            ? { ...m, isDeleted: true, deletedBy: currentUser.id, deletedForEveryone: true }
+            : m
+        ) })
+      ));
+    } else {
+      // Delete for me - only remove from current room
+      setRooms(prevRooms => prevRooms.map(r =>
+        r.id === activeRoom.id
+        ? { ...r, messages: r.messages.filter(m => m.id !== messageId) }
+        : r
+      ));
+    }
+  }, [activeRoom, currentUser.id]);
+
+  const togglePinMessage = useCallback((messageId: string) => {
+      if (!activeRoom) return;
+      setRooms(prevRooms => prevRooms.map(r =>
+          r.id === activeRoom.id
+          ? { ...r, messages: r.messages.map(m => m.id === messageId ? { ...m, isPinned: !m.isPinned } : m) }
+          : r
+      ));
+  }, [activeRoom]);
+
+
+  const sendPoll = useCallback((pollData: { question: string, options: string[], location?: string }) => {
+    if (!activeRoom) return;
+    const newPoll: Poll = {
+      id: `poll-${Date.now()}`,
+      question: pollData.question,
+      options: pollData.options.map((opt, i) => ({ id: `opt-${Date.now()}-${i}`, text: opt, votes: [] })),
+      location: pollData.location,
+    };
+    const newMessage: Message = {
+      id: `msg-${Date.now()}`,
+      author: currentUser,
+      timestamp: Date.now(),
+      text: `Poll: ${pollData.question}`,
+      poll: newPoll,
+      reactions: [],
+    };
+    setRooms(prev => prev.map(r => r.id === activeRoom.id ? { ...r, messages: [...r.messages, newMessage] } : r));
+  }, [activeRoom, currentUser]);
+
+  const handleVote = useCallback((messageId: string, optionId: string) => {
+    if (!activeRoom) return;
+    setRooms(prev => prev.map(r => {
+      if (r.id !== activeRoom.id) return r;
+      const newMessages = r.messages.map(m => {
+        if (m.id !== messageId || !m.poll) return m;
+
+        const newOptions = m.poll.options.map(opt => {
+            if (opt.id === optionId) {
+              // Toggle vote: if user has voted for this option, remove vote; otherwise add vote
+              const hasVoted = opt.votes.includes(currentUser.id);
+              const newVotes = hasVoted
+                ? opt.votes.filter(voterId => voterId !== currentUser.id)
+                : [...opt.votes, currentUser.id];
+              return { ...opt, votes: newVotes };
+            }
+            // Keep votes on other options (multiple choice poll)
+            return opt;
+        });
+
+        return { ...m, poll: { ...m.poll, options: newOptions } };
+      });
+      return { ...r, messages: newMessages };
+    }));
+  }, [activeRoom, currentUser.id]);
+
+  const handleReaction = useCallback((messageId: string, emoji: string) => {
+    if (!activeRoom) return;
+    setRooms(prev => prev.map(r => {
+        if (r.id !== activeRoom.id) return r;
+        const newMessages = r.messages.map(m => {
+            if (m.id !== messageId) return m;
+            const existingReaction = m.reactions.find(re => re.emoji === emoji);
+            let newReactions;
+            if (existingReaction) {
+                newReactions = m.reactions.map(re => {
+                    if (re.emoji === emoji) {
+                        return re.users.includes(currentUser.id) 
+                            ? { ...re, users: re.users.filter(uId => uId !== currentUser.id) }
+                            : { ...re, users: [...re.users, currentUser.id] };
+                    }
+                    return re;
+                }).filter(re => re.users.length > 0);
+            } else {
+                newReactions = [...m.reactions, { emoji, users: [currentUser.id] }];
+            }
+            return { ...m, reactions: newReactions };
+        });
+        return { ...r, messages: newMessages };
+    }));
+  }, [activeRoom, currentUser.id]);
+  
+  const searchMessages = useCallback((query: string, scope: 'current' | 'all') => {
+    if (!query.trim()) {
+        setSearchResults([]);
+        setIsSearching(false);
+        return;
+    }
+    
+    const lowerCaseQuery = query.toLowerCase();
+    const results: SearchResult[] = [];
+    
+    const roomsToSearch = scope === 'current' && activeRoom ? [activeRoom] : rooms;
+
+    for (const room of roomsToSearch) {
+        for (const message of room.messages) {
+            if (message.text.toLowerCase().includes(lowerCaseQuery)) {
+                results.push({
+                    message,
+                    roomId: room.id,
+                    roomName: room.name,
+                });
+            }
+        }
+    }
+
+    setSearchResults(results.sort((a, b) => b.message.timestamp - a.message.timestamp)); // most recent first
+    setIsSearching(true);
+  }, [rooms, activeRoom]);
+
+  const clearSearch = useCallback(() => {
+    setSearchResults([]);
+    setIsSearching(false);
+  }, []);
+
+  const updateRoomState = (roomId: string, update: (room: Room) => Room) => {
+    setRooms(prevRooms => prevRooms.map(r => r.id === roomId ? update(r) : r));
+    if (activeRoom?.id === roomId) {
+        setActiveRoom(prevActiveRoom => prevActiveRoom ? update(prevActiveRoom) : null);
+    }
+  };
+
+  const startVideoCall = useCallback((roomId: string) => {
+      updateRoomState(roomId, r => ({ ...r, activeCall: { participants: [currentUser.id] } }));
+  }, [currentUser.id]);
+
+  const joinVideoCall = useCallback((roomId: string) => {
+      updateRoomState(roomId, r => {
+          if (!r.activeCall || r.activeCall.participants.includes(currentUser.id)) return r;
+          return { ...r, activeCall: { ...r.activeCall, participants: [...r.activeCall.participants, currentUser.id] } };
+      });
+  }, [currentUser.id]);
+
+  const leaveVideoCall = useCallback((roomId: string) => {
+      updateRoomState(roomId, r => {
+          if (!r.activeCall) return r;
+          const newParticipants = r.activeCall.participants.filter(pId => pId !== currentUser.id);
+          if (newParticipants.length === 0) {
+              return { ...r, activeCall: null };
+          }
+          return { ...r, activeCall: { ...r.activeCall, participants: newParticipants } };
+      });
+  }, [currentUser.id]);
+
+  const deleteRoom = useCallback((roomId: string) => {
+    // Don't allow deleting self or AI chats
+    const roomToDelete = rooms.find(r => r.id === roomId);
+    if (!roomToDelete || roomToDelete.type === 'self' || roomToDelete.type === 'ai') return;
+
+    setRooms(prev => prev.filter(r => r.id !== roomId));
+
+    // If the deleted room was active, switch to self chat
+    if (activeRoom?.id === roomId) {
+      const selfRoom = rooms.find(r => r.type === 'self');
+      if (selfRoom) {
+        setActiveRoom(selfRoom);
+      }
+    }
+  }, [rooms, activeRoom]);
+
+  return { rooms, activeRoom, setActiveRoom, sendMessage, sendPoll, handleVote, handleReaction, isSending, createRoom, joinRoom, activeTypingUsers, unreadCounts, deleteMessage, togglePinMessage, searchMessages, clearSearch, searchResults, isSearching, startVideoCall, joinVideoCall, leaveVideoCall, deleteRoom };
+};
