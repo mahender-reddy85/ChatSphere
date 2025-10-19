@@ -1,15 +1,18 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import type { Message } from '../types';
 
-if (!import.meta.env.VITE_GEMINI_API_KEY) {
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+let ai: GoogleGenAI | null = null;
+const model = 'gemini-2.5-flash';
+
+if (apiKey) {
+  ai = new GoogleGenAI({ apiKey });
+} else {
   console.warn("VITE_GEMINI_API_KEY environment variable not set. AI features will be disabled.");
 }
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY! });
-const model = 'gemini-2.5-flash';
-
 export const getAIBotResponse = async (history: Message[]): Promise<string> => {
-  if (!import.meta.env.VITE_GEMINI_API_KEY) {
+  if (!apiKey) {
     return "The AI bot is currently offline. Please configure the VITE_GEMINI_API_KEY.";
   }
   
@@ -19,7 +22,7 @@ export const getAIBotResponse = async (history: Message[]): Promise<string> => {
       parts: [{ text: msg.text }],
     }));
 
-    const response: GenerateContentResponse = await ai.models.generateContent({
+    const response: GenerateContentResponse = await ai!.models.generateContent({
       model: model,
       contents: contents,
     });
