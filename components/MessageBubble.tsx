@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import type { Message, User, MessageLocation } from '../types';
 import Avatar from './Avatar';
 import PollDisplay from './PollDisplay';
@@ -74,22 +74,6 @@ const LocationAttachment = ({ location }: { location: MessageLocation }) => {
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isConsecutive, onVote, onReaction, onDelete, onSetEditingMessage, onTogglePin, onReply, repliedToMessage, isHighlighted, roomType }) => {
     const isCurrentUserMessage = message.author.id === currentUser.id;
-    const [isLongPressed, setIsLongPressed] = useState(false);
-    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-
-    const handleTouchStart = () => {
-        longPressTimer.current = setTimeout(() => {
-            setIsLongPressed(true);
-        }, 500);
-    };
-
-    const handleTouchEnd = () => {
-        if (longPressTimer.current) {
-            clearTimeout(longPressTimer.current);
-            longPressTimer.current = null;
-        }
-        setIsLongPressed(false);
-    };
 
     // If message is deleted for everyone, show deleted message
     if (message.isDeleted && message.deletedForEveryone) {
@@ -149,7 +133,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
     const reactionContainer = `flex items-center gap-1 mt-1 ${isCurrentUserMessage ? 'flex-row-reverse' : ''}`;
 
     return (
-        <div id={`message-${message.id}`} className={containerClasses} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <div id={`message-${message.id}`} className={containerClasses}>
             {(roomType !== 'self' && roomType !== 'ai') && (
                 <div className={`flex-shrink-0 self-end ${isConsecutive ? 'opacity-0' : ''}`}>
                     <Avatar user={isCurrentUserMessage ? currentUser : message.author} size="md" />
@@ -160,7 +144,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                 {!isConsecutive && (
                     <div className="flex justify-end w-full mb-1">
                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {isCurrentUserMessage ? 'You' : message.author.name}
+                            {formatTimestamp(message.timestamp)}
                         </span>
                     </div>
                 )}
@@ -191,17 +175,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                            />
                         )}
                     </div>
-                     {isLongPressed && (
-                        <MessageActions
-                            message={message}
-                            currentUser={currentUser}
-                            onReact={handleReaction}
-                            onDelete={onDelete}
-                            onEdit={onSetEditingMessage}
-                            onTogglePin={onTogglePin}
-                            onReply={onReply}
-                        />
-                    )}
+                     <MessageActions
+                        message={message}
+                        currentUser={currentUser}
+                        onReact={handleReaction}
+                        onDelete={onDelete}
+                        onEdit={onSetEditingMessage}
+                        onTogglePin={onTogglePin}
+                        onReply={onReply}
+                    />
                 </div>
                 
                  <div className="flex items-center gap-2 mt-1">
