@@ -29,6 +29,11 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'API route working fine!' });
 });
 
+app.get('/api/welcome', (req, res) => {
+  console.log(`Request: ${req.method} ${req.path}`);
+  res.json({ message: 'Welcome to ChatSphere!' });
+});
+
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
