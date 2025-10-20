@@ -18,7 +18,7 @@ export const useChat = (currentUser: User) => {
   const socketRef = useRef<any>(null);
 
   useEffect(() => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? 'https://chatsphere-7t8g.onrender.com' : 'http://localhost:5000');
     socketRef.current = io(backendUrl);
 
     socketRef.current.on('connect', () => {
