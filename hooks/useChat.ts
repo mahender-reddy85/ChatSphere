@@ -19,32 +19,31 @@ export const useChat = (currentUser: User) => {
 
   useEffect(() => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? 'https://chatsphere-7t8g.onrender.com' : 'http://localhost:5000');
-    socketRef.current = io(backendUrl);
+    const socket = io(backendUrl);
+    socketRef.current = socket;
 
-    socketRef.current.on('connect', () => {
-      console.log('Connected to backend server');
-    });
+    socket.on('connect', () => console.log('Connected to backend server'));
 
-    socketRef.current.on('receive_message', (data: { message: Message }) => {
+    socket.on('receive_message', (data: { message: Message }) => {
       const { message } = data;
-      setRooms(prev => prev.map(r => 
+      setRooms(prev => prev.map(r =>
         r.id === message.roomId ? { ...r, messages: [...r.messages, message] } : r
       ));
     });
 
-    socketRef.current.on('message_delivered', (data: { messageId: string }) => {
+    socket.on('message_delivered', (data: { messageId: string }) => {
       const { messageId } = data;
-      setRooms(prev => prev.map(r => 
-        r.id === activeRoom?.id 
+      setRooms(prev => prev.map(r =>
+        r.id === activeRoom?.id
           ? { ...r, messages: r.messages.map(m => m.id === messageId ? { ...m, status: 'delivered' as const } : m) }
           : r
       ));
     });
 
     return () => {
-      socketRef.current?.disconnect();
+      socket.disconnect();
     };
-  }, [activeRoom?.id]);
+  }, []);
 
   useEffect(() => {
     if (activeRoom && socketRef.current) {
@@ -106,10 +105,21 @@ export const useChat = (currentUser: User) => {
   };
   
   const joinRoom = (roomId: string, password?: string): 'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined' => {
-    const roomToJoin = rooms.find(r => r.id === roomId);
+    let roomToJoin = rooms.find(r => r.id === roomId);
     
     if (!roomToJoin) {
-        return 'not_found';
+        // Create room if not found (invite code is roomId)
+        const derivedName = roomId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        roomToJoin = {
+            id: roomId,
+            name: derivedName,
+            type: 'group',
+            users: [currentUser.id],
+            messages: [],
+            privacy: 'public',
+        };
+        setRooms(prev => [...prev, roomToJoin]);
+        return 'joined';
     }
 
     if (roomToJoin.users.includes(currentUser.id)) {
