@@ -1,14 +1,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-// Fix: Export FontSize and Settings types for use in other components.
-export type FontSize = 'font-size-sm' | 'font-size-md' | 'font-size-lg';
+// Fix: Export Settings types for use in other components.
 type Theme = 'light' | 'dark';
 
 export interface Settings {
     theme: Theme;
     enterToSend: boolean;
-    fontSize: FontSize;
 }
 
 const getStoredSettings = (): Settings => {
@@ -24,7 +22,6 @@ const getStoredSettings = (): Settings => {
     return {
         theme: prefersDark ? 'dark' : 'light',
         enterToSend: true,
-        fontSize: 'font-size-md' as FontSize,
     };
 };
 
@@ -48,9 +45,5 @@ export const useSettings = () => {
         setSettings(s => ({ ...s, enterToSend: !s.enterToSend }));
     }, []);
 
-    const setFontSize = useCallback((size: FontSize) => {
-        setSettings(s => ({ ...s, fontSize: size }));
-    }, []);
-
-    return { settings, toggleDarkMode, setFontSize, toggleEnterToSend };
+    return { settings, toggleDarkMode, toggleEnterToSend };
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from '../types';
 import { IconLogout, IconMoon, IconShare, IconSun, IconX } from './Icons';
-import type { Settings, FontSize } from '../hooks/useSettings';
+import type { Settings } from '../hooks/useSettings';
 
 // Fix: Add a props interface for type safety.
 interface UserSettingsModalProps {

@@ -8,7 +8,7 @@ import UserSettingsTrigger from './UserSettingsTrigger';
 import UserList from './UserList';
 import Avatar from './Avatar';
 import { MOCK_USERS } from '../constants';
-import type { Settings, FontSize } from '../hooks/useSettings';
+import type { Settings } from '../hooks/useSettings';
 import SearchResultsModal from './SearchResultsModal';
 import VideoCallModal from './VideoCallModal';
 
@@ -18,7 +18,6 @@ interface ChatRoomProps {
   logout: () => void;
   settings: Settings;
   toggleDarkMode: () => void;
-  setFontSize: (size: FontSize) => void;
   toggleEnterToSend: () => void;
   onOpenLogin?: () => void;
 }

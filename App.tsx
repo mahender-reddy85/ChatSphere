@@ -8,7 +8,7 @@ const App: React.FC = () => {
   // Fix: Destructure `login` from `useAuth` to pass it to the AuthForm.
   // This ensures a single source of truth for the authentication state.
   const { user, loading, login, updateUser, logout } = useAuth();
-  const { settings, toggleDarkMode, setFontSize, toggleEnterToSend } = useSettings();
+  const { settings, toggleDarkMode, toggleEnterToSend } = useSettings();
 
   const [showLoginPage, setShowLoginPage] = useState(false);
 
@@ -35,7 +35,6 @@ const App: React.FC = () => {
   const settingProps = {
     settings,
     toggleDarkMode,
-    setFontSize,
     toggleEnterToSend,
   };
 
