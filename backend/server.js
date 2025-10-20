@@ -16,6 +16,11 @@ const io = new Server(server, {
   }
 });
 
+// Test route for Render deployment verification
+app.get('/', (req, res) => {
+  res.send('✅ ChatSphere backend is live and running!');
+});
+
 const rooms = new Map(); // In-memory storage for rooms and messages
 
 io.on('connection', (socket) => {
