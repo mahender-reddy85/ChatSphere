@@ -44,9 +44,10 @@ export interface MessageLocation {
 
 export interface Message {
   id: string;
-  author: User;
+  author?: User;
   timestamp: number;
   text: string;
+  type?: 'text' | 'system';
   reactions: Reaction[];
   poll?: Poll;
   file?: MessageFile;

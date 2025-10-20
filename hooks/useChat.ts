@@ -31,6 +31,13 @@ export const useChat = (currentUser: User) => {
       ));
     });
 
+    socket.on('receive_system_message', (data: { message: Message }) => {
+      const { message } = data;
+      setRooms(prev => prev.map(r =>
+        r.id === message.roomId ? { ...r, messages: [...r.messages, message] } : r
+      ));
+    });
+
     socket.on('message_delivered', (data: { messageId: string }) => {
       const { messageId } = data;
       setRooms(prev => prev.map(r =>
@@ -101,12 +108,18 @@ export const useChat = (currentUser: User) => {
       ...(privacy === 'private' && password && { password }),
     };
     setRooms(prev => [...prev, newRoom]);
+
+    // Emit create_room event to backend
+    if (socketRef.current) {
+      socketRef.current.emit('create_room', { roomId: newRoomId, userName: currentUser.name });
+    }
+
     return newRoomId;
   };
   
   const joinRoom = (roomId: string, password?: string): 'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined' => {
     let roomToJoin = rooms.find(r => r.id === roomId);
-    
+
     if (!roomToJoin) {
         // Create room if not found (invite code is roomId)
         const derivedName = roomId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -119,6 +132,12 @@ export const useChat = (currentUser: User) => {
             privacy: 'public',
         };
         setRooms(prev => [...prev, roomToJoin]);
+
+        // Emit join_room event to backend
+        if (socketRef.current) {
+          socketRef.current.emit('join_room', { roomId, userName: currentUser.name });
+        }
+
         return 'joined';
     }
 
@@ -128,6 +147,12 @@ export const useChat = (currentUser: User) => {
 
     if (roomToJoin.privacy === 'public') {
         setRooms(prev => prev.map(r => r.id === roomId ? { ...r, users: [...r.users, currentUser.id] } : r));
+
+        // Emit join_room event to backend
+        if (socketRef.current) {
+          socketRef.current.emit('join_room', { roomId, userName: currentUser.name });
+        }
+
         return 'joined';
     }
 
@@ -138,14 +163,26 @@ export const useChat = (currentUser: User) => {
         }
         if (password === roomToJoin.password) {
             setRooms(prev => prev.map(r => r.id === roomId ? { ...r, users: [...r.users, currentUser.id] } : r));
+
+            // Emit join_room event to backend
+            if (socketRef.current) {
+              socketRef.current.emit('join_room', { roomId, userName: currentUser.name });
+            }
+
             return 'joined';
         } else {
             return 'invalid_password';
         }
     }
-    
+
     // Private room without a password (legacy or other reason) can be joined.
     setRooms(prev => prev.map(r => r.id === roomId ? { ...r, users: [...r.users, currentUser.id] } : r));
+
+    // Emit join_room event to backend
+    if (socketRef.current) {
+      socketRef.current.emit('join_room', { roomId, userName: currentUser.name });
+    }
+
     return 'joined';
   };
 

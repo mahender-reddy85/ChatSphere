@@ -73,20 +73,20 @@ const LocationAttachment = ({ location }: { location: MessageLocation }) => {
 
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isConsecutive, onVote, onReaction, onDelete, onSetEditingMessage, onTogglePin, onReply, repliedToMessage, isHighlighted, roomType }) => {
-    const isCurrentUserMessage = message.author.id === currentUser.id;
+    const isCurrentUserMessage = message.author?.id === currentUser.id;
 
     // If message is deleted for everyone, show deleted message
     if (message.isDeleted && message.deletedForEveryone) {
         const isDeletedByMe = message.deletedBy === currentUser.id;
         return (
             <div className={`flex items-start gap-3 group transition-colors duration-1000 ${isCurrentUserMessage ? 'flex-row-reverse' : ''} ${isHighlighted ? 'bg-primary-100/50 dark:bg-primary-900/40 rounded-lg' : ''}`}>
-                {!isCurrentUserMessage && (
+                {!isCurrentUserMessage && message.author && (
                     <div className={`flex-shrink-0 self-end ${isConsecutive ? 'opacity-0' : ''}`}>
                         <Avatar user={message.author} size="md" />
                     </div>
                 )}
                 <div className={`flex flex-col max-w-full ${isCurrentUserMessage ? 'items-end' : 'items-start'}`}>
-                    {!isConsecutive && (
+                    {!isConsecutive && message.author && (
                         <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{message.author.name}</span>
                         </div>
@@ -102,6 +102,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                             {formatTimestamp(message.timestamp)}
                         </span>
                     </div>
+                </div>
+            </div>
+        );
+    }
+
+    // System message
+    if (message.type === 'system') {
+        return (
+            <div className="flex justify-center my-2">
+                <div className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1 rounded-full text-sm">
+                    {message.text}
                 </div>
             </div>
         );
@@ -134,7 +145,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
 
     return (
         <div id={`message-${message.id}`} className={containerClasses}>
-            {(roomType !== 'self' && roomType !== 'ai') && (
+            {(roomType !== 'self' && roomType !== 'ai') && message.author && (
                 <div className={`flex-shrink-0 self-end ${isConsecutive ? 'opacity-0' : ''}`}>
                     <Avatar user={isCurrentUserMessage ? currentUser : message.author} size="md" />
                 </div>
@@ -144,7 +155,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                 {!isConsecutive && (
                     <div className="flex items-center gap-2 mb-1 px-1">
                         <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                            {isCurrentUserMessage ? formatTimestamp(message.timestamp) : message.author.name}
+                            {isCurrentUserMessage ? formatTimestamp(message.timestamp) : message.author?.name}
                         </span>
                     </div>
                 )}
@@ -153,7 +164,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                     <div className={bubbleClasses}>
                         {message.replyTo && repliedToMessage && (
                             <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-600 rounded border-l-4 border-blue-500">
-                                <p className="text-xs text-gray-600 dark:text-gray-400">Replying to {repliedToMessage.author.name}</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Replying to {repliedToMessage.author?.name}</p>
                                 <p className="text-sm text-gray-800 dark:text-gray-200 truncate">{repliedToMessage.text}</p>
                             </div>
                         )}

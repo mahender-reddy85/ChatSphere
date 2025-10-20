@@ -46,6 +46,34 @@ io.on('connection', (socket) => {
     console.log(`Message sent in room ${roomId}:`, message.id);
   });
 
+  socket.on('create_room', (data) => {
+    const { roomId, userName } = data;
+    const systemMessage = {
+      id: `msg-system-${Date.now()}`,
+      timestamp: Date.now(),
+      text: `${userName} created the room`,
+      type: 'system',
+      reactions: [],
+      roomId
+    };
+    io.to(roomId).emit('receive_system_message', { message: systemMessage });
+    console.log(`Room created: ${roomId} by ${userName}`);
+  });
+
+  socket.on('join_room', (data) => {
+    const { roomId, userName } = data;
+    const systemMessage = {
+      id: `msg-system-${Date.now()}`,
+      timestamp: Date.now(),
+      text: `${userName} joined the room`,
+      type: 'system',
+      reactions: [],
+      roomId
+    };
+    io.to(roomId).emit('receive_system_message', { message: systemMessage });
+    console.log(`${userName} joined room ${roomId}`);
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
