@@ -18,7 +18,7 @@ const MessageActions: React.FC<MessageActionsProps> = ({ message, currentUser, o
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const [isDeleteMenuOpen, setIsDeleteMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const isCurrentUserMessage = message.author.id === currentUser.id;
+    const isCurrentUserMessage = message.author?.id === currentUser.id;
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

@@ -211,7 +211,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                             </div>
                         )}
                     </div>
-                    {message.reactions.length > 0 && (
+                    {message.reactions && message.reactions.length > 0 && (
                         <div className={reactionContainer}>
                             {message.reactions.map(reaction => (
                                 <div key={reaction.emoji} className="flex items-center gap-1 px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded-full text-sm touch-manipulation">
