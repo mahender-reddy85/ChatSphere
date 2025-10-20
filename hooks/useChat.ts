@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { User, Room, Message, Poll, SearchResult, MessageLocation } from '../types';
 import { MOCK_USERS } from '../constants';
 import { getAIBotResponse } from '../services/geminiService';
+import io from 'socket.io-client';
 
 const aiBot = MOCK_USERS['ai-bot'];
 
@@ -13,6 +14,37 @@ export const useChat = (currentUser: User) => {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+
+  const socketRef = useRef<any>(null);
+
+  useEffect(() => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+    socketRef.current = io(backendUrl);
+
+    socketRef.current.on('connect', () => {
+      console.log('Connected to backend server');
+    });
+
+    socketRef.current.on('newMessage', (data: { message: Message }) => {
+      const { message } = data;
+      setRooms(prev => prev.map(r => 
+        r.id === message.roomId ? { ...r, messages: [...r.messages, message] } : r
+      ));
+    });
+
+    socketRef.current.on('messageDelivered', (data: { messageId: string }) => {
+      const { messageId } = data;
+      setRooms(prev => prev.map(r => 
+        r.id === activeRoom?.id 
+          ? { ...r, messages: r.messages.map(m => m.id === messageId ? { ...m, status: 'delivered' as const } : m) }
+          : r
+      ));
+    });
+
+    return () => {
+      socketRef.current?.disconnect();
+    };
+  }, [activeRoom?.id]);
   
   useEffect(() => {
       const selfChatInitialMessage: Message = {
@@ -125,6 +157,7 @@ export const useChat = (currentUser: User) => {
       text: payload.text.trim(),
       reactions: [],
       status: 'sent',
+      roomId: activeRoom.id,
       ...(replyTo && { replyTo }),
       ...(payload.audio && {
           audio: {
@@ -144,14 +177,10 @@ export const useChat = (currentUser: User) => {
 
     setRooms(prev => prev.map(r => r.id === activeRoom.id ? { ...r, messages: [...r.messages, newMessage] } : r));
 
-    // Simulate backend delivery: set status to 'delivered' after a short delay
-    setTimeout(() => {
-      setRooms(prev => prev.map(r =>
-        r.id === activeRoom.id
-          ? { ...r, messages: r.messages.map(m => m.id === newMessage.id ? { ...m, status: 'delivered' as const } : m) }
-          : r
-      ));
-    }, 1000); // 1 second delay to simulate delivery
+    // Send to backend via socket
+    if (socketRef.current) {
+      socketRef.current.emit('sendMessage', { roomId: activeRoom.id, message: newMessage });
+    }
 
     if (activeRoom.type === 'ai') {
         const history = [...activeRoom.messages, newMessage];
@@ -162,6 +191,7 @@ export const useChat = (currentUser: User) => {
           timestamp: Date.now(),
           text: aiResponseText,
           reactions: [],
+          roomId: activeRoom.id,
         };
         setRooms(prev => prev.map(r => r.id === activeRoom.id ? { ...r, messages: [...r.messages, aiMessage] } : r));
     }

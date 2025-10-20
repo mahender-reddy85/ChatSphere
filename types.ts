@@ -59,6 +59,7 @@ export interface Message {
   deletedForEveryone?: boolean;
   replyTo?: string; // message ID being replied to
   status?: 'sent' | 'delivered' | 'read'; // message delivery status
+  roomId?: string;
 }
 
 export interface Room {
