@@ -18,21 +18,21 @@ export const useChat = (currentUser: User) => {
   const socketRef = useRef<any>(null);
 
   useEffect(() => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
     socketRef.current = io(backendUrl);
 
     socketRef.current.on('connect', () => {
       console.log('Connected to backend server');
     });
 
-    socketRef.current.on('newMessage', (data: { message: Message }) => {
+    socketRef.current.on('receive_message', (data: { message: Message }) => {
       const { message } = data;
       setRooms(prev => prev.map(r => 
         r.id === message.roomId ? { ...r, messages: [...r.messages, message] } : r
       ));
     });
 
-    socketRef.current.on('messageDelivered', (data: { messageId: string }) => {
+    socketRef.current.on('message_delivered', (data: { messageId: string }) => {
       const { messageId } = data;
       setRooms(prev => prev.map(r => 
         r.id === activeRoom?.id 
@@ -44,6 +44,12 @@ export const useChat = (currentUser: User) => {
     return () => {
       socketRef.current?.disconnect();
     };
+  }, [activeRoom?.id]);
+
+  useEffect(() => {
+    if (activeRoom && socketRef.current) {
+      socketRef.current.emit('join_room', activeRoom.id);
+    }
   }, [activeRoom?.id]);
   
   useEffect(() => {
@@ -179,7 +185,7 @@ export const useChat = (currentUser: User) => {
 
     // Send to backend via socket
     if (socketRef.current) {
-      socketRef.current.emit('sendMessage', { roomId: activeRoom.id, message: newMessage });
+      socketRef.current.emit('send_message', { roomId: activeRoom.id, message: newMessage });
     }
 
     if (activeRoom.type === 'ai') {

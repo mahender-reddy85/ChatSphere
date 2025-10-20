@@ -1,50 +1,43 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const cors = require('cors');
 
 const app = express();
 const server = http.createServer(app);
-
-app.use(cors());
-app.use(express.json());
-
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' ? "https://your-frontend-domain.com" : "http://localhost:3001",
-    methods: ["GET", "POST"]
+    origin: 'https://chat-sphere-tan.vercel.app',
+    methods: ['GET', 'POST']
   }
 });
 
-// Test route for Render deployment verification
+const PORT = process.env.PORT || 5000;
+
+app.use(express.json());
+
 app.get('/', (req, res) => {
   res.send('✅ ChatSphere backend is live and running!');
 });
 
-const rooms = new Map(); // In-memory storage for rooms and messages
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API route working fine!' });
+});
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  socket.on('joinRoom', (roomId) => {
+  socket.on('join_room', (roomId) => {
     socket.join(roomId);
     console.log(`User ${socket.id} joined room ${roomId}`);
   });
 
-  socket.on('sendMessage', (data) => {
+  socket.on('send_message', (data) => {
     const { roomId, message } = data;
-    // Simulate saving to backend
-    if (!rooms.has(roomId)) {
-      rooms.set(roomId, []);
-    }
-    const roomMessages = rooms.get(roomId);
-    roomMessages.push(message);
-    
     // Emit to room
-    io.to(roomId).emit('newMessage', { message });
+    io.to(roomId).emit('receive_message', { message });
     
-    // Immediately confirm delivery to sender
-    socket.emit('messageDelivered', { messageId: message.id });
+    // Confirm delivery to sender
+    socket.emit('message_delivered', { messageId: message.id });
     
     console.log(`Message sent in room ${roomId}:`, message.id);
   });
@@ -54,7 +47,4 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
