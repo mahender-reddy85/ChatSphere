@@ -27,7 +27,7 @@ export const useChat = (currentUser: User) => {
     socket.on('receive_message', (data: { message: Message }) => {
       const { message } = data;
       setRooms(prev => prev.map(r =>
-        r.id === message.roomId ? { ...r, messages: [...r.messages, message] } : r
+        r.id === message.roomId ? { ...r, messages: r.messages.some(m => m.id === message.id) ? r.messages : [...r.messages, message] } : r
       ));
     });
 
@@ -190,8 +190,6 @@ export const useChat = (currentUser: User) => {
       }),
       ...(payload.location && { location: payload.location })
     };
-
-    setRooms(prev => prev.map(r => r.id === activeRoom.id ? { ...r, messages: [...r.messages, newMessage] } : r));
 
     // Send to backend via socket
     if (socketRef.current) {
