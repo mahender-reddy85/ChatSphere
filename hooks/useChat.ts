@@ -124,6 +124,7 @@ export const useChat = (currentUser: User) => {
       timestamp: Date.now(),
       text: payload.text.trim(),
       reactions: [],
+      status: 'sent',
       ...(replyTo && { replyTo }),
       ...(payload.audio && {
           audio: {
@@ -142,6 +143,15 @@ export const useChat = (currentUser: User) => {
     };
 
     setRooms(prev => prev.map(r => r.id === activeRoom.id ? { ...r, messages: [...r.messages, newMessage] } : r));
+
+    // Simulate backend delivery: set status to 'delivered' after a short delay
+    setTimeout(() => {
+      setRooms(prev => prev.map(r =>
+        r.id === activeRoom.id
+          ? { ...r, messages: r.messages.map(m => m.id === newMessage.id ? { ...m, status: 'delivered' as const } : m) }
+          : r
+      ));
+    }, 1000); // 1 second delay to simulate delivery
 
     if (activeRoom.type === 'ai') {
         const history = [...activeRoom.messages, newMessage];
