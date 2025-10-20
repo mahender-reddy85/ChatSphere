@@ -7,13 +7,19 @@ type Theme = 'light' | 'dark';
 export interface Settings {
     theme: Theme;
     enterToSend: boolean;
+    fontSize: number;
 }
 
 const getStoredSettings = (): Settings => {
     try {
         const stored = localStorage.getItem('chat_settings');
         if (stored) {
-            return JSON.parse(stored);
+            const parsed = JSON.parse(stored);
+            return {
+                theme: parsed.theme || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+                enterToSend: parsed.enterToSend ?? true,
+                fontSize: parsed.fontSize ?? 16,
+            };
         }
     } catch (e) {
         console.error("Failed to parse settings from localStorage", e);
@@ -22,6 +28,7 @@ const getStoredSettings = (): Settings => {
     return {
         theme: prefersDark ? 'dark' : 'light',
         enterToSend: true,
+        fontSize: 16,
     };
 };
 
@@ -34,6 +41,7 @@ export const useSettings = () => {
         } else {
             document.documentElement.classList.remove('dark');
         }
+        document.body.style.fontSize = `${settings.fontSize}px`;
         localStorage.setItem('chat_settings', JSON.stringify(settings));
     }, [settings]);
 
@@ -45,5 +53,9 @@ export const useSettings = () => {
         setSettings(s => ({ ...s, enterToSend: !s.enterToSend }));
     }, []);
 
-    return { settings, toggleDarkMode, toggleEnterToSend };
+    const setFontSize = useCallback((size: number) => {
+        setSettings(s => ({ ...s, fontSize: size }));
+    }, []);
+
+    return { settings, toggleDarkMode, toggleEnterToSend, setFontSize };
 };
