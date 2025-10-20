@@ -191,6 +191,9 @@ export const useChat = (currentUser: User) => {
       ...(payload.location && { location: payload.location })
     };
 
+    // Add message locally for immediate UI update
+    setRooms(prev => prev.map(r => r.id === activeRoom.id ? { ...r, messages: [...r.messages, newMessage] } : r));
+
     // Send to backend via socket
     if (socketRef.current) {
       socketRef.current.emit('send_message', { roomId: activeRoom.id, message: newMessage });
