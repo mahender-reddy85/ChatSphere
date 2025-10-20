@@ -27,7 +27,10 @@ export const useChat = (currentUser: User) => {
     socket.on('receive_message', (data: { message: Message }) => {
       const { message } = data;
       setRooms(prev => prev.map(r =>
-        r.id === message.roomId ? { ...r, messages: [...r.messages, message] } : r
+        r.id === message.roomId ? {
+          ...r,
+          messages: r.messages.some(m => m.id === message.id) ? r.messages : [...r.messages, message]
+        } : r
       ));
     });
 
@@ -53,10 +56,14 @@ export const useChat = (currentUser: User) => {
   }, []);
 
   useEffect(() => {
-    if (activeRoom && socketRef.current) {
-      socketRef.current.emit('join_room', activeRoom.id);
+    if (socketRef.current && rooms.length > 0) {
+      rooms.forEach(room => {
+        if (room.users.includes(currentUser.id)) {
+          socketRef.current.emit('join_room', room.id);
+        }
+      });
     }
-  }, [activeRoom?.id]);
+  }, [rooms, currentUser.id]);
   
   useEffect(() => {
       const selfChatInitialMessage: Message = {

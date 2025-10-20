@@ -37,8 +37,8 @@ io.on('connection', (socket) => {
 
   socket.on('send_message', (data) => {
     const { roomId, message } = data;
-    // Emit to all clients in the room, including the sender
-    io.to(roomId).emit('receive_message', { message });
+    // Emit to all clients in the room, excluding the sender
+    socket.to(roomId).emit('receive_message', { message });
 
     // Confirm delivery to sender
     socket.emit('message_delivered', { messageId: message.id });
