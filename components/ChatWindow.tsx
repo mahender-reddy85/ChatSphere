@@ -121,13 +121,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
           )}
           {room.messages.map((message, index) => {
             const prevMessage: Message | undefined = room.messages[index-1];
-            const isConsecutive = prevMessage?.author?.id === message?.author?.id && (message.timestamp - prevMessage.timestamp < 60000);
+            const isConsecutive = prevMessage && prevMessage.timestamp && message.timestamp && prevMessage.author?.id === message.author?.id && (message.timestamp - prevMessage.timestamp < 60000);
             return (
               <MessageBubble
                 key={message.id}
                 message={message}
                 currentUser={currentUser}
-                isConsecutive={isConsecutive}
+                isConsecutive={!!isConsecutive}
                 onVote={handleVote}
                 onReaction={handleReaction}
                 onDelete={deleteMessage}
