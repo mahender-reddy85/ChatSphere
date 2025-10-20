@@ -12,7 +12,7 @@ import ActiveCallBanner from './ActiveCallBanner';
 interface ChatWindowProps {
   room: Room;
   currentUser: User;
-  sendMessage: (payload: { text: string; audio?: { blob: Blob; duration: number }; file?: File, location?: MessageLocation }, editingMessageId?: string) => void;
+  sendMessage: (payload: { text: string; audio?: { blob: Blob; duration: number }; file?: File, location?: MessageLocation }, editingMessageId?: string, replyTo?: string) => void;
   sendPoll: (poll: { question: string; options: string[] }) => void;
   handleVote: (messageId: string, optionId: string) => void;
   handleReaction: (messageId: string, emoji: string) => void;

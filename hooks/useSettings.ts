@@ -8,6 +8,7 @@ type Theme = 'light' | 'dark';
 export interface Settings {
     theme: Theme;
     enterToSend: boolean;
+    fontSize: FontSize;
 }
 
 const getStoredSettings = (): Settings => {
@@ -23,6 +24,7 @@ const getStoredSettings = (): Settings => {
     return {
         theme: prefersDark ? 'dark' : 'light',
         enterToSend: true,
+        fontSize: 'font-size-md' as FontSize,
     };
 };
 
@@ -46,5 +48,9 @@ export const useSettings = () => {
         setSettings(s => ({ ...s, enterToSend: !s.enterToSend }));
     }, []);
 
-    return { settings, toggleDarkMode, toggleEnterToSend };
+    const setFontSize = useCallback((size: FontSize) => {
+        setSettings(s => ({ ...s, fontSize: size }));
+    }, []);
+
+    return { settings, toggleDarkMode, setFontSize, toggleEnterToSend };
 };
