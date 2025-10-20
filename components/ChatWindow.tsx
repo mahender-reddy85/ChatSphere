@@ -5,7 +5,8 @@ import ChatInput from './ChatInput';
 import TypingIndicator from './TypingIndicator';
 import PinnedMessagesBar from './PinnedMessagesBar';
 import Avatar from './Avatar';
-import { IconUsers, IconAI, IconUser, IconVideo, IconMenu } from './Icons';
+import UserList from './UserList';
+import { IconUsers, IconAI, IconUser, IconVideo, IconMenu, IconX } from './Icons';
 import type { Settings } from '../hooks/useSettings';
 import ActiveCallBanner from './ActiveCallBanner';
 
@@ -27,6 +28,7 @@ interface ChatWindowProps {
   onStartVideoCall: () => void;
   onJoinVideoCall: () => void;
   onToggleSidebar?: () => void;
+  users: User[];
 }
 
 const RoomIcon = ({ room }: { room: Room }) => {
@@ -39,11 +41,12 @@ const RoomIcon = ({ room }: { room: Room }) => {
     return <IconUsers className="w-6 h-6 text-blue-500" />;
 };
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage, sendPoll, handleVote, handleReaction, deleteMessage, togglePinMessage, isSending, typingUsers, settings, onOpenSettings, jumpToMessageId, onClearJump, onStartVideoCall, onJoinVideoCall, onToggleSidebar }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage, sendPoll, handleVote, handleReaction, deleteMessage, togglePinMessage, isSending, typingUsers, settings, onOpenSettings, jumpToMessageId, onClearJump, onStartVideoCall, onJoinVideoCall, onToggleSidebar, users }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [replyingMessage, setReplyingMessage] = useState<Message | null>(null);
+  const [showMembersModal, setShowMembersModal] = useState(false);
 
   useEffect(() => {
     if (!jumpToMessageId) {
@@ -94,7 +97,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
         ) : (
           <>
             <RoomIcon room={room} />
-            <h2 className="text-lg font-semibold ml-3 text-gray-800 dark:text-gray-100">{room.name}</h2>
+            <h2 className="text-lg font-semibold ml-3 text-gray-800 dark:text-gray-100 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300" onClick={() => setShowMembersModal(true)}>{room.name}</h2>
           </>
         )}
         <div className="ml-auto">
@@ -157,6 +160,23 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
         replyingMessage={replyingMessage}
         onCancelReply={() => setReplyingMessage(null)}
       />
+
+      {/* Members Modal */}
+      {showMembersModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" onClick={() => setShowMembersModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
+              <h2 className="text-lg font-semibold dark:text-white">Members</h2>
+              <button onClick={() => setShowMembersModal(false)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <IconX className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              </button>
+            </div>
+            <div className="p-4">
+              <UserList users={users} title="" roomId={room.id} currentUser={currentUser} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

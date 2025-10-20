@@ -109,6 +109,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
             onStartVideoCall={() => startVideoCall(currentActiveRoom.id)}
             onJoinVideoCall={() => joinVideoCall(currentActiveRoom.id)}
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            users={activeRoomUsers}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400">
@@ -117,12 +118,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
         )}
       </main>
 
-      {/* Right Sidebar */}
-      {currentActiveRoom && currentActiveRoom.type === 'group' && (
-         <aside className="w-full md:w-72 flex-shrink-0 flex flex-col bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 md:h-screen md:overflow-hidden">
-          <UserList users={activeRoomUsers} title="Members" roomId={currentActiveRoom.id} currentUser={user}/>
-         </aside>
-      )}
+
 
       {/* Settings Modal */}
       <UserSettingsModal

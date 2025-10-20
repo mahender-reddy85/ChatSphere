@@ -1,26 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { IconX, IconShare, IconGlobe, IconLock } from './Icons';
+import { IconX, IconShare } from './Icons';
 
 interface CreateRoomModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onCreate: (name: string, privacy: 'public' | 'private', password?: string) => string;
+    onCreate: (name: string) => string;
 }
 
 const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose, onCreate }) => {
     const [roomName, setRoomName] = useState('');
     const [createdRoomId, setCreatedRoomId] = useState<string | null>(null);
     const [copyStatus, setCopyStatus] = useState('Copy Code');
-    const [privacy, setPrivacy] = useState<'public' | 'private'>('private');
-    const [password, setPassword] = useState('');
 
     useEffect(() => {
         if (isOpen) {
             setRoomName('');
             setCreatedRoomId(null);
             setCopyStatus('Copy Code');
-            setPrivacy('private');
-            setPassword('');
         }
     }, [isOpen]);
 
@@ -28,8 +24,7 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose, onCr
 
     const handleCreate = () => {
         if (roomName.trim()) {
-            if (privacy === 'private' && password.length < 4) return;
-            const newRoomId = onCreate(roomName.trim(), privacy, password);
+            const newRoomId = onCreate(roomName.trim());
             setCreatedRoomId(newRoomId);
         }
     };
@@ -70,38 +65,14 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose, onCr
                     <div className="p-6 space-y-4">
                         <div>
                             <label htmlFor="room-name" className="text-sm font-medium text-gray-600 dark:text-gray-400">Room Name</label>
-                            <input 
+                            <input
                                 id="room-name"
-                                type="text" 
-                                value={roomName} 
-                                onChange={e => setRoomName(e.target.value)} 
-                                placeholder="e.g., Project Alpha" 
-                                className="w-full mt-1 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                                type="text"
+                                value={roomName}
+                                onChange={e => setRoomName(e.target.value)}
+                                placeholder="e.g., Project Alpha"
+                                className="w-full mt-1 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                             />
-                        </div>
-                        {privacy === 'private' && (
-                            <div>
-                                <label htmlFor="room-password" className="text-sm font-medium text-gray-600 dark:text-gray-400">Room Password</label>
-                                <input 
-                                    id="room-password"
-                                    type="password" 
-                                    value={password} 
-                                    onChange={e => setPassword(e.target.value)} 
-                                    placeholder="Min. 4 characters" 
-                                    className="w-full mt-1 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
-                                />
-                            </div>
-                        )}
-                        <div>
-                            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Privacy</label>
-                            <div className="flex items-center gap-2 mt-2">
-                                <button onClick={() => setPrivacy('private')} className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg border ${privacy === 'private' ? 'bg-primary-500 text-white border-primary-500' : 'dark:border-gray-600'}`}>
-                                    <IconLock className="w-4 h-4" /> Private
-                                </button>
-                                <button onClick={() => setPrivacy('public')} className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg border ${privacy === 'public' ? 'bg-primary-500 text-white border-primary-500' : 'dark:border-gray-600'}`}>
-                                    <IconGlobe className="w-4 h-4" /> Public
-                                </button>
-                            </div>
                         </div>
                     </div>
                 )}
@@ -112,9 +83,9 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose, onCr
                             Done
                         </button>
                      ) : (
-                        <button 
-                            onClick={handleCreate} 
-                            disabled={!roomName.trim() || (privacy === 'private' && password.length < 4)}
+                        <button
+                            onClick={handleCreate}
+                            disabled={!roomName.trim()}
                             className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-primary-300 dark:disabled:bg-primary-800"
                         >
                             Create Room

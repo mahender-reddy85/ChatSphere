@@ -19,7 +19,9 @@ export const useChat = (currentUser: User) => {
 
   useEffect(() => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? 'https://chatsphere-7t8g.onrender.com' : 'http://localhost:5000');
-    const socket = io(backendUrl);
+    const socket = io(backendUrl, {
+      transports: ['websocket']
+    });
     socketRef.current = socket;
 
     socket.on('connect', () => console.log('Connected to backend server'));
@@ -32,6 +34,10 @@ export const useChat = (currentUser: User) => {
           messages: r.messages.some(m => m.id === message.id) ? r.messages : [...r.messages, message]
         } : r
       ));
+      // Update unread counts for other rooms
+      if (message.roomId !== activeRoom?.id) {
+        setUnreadCounts(prev => ({ ...prev, [message.roomId]: (prev[message.roomId] || 0) + 1 }));
+      }
     });
 
     socket.on('receive_system_message', (data: { message: Message }) => {
@@ -102,23 +108,23 @@ export const useChat = (currentUser: User) => {
     }
   }, [activeRoom]);
   
-  const createRoom = (name: string, privacy: 'public' | 'private', password?: string): string => {
+  const createRoom = (name: string): string => {
     const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     const newRoomId = `${slug}-${Math.random().toString(36).substr(2, 4)}`;
     const newRoom: Room = {
       id: newRoomId,
       name,
-      privacy,
+      privacy: 'public',
       type: 'group',
       users: [currentUser.id],
       messages: [],
-      ...(privacy === 'private' && password && { password }),
     };
     setRooms(prev => [...prev, newRoom]);
 
     // Emit create_room event to backend
     if (socketRef.current) {
       socketRef.current.emit('create_room', { roomId: newRoomId, userName: currentUser.name });
+      socketRef.current.emit('join_room', newRoomId);
     }
 
     return newRoomId;

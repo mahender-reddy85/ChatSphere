@@ -7,17 +7,19 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? ['https://chat-sphere-tan.vercel.app', 'https://*.vercel.app'] 
+    origin: process.env.NODE_ENV === 'production'
+      ? ['https://chat-sphere-tan.vercel.app', 'https://*.vercel.app']
       : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003'],
     methods: ['GET', 'POST']
-  }
+  },
+  maxHttpBufferSize: 1e8  // 100 MB for Socket.IO payloads
 });
 
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));  // Increase JSON body limit
+app.use(express.urlencoded({ extended: true, limit: '50mb' })); // For form data
 
 app.get('/', (req, res) => {
   res.send('✅ ChatSphere backend is live and running!');
@@ -30,15 +32,10 @@ app.get('/api/test', (req, res) => {
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  socket.on('join_room', (roomId) => {
-    socket.join(roomId);
-    console.log(`User ${socket.id} joined room ${roomId}`);
-  });
-
   socket.on('send_message', (data) => {
     const { roomId, message } = data;
-    // Emit to all clients in the room, excluding the sender
-    socket.to(roomId).emit('receive_message', { message });
+    // Emit to all clients in the room, including sender for sync
+    io.to(roomId).emit('receive_message', { message });
 
     // Confirm delivery to sender
     socket.emit('message_delivered', { messageId: message.id });
@@ -48,6 +45,7 @@ io.on('connection', (socket) => {
 
   socket.on('create_room', (data) => {
     const { roomId, userName } = data;
+    socket.join(roomId);
     const systemMessage = {
       id: `msg-system-${Date.now()}`,
       timestamp: Date.now(),
@@ -61,17 +59,28 @@ io.on('connection', (socket) => {
   });
 
   socket.on('join_room', (data) => {
-    const { roomId, userName } = data;
-    const systemMessage = {
-      id: `msg-system-${Date.now()}`,
-      timestamp: Date.now(),
-      text: `${userName} joined the room`,
-      type: 'system',
-      reactions: [],
-      roomId
-    };
-    io.to(roomId).emit('receive_system_message', { message: systemMessage });
-    console.log(`${userName} joined room ${roomId}`);
+    let roomId, userName;
+    if (typeof data === 'string') {
+      roomId = data;
+      userName = null;
+    } else {
+      ({ roomId, userName } = data);
+    }
+    socket.join(roomId);
+    if (userName) {
+      const systemMessage = {
+        id: `msg-system-${Date.now()}`,
+        timestamp: Date.now(),
+        text: `${userName} joined the room`,
+        type: 'system',
+        reactions: [],
+        roomId
+      };
+      io.to(roomId).emit('receive_system_message', { message: systemMessage });
+      console.log(`${userName} joined room ${roomId}`);
+    } else {
+      console.log(`User ${socket.id} joined room ${roomId}`);
+    }
   });
 
   socket.on('disconnect', () => {
