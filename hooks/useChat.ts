@@ -56,6 +56,32 @@ export const useChat = (currentUser: User) => {
       ));
     });
 
+    socket.on('poll_vote', (data: { messageId: string, optionId: string, userId: string }) => {
+      const { messageId, optionId, userId } = data;
+      setRooms(prev => prev.map(r => {
+        if (r.id !== activeRoom?.id) return r;
+        const newMessages = r.messages.map(m => {
+          if (m.id !== messageId || !m.poll) return m;
+
+          const newOptions = m.poll.options.map(opt => {
+              if (opt.id === optionId) {
+                // Toggle vote: if user has voted for this option, remove vote; otherwise add vote
+                const hasVoted = opt.votes.includes(userId);
+                const newVotes = hasVoted
+                  ? opt.votes.filter(voterId => voterId !== userId)
+                  : [...opt.votes, userId];
+                return { ...opt, votes: newVotes };
+              }
+              // Keep votes on other options (multiple choice poll)
+              return opt;
+          });
+
+          return { ...m, poll: { ...m.poll, options: newOptions } };
+        });
+        return { ...r, messages: newMessages };
+      }));
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -312,8 +338,14 @@ export const useChat = (currentUser: User) => {
       text: `Poll: ${pollData.question}`,
       poll: newPoll,
       reactions: [],
+      roomId: activeRoom.id,
     };
     setRooms(prev => prev.map(r => r.id === activeRoom.id ? { ...r, messages: [...r.messages, newMessage] } : r));
+
+    // Emit to backend for synchronization
+    if (socketRef.current) {
+      socketRef.current.emit('send_message', { roomId: activeRoom.id, message: newMessage });
+    }
   }, [activeRoom, currentUser]);
 
   const handleVote = useCallback((messageId: string, optionId: string) => {
@@ -340,6 +372,11 @@ export const useChat = (currentUser: User) => {
       });
       return { ...r, messages: newMessages };
     }));
+
+    // Emit vote update to backend for synchronization
+    if (socketRef.current) {
+      socketRef.current.emit('vote_poll', { roomId: activeRoom.id, messageId, optionId, userId: currentUser.id });
+    }
   }, [activeRoom, currentUser.id]);
 
   const handleReaction = useCallback((messageId: string, emoji: string) => {

@@ -81,6 +81,18 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
         setReplyingMessage(null);
     }
   }
+
+  const handleStartVideoCall = () => {
+    if (room) {
+      onStartVideoCall();
+    }
+  };
+
+  const handleJoinVideoCall = () => {
+    if (room) {
+      onJoinVideoCall();
+    }
+  };
   
   const isUserInCall = room.activeCall?.participants.includes(currentUser.id) ?? false;
 

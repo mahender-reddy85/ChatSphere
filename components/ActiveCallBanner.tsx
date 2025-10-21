@@ -8,6 +8,7 @@ interface ActiveCallBannerProps {
     room: Room;
     onJoin: () => void;
     currentUser: User;
+    onStartCall?: () => void;
 }
 
 const ActiveCallBanner: React.FC<ActiveCallBannerProps> = ({ room, onJoin, currentUser }) => {

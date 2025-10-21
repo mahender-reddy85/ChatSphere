@@ -88,6 +88,13 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('vote_poll', (data) => {
+    const { roomId, messageId, optionId, userId } = data;
+    // Emit vote update to all clients in the room
+    io.to(roomId).emit('poll_vote', { messageId, optionId, userId });
+    console.log(`Vote in room ${roomId}: message ${messageId}, option ${optionId}, user ${userId}`);
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
