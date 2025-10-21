@@ -221,12 +221,47 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                 </div>
                 <div className={`flex ${isCurrentUserMessage ? 'justify-end' : 'justify-start'} mt-1`}>
                     <div className="flex items-center gap-1">
-                        <button onClick={() => setIsEmojiPickerOpen(true)} className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500 min-w-[40px] min-h-[40px] flex items-center justify-center touch-manipulation">
-                            <IconSmile className="w-5 h-5" />
-                        </button>
-                        <button onClick={() => setIsMenuOpen(true)} className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500 min-w-[40px] min-h-[40px] flex items-center justify-center touch-manipulation">
-                            <IconDots className="w-5 h-5" />
-                        </button>
+                        <div className="relative">
+                            <button onClick={() => setIsEmojiPickerOpen(true)} className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500 min-w-[40px] min-h-[40px] flex items-center justify-center touch-manipulation">
+                                <IconSmile className="w-5 h-5" />
+                            </button>
+                            {isEmojiPickerOpen && (
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-10">
+                                    <EmojiPicker onSelect={(emoji) => { onReaction(message.id, emoji); setIsEmojiPickerOpen(false); }} onClose={() => setIsEmojiPickerOpen(false)} />
+                                </div>
+                            )}
+                        </div>
+                        <div className="relative">
+                            <button onClick={() => setIsMenuOpen(true)} className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500 min-w-[40px] min-h-[40px] flex items-center justify-center touch-manipulation">
+                                <IconDots className="w-5 h-5" />
+                            </button>
+                            {isMenuOpen && (
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-10" ref={menuRef}>
+                                    <button onClick={handleCopy} className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm">
+                                        <IconCopy className="w-4 h-4" /> Copy Text
+                                    </button>
+                                    <button onClick={() => { onTogglePin(message.id); setIsMenuOpen(false); }} className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm">
+                                        <IconPin className="w-4 h-4" /> {message.isPinned ? 'Unpin Message' : 'Pin Message'}
+                                    </button>
+                                    <button onClick={() => { onReply(message); setIsMenuOpen(false); }} className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm">
+                                        <IconReply className="w-4 h-4" /> Reply
+                                    </button>
+                                    {isCurrentUserMessage && (
+                                        <>
+                                            <div className="my-1 h-px bg-gray-200 dark:bg-gray-600" />
+                                            {Date.now() - message.timestamp <= 900000 && ( // 15 minutes = 900000ms
+                                                <button onClick={() => { onSetEditingMessage(message); setIsMenuOpen(false); }} className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm">
+                                                    <IconEdit className="w-4 h-4" /> Edit Message
+                                                </button>
+                                            )}
+                                             <button onClick={handleDeleteClick} className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm text-red-600 dark:text-red-400">
+                                                <IconTrash className="w-4 h-4" /> Delete Message
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
                 
