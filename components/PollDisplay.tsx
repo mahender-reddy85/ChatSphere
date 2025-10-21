@@ -16,7 +16,7 @@ const PollDisplay: React.FC<PollDisplayProps> = ({ poll, currentUser, onVote, is
     const textColor = isCurrentUserMessage ? 'text-white' : 'text-gray-800 dark:text-gray-200';
 
     return (
-        <div className={`my-2 w-full max-w-xs sm:max-w-md lg:max-w-lg ${textColor}`}>
+        <div className={`my-2 w-full max-w-xs sm:w-80 md:w-96 lg:w-[32rem] ${textColor}`}>
             <p className="font-bold mb-1 text-sm sm:text-base">{poll.question}</p>
             {poll.location && (
                 <div className="flex items-center gap-1.5 text-xs mb-3 opacity-80">
