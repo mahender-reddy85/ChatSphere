@@ -312,20 +312,20 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                     <div className={`flex items-center gap-2 ${isCurrentUserMessage ? 'justify-end' : 'justify-start'}`}>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                             {message.isEdited && "Edited "}
-                            {message.status === 'read' ? 'Seen' : 'Sent'}
+                            {message.status === 'seen' ? 'Seen' : 'Sent'}
                         </span>
                         {isCurrentUserMessage && message.status && (
                             <div className="flex items-center gap-1 ml-2">
                                 {message.status === 'sent' && <IconCheck className="w-3 h-3 text-gray-400" />}
                                 {message.status === 'delivered' && <IconDoubleCheck className="w-3 h-3 text-gray-400" />}
-                                {message.status === 'read' && <IconDoubleCheck className="w-3 h-3 text-blue-500" />}
+                                {message.status === 'seen' && <IconDoubleCheck className="w-3 h-3 text-blue-500" />}
                             </div>
                         )}
                     </div>
                     {message.reactions && message.reactions.length > 0 && (
-                        <div className={reactionContainer}>
+                        <div className={`${reactionContainer} overflow-x-auto`}>
                             {message.reactions.map(reaction => (
-                                <div key={reaction.emoji} className="flex items-center gap-1 px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded-full text-sm touch-manipulation">
+                                <div key={reaction.emoji} className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded-full text-xs touch-manipulation flex-shrink-0">
                                     <span>{reaction.emoji}</span>
                                     <span className="font-semibold text-gray-700 dark:text-gray-200">{reaction.users.length}</span>
                                 </div>

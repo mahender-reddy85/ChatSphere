@@ -14,6 +14,7 @@ export const useChat = (currentUser: User) => {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [incomingCall, setIncomingCall] = useState<{roomId: string, callerId: string} | null>(null);
 
   const socketRef = useRef<any>(null);
 
@@ -83,9 +84,7 @@ export const useChat = (currentUser: User) => {
     });
 
     socket.on('incoming_call', (data: { roomId: string, callerId: string }) => {
-      // Handle incoming call notification - could trigger a modal or notification
-      console.log(`Incoming call from ${data.callerId} in room ${data.roomId}`);
-      // For now, just log it. In a full implementation, you'd show an IncomingCallModal here.
+      setIncomingCall(data);
     });
 
     socket.on('user_joined_call', (data: { roomId: string, userId: string }) => {
@@ -519,5 +518,5 @@ export const useChat = (currentUser: User) => {
     }
   }, [rooms, activeRoom]);
 
-  return { rooms, activeRoom, setActiveRoom, sendMessage, sendPoll, handleVote, handleReaction, isSending, createRoom, joinRoom, activeTypingUsers, unreadCounts, deleteMessage, togglePinMessage, searchMessages, clearSearch, searchResults, isSearching, startVideoCall, joinVideoCall, leaveVideoCall, deleteRoom };
+  return { rooms, activeRoom, setActiveRoom, sendMessage, sendPoll, handleVote, handleReaction, isSending, createRoom, joinRoom, activeTypingUsers, unreadCounts, deleteMessage, togglePinMessage, searchMessages, clearSearch, searchResults, isSearching, startVideoCall, joinVideoCall, leaveVideoCall, deleteRoom, incomingCall, setIncomingCall };
 };
