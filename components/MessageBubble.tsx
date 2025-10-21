@@ -194,39 +194,39 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                     </div>
                 )}
 
-                <div className={`relative flex items-center group ${isCurrentUserMessage ? 'flex-row-reverse' : ''}`}>
-                    <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 md:opacity-0 md:group-hover:opacity-100 opacity-100 flex items-center gap-1 bg-gray-200 dark:bg-gray-600 p-1 rounded-full min-w-[80px] justify-center">
+                <div className={bubbleClasses}>
+                    {message.replyTo && repliedToMessage && (
+                        <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-600 rounded border-l-4 border-blue-500">
+                            <p className="text-xs text-gray-600 dark:text-gray-400">Replying to {repliedToMessage.author?.name}</p>
+                            <p className="text-sm text-gray-800 dark:text-gray-200 truncate">{repliedToMessage.text}</p>
+                        </div>
+                    )}
+                    {message.location && <LocationAttachment location={message.location} />}
+                    {message.audio ? (
+                       <AudioAttachment audio={message.audio} isCurrentUserMessage={isCurrentUserMessage} />
+                    ) : message.file ? (
+                       <FileAttachment file={message.file} onImageClick={handleImageClick} />
+                    ) : null}
+
+                    {message.text && <p className="whitespace-pre-wrap break-words">{message.text}</p>}
+
+                    {message.poll && (
+                       <PollDisplay
+                            poll={message.poll}
+                            currentUser={currentUser}
+                            onVote={handleVote}
+                            isCurrentUserMessage={isCurrentUserMessage}
+                       />
+                    )}
+                </div>
+                <div className={`flex ${isCurrentUserMessage ? 'justify-end' : 'justify-start'} mt-1`}>
+                    <div className="flex items-center gap-1">
                         <button onClick={() => setIsEmojiPickerOpen(true)} className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500 min-w-[40px] min-h-[40px] flex items-center justify-center touch-manipulation">
                             <IconSmile className="w-5 h-5" />
                         </button>
                         <button onClick={() => setIsMenuOpen(true)} className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500 min-w-[40px] min-h-[40px] flex items-center justify-center touch-manipulation">
                             <IconDots className="w-5 h-5" />
                         </button>
-                    </div>
-                    <div className={bubbleClasses}>
-                        {message.replyTo && repliedToMessage && (
-                            <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-600 rounded border-l-4 border-blue-500">
-                                <p className="text-xs text-gray-600 dark:text-gray-400">Replying to {repliedToMessage.author?.name}</p>
-                                <p className="text-sm text-gray-800 dark:text-gray-200 truncate">{repliedToMessage.text}</p>
-                            </div>
-                        )}
-                        {message.location && <LocationAttachment location={message.location} />}
-                        {message.audio ? (
-                           <AudioAttachment audio={message.audio} isCurrentUserMessage={isCurrentUserMessage} />
-                        ) : message.file ? (
-                           <FileAttachment file={message.file} onImageClick={handleImageClick} />
-                        ) : null}
-
-                        {message.text && <p className="whitespace-pre-wrap break-words">{message.text}</p>}
-
-                        {message.poll && (
-                           <PollDisplay
-                                poll={message.poll}
-                                currentUser={currentUser}
-                                onVote={handleVote}
-                                isCurrentUserMessage={isCurrentUserMessage}
-                           />
-                        )}
                     </div>
                 </div>
                 
