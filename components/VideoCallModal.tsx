@@ -10,13 +10,19 @@ interface VideoCallModalProps {
     onLeaveCall: () => void;
 }
 
-const getGridClasses = (count: number) => {
-    if (count <= 1) return 'grid-cols-1 grid-rows-1';
-    if (count === 2) return 'grid-cols-1 grid-rows-2';
-    if (count === 3 || count === 4) return 'grid-cols-2 grid-rows-2';
-    if (count === 5 || count === 6) return 'grid-cols-3 grid-rows-2';
-    // Add more cases for larger calls if needed
-    return 'grid-cols-3 grid-rows-3';
+const getGridClasses = (count: number, isMobile: boolean) => {
+    if (isMobile) {
+        if (count <= 1) return 'grid-cols-1 grid-rows-1';
+        if (count === 2) return 'grid-cols-1 grid-rows-2';
+        if (count >= 3) return 'grid-cols-1 grid-rows-3'; // Stack vertically on mobile for better visibility
+    } else {
+        if (count <= 1) return 'grid-cols-1 grid-rows-1';
+        if (count === 2) return 'grid-cols-1 grid-rows-2';
+        if (count === 3 || count === 4) return 'grid-cols-2 grid-rows-2';
+        if (count === 5 || count === 6) return 'grid-cols-3 grid-rows-2';
+        // Add more cases for larger calls if needed
+        return 'grid-cols-3 grid-rows-3';
+    }
 };
 
 const VideoCallModal: React.FC<VideoCallModalProps> = ({ room, currentUser, onLeaveCall }) => {
@@ -28,7 +34,18 @@ const VideoCallModal: React.FC<VideoCallModalProps> = ({ room, currentUser, onLe
     const [isMicMuted, setIsMicMuted] = useState(false);
     const [isCameraOff, setIsCameraOff] = useState(false);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     const stopScreenShare = useCallback(() => {
         if (screenStreamRef.current) {
             screenStreamRef.current.getTracks().forEach(track => track.stop());

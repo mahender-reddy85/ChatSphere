@@ -16,8 +16,8 @@ const PollDisplay: React.FC<PollDisplayProps> = ({ poll, currentUser, onVote, is
     const textColor = isCurrentUserMessage ? 'text-white' : 'text-gray-800 dark:text-gray-200';
 
     return (
-        <div className={`my-2 w-80 ${textColor}`}>
-            <p className="font-bold mb-1">{poll.question}</p>
+        <div className={`my-2 w-full max-w-xs sm:max-w-md lg:max-w-lg ${textColor}`}>
+            <p className="font-bold mb-1 text-sm sm:text-base">{poll.question}</p>
             {poll.location && (
                 <div className="flex items-center gap-1.5 text-xs mb-3 opacity-80">
                     <IconMapPin className="w-3.5 h-3.5" />
@@ -40,21 +40,21 @@ const PollDisplay: React.FC<PollDisplayProps> = ({ poll, currentUser, onVote, is
                         <div key={option.id} className="relative">
                             <button
                                 onClick={() => onVote(option.id)}
-                                className={`w-full text-left p-2 border rounded-md transition-all duration-200
+                                className={`w-full text-left p-3 sm:p-2 border rounded-md transition-all duration-200 min-h-[44px] mobile-touch-friendly
                                     ${isVotedByUser ? `ring-2 ${votedRing}` : baseBorder}
                                     ${hoverBorder}`
                                 }
                             >
                                 {userVote && (
-                                    <div 
-                                        className={`absolute top-0 left-0 h-full ${progressBg} rounded-md`} 
+                                    <div
+                                        className={`absolute top-0 left-0 h-full ${progressBg} rounded-md`}
                                         style={{ width: `${percentage}%` }}
                                     />
                                 )}
                                 <div className="relative z-10 flex justify-between items-center">
-                                    <span className={`font-medium ${optionTextColor}`}>{option.text}</span>
+                                    <span className={`font-medium text-sm sm:text-base ${optionTextColor}`}>{option.text}</span>
                                     {userVote && (
-                                        <span className={`text-sm font-semibold ${voteCountColor}`}>{option.votes.length} ({Math.round(percentage)}%)</span>
+                                        <span className={`text-xs sm:text-sm font-semibold ${voteCountColor}`}>{option.votes.length} ({Math.round(percentage)}%)</span>
                                     )}
                                 </div>
                             </button>
