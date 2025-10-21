@@ -68,6 +68,15 @@ export const useChat = (currentUser: User) => {
       ));
     });
 
+    socket.on('message_edited', (data: { messageId: string; newText: string; roomId: string }) => {
+      const { messageId, newText, roomId } = data;
+      setRooms(prev => prev.map(r =>
+        r.id === roomId
+          ? { ...r, messages: r.messages.map(m => m.id === messageId ? { ...m, text: newText, isEdited: true, file: undefined, audio: undefined, location: undefined } : m) }
+          : r
+      ));
+    });
+
     socket.on('poll_vote', (data: { messageId: string, optionId: string, userId: string }) => {
       const { messageId, optionId, userId } = data;
       setRooms(prev => prev.map(r => {
@@ -305,11 +314,17 @@ export const useChat = (currentUser: User) => {
     if (editingMessageId) {
         // Edit existing message (audio/file/location not supported for edits)
         if (!payload.text.trim()) return;
+        const newText = payload.text.trim();
         setRooms(prevRooms => prevRooms.map(r => 
             r.id === activeRoom.id
-            ? { ...r, messages: r.messages.map(m => m.id === editingMessageId ? { ...m, text: payload.text.trim(), isEdited: true } : m) }
+            ? { ...r, messages: r.messages.map(m => m.id === editingMessageId ? { ...m, text: newText, isEdited: true, file: undefined, audio: undefined, location: undefined } : m) }
             : r
         ));
+
+        // Emit edit to backend for synchronization
+        if (socketRef.current) {
+          socketRef.current.emit('edit_message', { roomId: activeRoom.id, messageId: editingMessageId, newText });
+        }
         return;
     }
     

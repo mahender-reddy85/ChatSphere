@@ -128,6 +128,13 @@ io.on('connection', (socket) => {
     socket.to(toId).emit('webrtc_ice_candidate', { candidate, fromId });
   });
 
+  socket.on('edit_message', (data) => {
+    const { roomId, messageId, newText } = data;
+    // Emit edit update to all clients in the room
+    io.to(roomId).emit('message_edited', { messageId, newText, roomId });
+    console.log(`Message edited in room ${roomId}: ${messageId}`);
+  });
+
   socket.on('message_seen', (data) => {
     const { from, to, messageIds, timestamp } = data;
     // Update message status for sender
