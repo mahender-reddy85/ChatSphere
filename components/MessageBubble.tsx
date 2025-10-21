@@ -258,7 +258,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                                 <IconDots className="w-5 h-5" />
                             </button>
                             {isMenuOpen && (
-                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-10" ref={menuRef}>
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-50" ref={menuRef}>
                                     <button onClick={handleCopy} className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm">
                                         <IconCopy className="w-4 h-4" /> Copy Text
                                     </button>
@@ -280,6 +280,27 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                                                 <IconTrash className="w-4 h-4" /> Delete Message
                                             </button>
                                         </>
+                                    )}
+                                </div>
+                            )}
+                            {isDeleteMenuOpen && (
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-50" ref={deleteRef}>
+                                    <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-600">
+                                        <span className="text-sm font-medium">Delete Message</span>
+                                        <button onClick={() => setIsDeleteMenuOpen(false)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600">
+                                            <IconX className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <button onClick={handleDeleteForMe} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm">
+                                        <IconTrash className="w-4 h-4" /> Delete for me
+                                    </button>
+                                    <button onClick={handleDeleteForEveryone} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm text-red-600 dark:text-red-400">
+                                        <IconTrash className="w-4 h-4" /> Delete for everyone
+                                    </button>
+                                    {message.isDeleted && (
+                                        <button onClick={() => { onDelete(message.id, 'permanent'); setIsDeleteMenuOpen(false); }} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm text-red-600 dark:text-red-400">
+                                            <IconTrash className="w-4 h-4" /> Delete permanently
+                                        </button>
                                     )}
                                 </div>
                             )}
@@ -320,28 +341,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                 imageUrl={selectedImageUrl}
                 imageName={selectedImageName}
             />
-
-            {isDeleteMenuOpen && (
-                <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-10">
-                    <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-600">
-                        <span className="text-sm font-medium">Delete Message</span>
-                        <button onClick={() => setIsDeleteMenuOpen(false)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600">
-                            <IconX className="w-4 h-4" />
-                        </button>
-                    </div>
-                    <button onClick={handleDeleteForMe} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm">
-                        <IconTrash className="w-4 h-4" /> Delete for me
-                    </button>
-                    <button onClick={handleDeleteForEveryone} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm text-red-600 dark:text-red-400">
-                        <IconTrash className="w-4 h-4" /> Delete for everyone
-                    </button>
-                    {message.isDeleted && (
-                        <button onClick={() => { onDelete(message.id, 'permanent'); setIsDeleteMenuOpen(false); }} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm text-red-600 dark:text-red-400">
-                            <IconTrash className="w-4 h-4" /> Delete permanently
-                        </button>
-                    )}
-                </div>
-            )}
         </div>
     );
 };

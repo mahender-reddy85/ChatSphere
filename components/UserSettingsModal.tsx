@@ -76,6 +76,31 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, onClose, 
       });
   }, [currentUser.id]);
 
+  const handleShareReferral = useCallback(async () => {
+      const referralLink = `${window.location.origin}?ref=${currentUser.id}`;
+      if (navigator.share) {
+          try {
+              await navigator.share({
+                  title: 'Invite to ChatSphere',
+                  text: 'Join me on ChatSphere!',
+                  url: referralLink,
+              });
+          } catch (error) {
+              if (error instanceof DOMException && error.name !== 'AbortError') {
+                  // Fallback to copy if share was cancelled or failed
+                  navigator.clipboard.writeText(referralLink);
+                  setCopyStatus('Copied!');
+                  setTimeout(() => setCopyStatus('Copy Link'), 2000);
+              }
+          }
+      } else {
+          // Fallback for unsupported browsers
+          navigator.clipboard.writeText(referralLink);
+          setCopyStatus('Copied!');
+          setTimeout(() => setCopyStatus('Copy Link'), 2000);
+      }
+  }, [currentUser.id]);
+
   if (!isOpen) return null;
 
   const isDarkMode = settings.theme === 'dark';
@@ -145,6 +170,9 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, onClose, 
                     <input type="text" readOnly value={`${window.location.origin}?ref=${currentUser.id}`} className="w-full mt-1 px-3 py-2 text-sm border rounded bg-gray-100 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300" />
                     <button onClick={handleCopyReferral} className="flex items-center gap-2 px-3 py-2 mt-1 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 min-w-[110px] justify-center">
                        <IconShare className="w-4 h-4" /> {copyStatus}
+                    </button>
+                    <button onClick={handleShareReferral} className="flex items-center gap-2 px-3 py-2 mt-1 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 min-w-[80px] justify-center" title="Share via WhatsApp, etc.">
+                       <IconShare className="w-4 h-4" /> Share
                     </button>
                 </div>
             </div>
