@@ -52,11 +52,11 @@ const MessageActions: React.FC<MessageActionsProps> = ({ message, currentUser, o
 
     return (
         <div className="relative flex items-center" ref={menuRef}>
-            <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 group-hover:opacity-100 opacity-0 transition-opacity flex items-center gap-1 bg-gray-200 dark:bg-gray-600 p-1 rounded-full">
-                <button onClick={() => setIsEmojiPickerOpen(true)} className="p-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500">
+            <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 md:group-hover:opacity-100 md:opacity-0 opacity-100 transition-opacity flex items-center gap-1 bg-gray-200 dark:bg-gray-600 p-1 rounded-full">
+                <button onClick={() => setIsEmojiPickerOpen(true)} className="p-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500 touch-manipulation">
                     <IconSmile className="w-5 h-5" />
                 </button>
-                <button onClick={() => setIsMenuOpen(true)} className="p-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500">
+                <button onClick={() => setIsMenuOpen(true)} className="p-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500 touch-manipulation">
                     <IconDots className="w-5 h-5" />
                 </button>
             </div>
