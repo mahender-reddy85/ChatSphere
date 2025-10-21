@@ -312,7 +312,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                     <div className={`flex items-center gap-2 ${isCurrentUserMessage ? 'justify-end' : 'justify-start'}`}>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                             {message.isEdited && "Edited "}
-                            {!isCurrentUserMessage && message.status === 'seen' && 'Seen'}
+                            {isCurrentUserMessage && message.status === 'seen' && 'Seen'}
                         </span>
                         {isCurrentUserMessage && message.status && (
                             <div className="flex items-center gap-1 ml-2">
