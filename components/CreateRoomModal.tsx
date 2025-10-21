@@ -4,7 +4,7 @@ import { IconX, IconShare } from './Icons';
 interface CreateRoomModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onCreate: (name: string) => string;
+    onCreate: (name: string, privacy: 'public' | 'private') => string;
 }
 
 const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose, onCreate }) => {
@@ -24,7 +24,7 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose, onCr
 
     const handleCreate = () => {
         if (roomName.trim()) {
-            const newRoomId = onCreate(roomName.trim());
+            const newRoomId = onCreate(roomName.trim(), 'public');
             setCreatedRoomId(newRoomId);
         }
     };

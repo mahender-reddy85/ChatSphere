@@ -10,7 +10,7 @@ interface RoomListProps {
   rooms: Room[];
   activeRoom: Room | null;
   setActiveRoom: (room: Room) => void;
-  createRoom: (name: string, privacy: 'public' | 'private') => string;
+  createRoom: (name: string) => string;
   joinRoom: (roomId: string, password?: string) => 'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined';
   deleteRoom: (roomId: string) => void;
   unreadCounts: Record<string, number>;
@@ -65,11 +65,6 @@ const RoomList: React.FC<RoomListProps> = ({ rooms, activeRoom, setActiveRoom, c
                   <div className="ml-3 flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="truncate font-semibold">{room.name}</span>
-                      {unreadCount > 0 && (
-                        <span className="ml-2 text-xs font-semibold text-white bg-red-500 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                          {unreadCount}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </>
@@ -79,11 +74,6 @@ const RoomList: React.FC<RoomListProps> = ({ rooms, activeRoom, setActiveRoom, c
                   <div className="ml-3 flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="truncate font-semibold">{room.name}</span>
-                      {unreadCount > 0 && (
-                        <span className="ml-2 text-xs font-semibold text-white bg-red-500 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                          {unreadCount}
-                        </span>
-                      )}
                     </div>
                     {isGroup && (
                       <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
