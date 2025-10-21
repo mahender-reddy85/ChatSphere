@@ -11,6 +11,7 @@ import { MOCK_USERS } from '../constants';
 import type { Settings } from '../hooks/useSettings';
 import SearchResultsModal from './SearchResultsModal';
 import VideoCallModal from './VideoCallModal';
+import IncomingCallModal from './IncomingCallModal';
 
 interface ChatRoomProps {
   user: User;

@@ -82,6 +82,36 @@ export const useChat = (currentUser: User) => {
       }));
     });
 
+    socket.on('incoming_call', (data: { roomId: string, callerId: string }) => {
+      // Handle incoming call notification - could trigger a modal or notification
+      console.log(`Incoming call from ${data.callerId} in room ${data.roomId}`);
+      // For now, just log it. In a full implementation, you'd show an IncomingCallModal here.
+    });
+
+    socket.on('user_joined_call', (data: { roomId: string, userId: string }) => {
+      setRooms(prev => prev.map(r =>
+        r.id === data.roomId ? {
+          ...r,
+          activeCall: r.activeCall ? {
+            ...r.activeCall,
+            participants: r.activeCall.participants.includes(data.userId) ? r.activeCall.participants : [...r.activeCall.participants, data.userId]
+          } : null
+        } : r
+      ));
+    });
+
+    socket.on('user_left_call', (data: { roomId: string, userId: string }) => {
+      setRooms(prev => prev.map(r =>
+        r.id === data.roomId ? {
+          ...r,
+          activeCall: r.activeCall ? {
+            ...r.activeCall,
+            participants: r.activeCall.participants.filter(p => p !== data.userId)
+          } : null
+        } : r
+      ));
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -444,6 +474,9 @@ export const useChat = (currentUser: User) => {
 
   const startVideoCall = useCallback((roomId: string) => {
       updateRoomState(roomId, r => ({ ...r, activeCall: { participants: [currentUser.id] } }));
+      if (socketRef.current) {
+          socketRef.current.emit('start_call', { roomId, callerId: currentUser.id });
+      }
   }, [currentUser.id]);
 
   const joinVideoCall = useCallback((roomId: string) => {
@@ -451,6 +484,9 @@ export const useChat = (currentUser: User) => {
           if (!r.activeCall || r.activeCall.participants.includes(currentUser.id)) return r;
           return { ...r, activeCall: { ...r.activeCall, participants: [...r.activeCall.participants, currentUser.id] } };
       });
+      if (socketRef.current) {
+          socketRef.current.emit('join_call', { roomId, userId: currentUser.id });
+      }
   }, [currentUser.id]);
 
   const leaveVideoCall = useCallback((roomId: string) => {
@@ -462,6 +498,9 @@ export const useChat = (currentUser: User) => {
           }
           return { ...r, activeCall: { ...r.activeCall, participants: newParticipants } };
       });
+      if (socketRef.current) {
+          socketRef.current.emit('leave_call', { roomId, userId: currentUser.id });
+      }
   }, [currentUser.id]);
 
   const deleteRoom = useCallback((roomId: string) => {

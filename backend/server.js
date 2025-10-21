@@ -95,6 +95,39 @@ io.on('connection', (socket) => {
     console.log(`Vote in room ${roomId}: message ${messageId}, option ${optionId}, user ${userId}`);
   });
 
+  socket.on('start_call', (data) => {
+    const { roomId, callerId } = data;
+    socket.to(roomId).emit('incoming_call', { roomId, callerId });
+    console.log(`Call started in room ${roomId} by ${callerId}`);
+  });
+
+  socket.on('join_call', (data) => {
+    const { roomId, userId } = data;
+    socket.to(roomId).emit('user_joined_call', { roomId, userId });
+    console.log(`${userId} joined call in room ${roomId}`);
+  });
+
+  socket.on('leave_call', (data) => {
+    const { roomId, userId } = data;
+    socket.to(roomId).emit('user_left_call', { roomId, userId });
+    console.log(`${userId} left call in room ${roomId}`);
+  });
+
+  socket.on('webrtc_offer', (data) => {
+    const { roomId, offer, fromId, toId } = data;
+    socket.to(toId).emit('webrtc_offer', { offer, fromId });
+  });
+
+  socket.on('webrtc_answer', (data) => {
+    const { roomId, answer, fromId, toId } = data;
+    socket.to(toId).emit('webrtc_answer', { answer, fromId });
+  });
+
+  socket.on('webrtc_ice_candidate', (data) => {
+    const { roomId, candidate, fromId, toId } = data;
+    socket.to(toId).emit('webrtc_ice_candidate', { candidate, fromId });
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
