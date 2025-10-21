@@ -128,6 +128,13 @@ io.on('connection', (socket) => {
     socket.to(toId).emit('webrtc_ice_candidate', { candidate, fromId });
   });
 
+  socket.on('message_seen', (data) => {
+    const { from, to, messageIds, timestamp } = data;
+    // Update message status for sender
+    socket.to(to).emit('message_status_update', { messageIds, status: 'seen', timestamp });
+    console.log(`Messages seen by ${from}: ${messageIds.join(', ')}`);
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });

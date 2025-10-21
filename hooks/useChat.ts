@@ -4,6 +4,14 @@ import { MOCK_USERS } from '../constants';
 import { getAIBotResponse } from '../services/geminiService';
 import io from 'socket.io-client';
 
+// WebRTC configuration
+const rtcConfiguration = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    // Add TURN servers if needed for production
+  ]
+};
+
 const aiBot = MOCK_USERS['ai-bot'];
 
 export const useChat = (currentUser: User) => {
@@ -15,6 +23,9 @@ export const useChat = (currentUser: User) => {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [incomingCall, setIncomingCall] = useState<{roomId: string, callerId: string} | null>(null);
+  const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
   const socketRef = useRef<any>(null);
 
@@ -108,6 +119,40 @@ export const useChat = (currentUser: User) => {
             participants: r.activeCall.participants.filter(p => p !== data.userId)
           } : null
         } : r
+      ));
+    });
+
+    socket.on('webrtc_offer', async (data: { offer: string, fromId: string }) => {
+      const pc = new RTCPeerConnection(rtcConfiguration);
+      setPeerConnection(pc);
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      setLocalStream(stream);
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+      pc.onicecandidate = (event) => socket.emit('webrtc_ice_candidate', { candidate: event.candidate, fromId: currentUser.id, toId: data.fromId });
+      pc.ontrack = (event) => setRemoteStream(event.streams[0]);
+      await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.offer }));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit('webrtc_answer', { answer: answer.sdp, fromId: currentUser.id, toId: data.fromId });
+    });
+
+    socket.on('webrtc_answer', async (data: { answer: string, fromId: string }) => {
+      if (peerConnection) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.answer }));
+      }
+    });
+
+    socket.on('webrtc_ice_candidate', (data: { candidate: any, fromId: string }) => {
+      if (peerConnection && data.candidate) {
+        peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+      }
+    });
+
+    socket.on('message_status_update', (data: { messageIds: string[], status: 'seen' }) => {
+      setRooms(prev => prev.map(r =>
+        r.id === activeRoom?.id
+          ? { ...r, messages: r.messages.map(m => data.messageIds.includes(m.id) ? { ...m, status: 'seen' as const } : m) }
+          : r
       ));
     });
 
@@ -471,10 +516,21 @@ export const useChat = (currentUser: User) => {
     }
   };
 
-  const startVideoCall = useCallback((roomId: string) => {
+  const startVideoCall = useCallback(async (roomId: string) => {
       updateRoomState(roomId, r => ({ ...r, activeCall: { participants: [currentUser.id] } }));
       if (socketRef.current) {
           socketRef.current.emit('start_call', { roomId, callerId: currentUser.id });
+          // Initialize WebRTC for caller
+          const pc = new RTCPeerConnection(rtcConfiguration);
+          setPeerConnection(pc);
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          setLocalStream(stream);
+          stream.getTracks().forEach(track => pc.addTrack(track, stream));
+          pc.onicecandidate = (event) => socketRef.current.emit('webrtc_ice_candidate', { candidate: event.candidate, fromId: currentUser.id, toId: roomId });
+          pc.ontrack = (event) => setRemoteStream(event.streams[0]);
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          socketRef.current.emit('webrtc_offer', { offer: offer.sdp, fromId: currentUser.id, toId: roomId });
       }
   }, [currentUser.id]);
 
@@ -518,5 +574,5 @@ export const useChat = (currentUser: User) => {
     }
   }, [rooms, activeRoom]);
 
-  return { rooms, activeRoom, setActiveRoom, sendMessage, sendPoll, handleVote, handleReaction, isSending, createRoom, joinRoom, activeTypingUsers, unreadCounts, deleteMessage, togglePinMessage, searchMessages, clearSearch, searchResults, isSearching, startVideoCall, joinVideoCall, leaveVideoCall, deleteRoom, incomingCall, setIncomingCall };
+  return { rooms, activeRoom, setActiveRoom, sendMessage, sendPoll, handleVote, handleReaction, isSending, createRoom, joinRoom, activeTypingUsers, unreadCounts, deleteMessage, togglePinMessage, searchMessages, clearSearch, searchResults, isSearching, startVideoCall, joinVideoCall, leaveVideoCall, deleteRoom, incomingCall, setIncomingCall, peerConnection, localStream, remoteStream };
 };
