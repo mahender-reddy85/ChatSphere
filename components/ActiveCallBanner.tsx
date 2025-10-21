@@ -34,11 +34,17 @@ const ActiveCallBanner: React.FC<ActiveCallBannerProps> = ({ room, onJoin, curre
                         {remainingCount > 0 && ` (+${remainingCount} more)`}
                     </p>
                 </div>
-                <button 
-                    onClick={onJoin} 
+                <button
+                    onClick={onJoin}
                     className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-white bg-green-600 rounded-md hover:bg-green-700"
                 >
                     Join Call
+                </button>
+                <button
+                    onClick={() => {}} // Placeholder for decline functionality
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 dark:text-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600"
+                >
+                    Don't Join
                 </button>
             </div>
              <style>{`.animate-pulse-fast { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }`}</style>

@@ -5,7 +5,7 @@ interface EmojiPickerProps {
     onClose: () => void;
 }
 
-const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '+'];
 
 const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, onClose }) => {
     const pickerRef = useRef<HTMLDivElement>(null);
