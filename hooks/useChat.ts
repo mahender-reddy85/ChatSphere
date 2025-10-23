@@ -22,10 +22,7 @@ export const useChat = (currentUser: User) => {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [incomingCall, setIncomingCall] = useState<{roomId: string, callerId: string} | null>(null);
-  const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+
 
   const socketRef = useRef<any>(null);
 
@@ -103,59 +100,7 @@ export const useChat = (currentUser: User) => {
       }));
     });
 
-    socket.on('incoming_call', (data: { roomId: string, callerId: string }) => {
-      setIncomingCall(data);
-    });
 
-    socket.on('user_joined_call', (data: { roomId: string, userId: string }) => {
-      setRooms(prev => prev.map(r =>
-        r.id === data.roomId ? {
-          ...r,
-          activeCall: r.activeCall ? {
-            ...r.activeCall,
-            participants: r.activeCall.participants.includes(data.userId) ? r.activeCall.participants : [...r.activeCall.participants, data.userId]
-          } : null
-        } : r
-      ));
-    });
-
-    socket.on('user_left_call', (data: { roomId: string, userId: string }) => {
-      setRooms(prev => prev.map(r =>
-        r.id === data.roomId ? {
-          ...r,
-          activeCall: r.activeCall ? {
-            ...r.activeCall,
-            participants: r.activeCall.participants.filter(p => p !== data.userId)
-          } : null
-        } : r
-      ));
-    });
-
-    socket.on('webrtc_offer', async (data: { offer: string, fromId: string }) => {
-      const pc = new RTCPeerConnection(rtcConfiguration);
-      setPeerConnection(pc);
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setLocalStream(stream);
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
-      pc.onicecandidate = (event) => socket.emit('webrtc_ice_candidate', { candidate: event.candidate, fromId: currentUser.id, toId: data.fromId });
-      pc.ontrack = (event) => setRemoteStream(event.streams[0]);
-      await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.offer }));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      socket.emit('webrtc_answer', { answer: answer.sdp, fromId: currentUser.id, toId: data.fromId });
-    });
-
-    socket.on('webrtc_answer', async (data: { answer: string, fromId: string }) => {
-      if (peerConnection) {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.answer }));
-      }
-    });
-
-    socket.on('webrtc_ice_candidate', (data: { candidate: any, fromId: string }) => {
-      if (peerConnection && data.candidate) {
-        peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-      }
-    });
 
     socket.on('message_status_update', (data: { messageIds: string[], status: 'seen' }) => {
       setRooms(prev => prev.map(r =>
@@ -531,47 +476,7 @@ export const useChat = (currentUser: User) => {
     }
   };
 
-  const startVideoCall = useCallback(async (roomId: string) => {
-      updateRoomState(roomId, r => ({ ...r, activeCall: { participants: [currentUser.id] } }));
-      if (socketRef.current) {
-          socketRef.current.emit('start_call', { roomId, callerId: currentUser.id });
-          // Initialize WebRTC for caller
-          const pc = new RTCPeerConnection(rtcConfiguration);
-          setPeerConnection(pc);
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          setLocalStream(stream);
-          stream.getTracks().forEach(track => pc.addTrack(track, stream));
-          pc.onicecandidate = (event) => socketRef.current.emit('webrtc_ice_candidate', { candidate: event.candidate, fromId: currentUser.id, toId: roomId });
-          pc.ontrack = (event) => setRemoteStream(event.streams[0]);
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          socketRef.current.emit('webrtc_offer', { offer: offer.sdp, fromId: currentUser.id, toId: roomId });
-      }
-  }, [currentUser.id]);
 
-  const joinVideoCall = useCallback((roomId: string) => {
-      updateRoomState(roomId, r => {
-          if (!r.activeCall || r.activeCall.participants.includes(currentUser.id)) return r;
-          return { ...r, activeCall: { ...r.activeCall, participants: [...r.activeCall.participants, currentUser.id] } };
-      });
-      if (socketRef.current) {
-          socketRef.current.emit('join_call', { roomId, userId: currentUser.id });
-      }
-  }, [currentUser.id]);
-
-  const leaveVideoCall = useCallback((roomId: string) => {
-      updateRoomState(roomId, r => {
-          if (!r.activeCall) return r;
-          const newParticipants = r.activeCall.participants.filter(pId => pId !== currentUser.id);
-          if (newParticipants.length === 0) {
-              return { ...r, activeCall: null };
-          }
-          return { ...r, activeCall: { ...r.activeCall, participants: newParticipants } };
-      });
-      if (socketRef.current) {
-          socketRef.current.emit('leave_call', { roomId, userId: currentUser.id });
-      }
-  }, [currentUser.id]);
 
   const deleteRoom = useCallback((roomId: string) => {
     // Don't allow deleting self or AI chats
@@ -589,5 +494,5 @@ export const useChat = (currentUser: User) => {
     }
   }, [rooms, activeRoom]);
 
-  return { rooms, activeRoom, setActiveRoom, sendMessage, sendPoll, handleVote, handleReaction, isSending, createRoom, joinRoom, activeTypingUsers, unreadCounts, deleteMessage, togglePinMessage, searchMessages, clearSearch, searchResults, isSearching, startVideoCall, joinVideoCall, leaveVideoCall, deleteRoom, incomingCall, setIncomingCall, peerConnection, localStream, remoteStream };
+  return { rooms, activeRoom, setActiveRoom, sendMessage, sendPoll, handleVote, handleReaction, isSending, createRoom, joinRoom, activeTypingUsers, unreadCounts, deleteMessage, togglePinMessage, searchMessages, clearSearch, searchResults, isSearching, deleteRoom };
 };
