@@ -71,9 +71,6 @@ export interface Room {
   messages: Message[];
   privacy: 'public' | 'private';
   password?: string;
-  activeCall?: {
-      participants: string[]; // array of user IDs
-  } | null;
 }
 
 export interface SearchResult {

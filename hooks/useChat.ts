@@ -4,13 +4,7 @@ import { MOCK_USERS } from '../constants';
 import { getAIBotResponse } from '../services/geminiService';
 import io from 'socket.io-client';
 
-// WebRTC configuration
-const rtcConfiguration = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    // Add TURN servers if needed for production
-  ]
-};
+
 
 const aiBot = MOCK_USERS['ai-bot'];
 

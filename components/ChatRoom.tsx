@@ -10,8 +10,7 @@ import Avatar from './Avatar';
 import { MOCK_USERS } from '../constants';
 import type { Settings } from '../hooks/useSettings';
 import SearchResultsModal from './SearchResultsModal';
-import VideoCallModal from './VideoCallModal';
-import IncomingCallModal from './IncomingCallModal';
+
 
 interface ChatRoomProps {
   user: User;
@@ -24,7 +23,7 @@ interface ChatRoomProps {
 }
 
 const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLogin, ...settingProps }) => {
-  const { rooms, activeRoom, setActiveRoom, sendMessage, sendPoll, handleVote, handleReaction, isSending, createRoom, joinRoom, activeTypingUsers, unreadCounts, deleteMessage, togglePinMessage, searchMessages, clearSearch, searchResults, isSearching, startVideoCall, joinVideoCall, leaveVideoCall, deleteRoom, incomingCall, setIncomingCall } = useChat(user);
+  const { rooms, activeRoom, setActiveRoom, sendMessage, sendPoll, handleVote, handleReaction, isSending, createRoom, joinRoom, activeTypingUsers, unreadCounts, deleteMessage, togglePinMessage, searchMessages, clearSearch, searchResults, isSearching, deleteRoom } = useChat(user);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [jumpToMessageId, setJumpToMessageId] = useState<string | null>(null);
@@ -56,7 +55,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
       setJumpToMessageId(null);
   };
 
-  const isUserInCall = currentActiveRoom?.activeCall?.participants.includes(user.id) ?? false;
+
 
   return (
     <div className={`flex flex-col md:flex-row h-screen bg-gray-50 dark:bg-gray-900`}>
@@ -107,8 +106,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
             onOpenSettings={() => setIsSettingsModalOpen(true)}
             jumpToMessageId={jumpToMessageId}
             onClearJump={handleClearJump}
-            onStartVideoCall={() => startVideoCall(currentActiveRoom.id)}
-            onJoinVideoCall={() => joinVideoCall(currentActiveRoom.id)}
+
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             users={activeRoomUsers}
           />
@@ -140,27 +138,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
         onJumpToMessage={handleJumpToMessage}
       />
 
-      {/* Video Call Modal */}
-      {currentActiveRoom && isUserInCall && (
-        <VideoCallModal
-            room={currentActiveRoom}
-            currentUser={user}
-            onLeaveCall={() => leaveVideoCall(currentActiveRoom.id)}
-        />
-      )}
 
-      {/* Incoming Call Modal */}
-      {incomingCall && (
-        <IncomingCallModal
-          roomId={incomingCall.roomId}
-          callerId={incomingCall.callerId}
-          onAccept={() => {
-            joinVideoCall(incomingCall.roomId);
-            setIncomingCall(null);
-          }}
-          onDecline={() => setIncomingCall(null)}
-        />
-      )}
     </div>
   );
 };

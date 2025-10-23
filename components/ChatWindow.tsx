@@ -6,9 +6,8 @@ import TypingIndicator from './TypingIndicator';
 import PinnedMessagesBar from './PinnedMessagesBar';
 import Avatar from './Avatar';
 import UserList from './UserList';
-import { IconUsers, IconAI, IconUser, IconVideo, IconMenu, IconX } from './Icons';
+import { IconUsers, IconAI, IconUser, IconMenu, IconX } from './Icons';
 import type { Settings } from '../hooks/useSettings';
-import ActiveCallBanner from './ActiveCallBanner';
 
 interface ChatWindowProps {
   room: Room;
@@ -25,8 +24,6 @@ interface ChatWindowProps {
   onOpenSettings: () => void;
   jumpToMessageId: string | null;
   onClearJump: () => void;
-  onStartVideoCall: () => void;
-  onJoinVideoCall: () => void;
   onToggleSidebar?: () => void;
   users: User[];
 }
@@ -41,7 +38,7 @@ const RoomIcon = ({ room }: { room: Room }) => {
     return <IconUsers className="w-6 h-6 text-blue-500" />;
 };
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage, sendPoll, handleVote, handleReaction, deleteMessage, togglePinMessage, isSending, typingUsers, settings, onOpenSettings, jumpToMessageId, onClearJump, onStartVideoCall, onJoinVideoCall, onToggleSidebar, users }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage, sendPoll, handleVote, handleReaction, deleteMessage, togglePinMessage, isSending, typingUsers, settings, onOpenSettings, jumpToMessageId, onClearJump, onToggleSidebar, users }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
@@ -82,19 +79,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
     }
   }
 
-  const handleStartVideoCall = () => {
-    if (room) {
-      onStartVideoCall();
-    }
-  };
 
-  const handleJoinVideoCall = () => {
-    if (room) {
-      onJoinVideoCall();
-    }
-  };
-  
-  const isUserInCall = room.activeCall?.participants.includes(currentUser.id) ?? false;
 
   return (
     <div className="flex-1 flex flex-col h-full md:h-screen">
@@ -113,17 +98,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
           </>
         )}
         <div className="ml-auto">
-            {room.type === 'group' && !room.activeCall && (
-                <button onClick={onStartVideoCall} className="p-2 text-gray-500 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 dark:text-gray-400">
-                    <IconVideo className="w-6 h-6" />
-                </button>
-            )}
         </div>
       </header>
       
-      {room.activeCall && !isUserInCall && (
-        <ActiveCallBanner room={room} onJoin={onJoinVideoCall} currentUser={currentUser} />
-      )}
+
 
       {pinnedMessages.length > 0 && <PinnedMessagesBar messages={pinnedMessages} onUnpin={togglePinMessage} />}
       
