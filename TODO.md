@@ -2,10 +2,13 @@
 
 ## Steps to Complete
 
-- [x] Delete video call components: VideoCallButton.tsx, VideoCallModal.tsx, IncomingCallModal.tsx, ActiveCallBanner.tsx
-- [x] Update ChatRoom.tsx: Remove video call imports, render blocks, props, and handlers
-- [x] Update ChatWindow.tsx: Remove video call buttons, ActiveCallBanner, and related props
-- [x] Update useChat.ts: Remove video call functions, activeCall state, WebRTC code, incomingCall state
-- [x] Update types.ts: Remove activeCall property from Room interface
-- [x] Update TODO.md: Remove video call related tasks (this file)
-- [x] Test application: Ensure no video call features remain, no broken imports, chat functionality works
+- [x] Delete video call component files: VideoCallButton.tsx, VideoCallModal.tsx, IncomingCallModal.tsx, ActiveCallBanner.tsx
+- [x] Remove video call code from useChat.ts: remove startVideoCall, joinVideoCall, leaveVideoCall functions, incomingCall state, peerConnection, localStream, remoteStream, and related socket listeners
+- [x] Update types.ts: remove activeCall from Room interface
+- [x] Update ChatRoom.tsx: remove VideoCallModal, IncomingCallModal imports and usage, remove onStartVideoCall, onJoinVideoCall props and handlers, remove isUserInCall logic
+- [x] Update ChatWindow.tsx: remove ActiveCallBanner import and usage, remove onStartVideoCall, onJoinVideoCall props, remove video call button and banner rendering
+- [x] Update TODO.md: mark video call removal as complete after verification
+
+## Followup Steps
+- [x] Run the app (`npm run dev`) to verify no errors after removal
+- [x] Test chat functionality to ensure no regressions

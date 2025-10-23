@@ -7,6 +7,7 @@ import PinnedMessagesBar from './PinnedMessagesBar';
 import Avatar from './Avatar';
 import UserList from './UserList';
 import { IconUsers, IconAI, IconUser, IconMenu, IconX } from './Icons';
+
 import type { Settings } from '../hooks/useSettings';
 
 interface ChatWindowProps {
@@ -103,8 +104,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
       
 
 
+
+
       {pinnedMessages.length > 0 && <PinnedMessagesBar messages={pinnedMessages} onUnpin={togglePinMessage} />}
-      
+
       <div className="flex-1 overflow-y-auto p-4 bg-gray-100 dark:bg-gray-900">
         <div className="space-y-4">
           {room.messages.length === 0 && (

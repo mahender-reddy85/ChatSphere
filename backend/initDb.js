@@ -1,5 +1,6 @@
-const mysql = require('mysql2/promise');
-require('dotenv').config({ path: './backend/.env' });
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+dotenv.config({ path: './backend/.env' });
 
 async function initDatabase() {
   let connection;
@@ -10,6 +11,7 @@ async function initDatabase() {
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
       port: process.env.DB_PORT
     });
 
@@ -18,7 +20,7 @@ async function initDatabase() {
     console.log('Database created or already exists');
 
     // Use the database
-    await connection.execute('USE chatsphere');
+    await connection.changeUser({ database: 'chatsphere' });
 
     // Create users table
     await connection.execute(`

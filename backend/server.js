@@ -1,150 +1,26 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { pool } from './db.js';
+import userRoutes from './routes/users.js';
+import messageRoutes from './routes/messages.js';
+import roomRoutes from './routes/rooms.js';
+
+dotenv.config({ path: './backend/.env' });
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: process.env.NODE_ENV === 'production'
-      ? ['https://chat-sphere-tan.vercel.app', 'https://*.vercel.app']
-      : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003'],
-    methods: ['GET', 'POST']
-  },
-  maxHttpBufferSize: 1e8  // 100 MB for Socket.IO payloads
+app.use(cors());
+app.use(express.json());
+
+// Routes
+app.use('/api/users', userRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/rooms', roomRoutes);
+
+// Test route
+app.get('/', (req, res) => {
+  res.send('✅ ChatSphere Backend Running');
 });
 
 const PORT = process.env.PORT || 5000;
-
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));  // Increase JSON body limit
-app.use(express.urlencoded({ extended: true, limit: '50mb' })); // For form data
-
-app.get('/', (req, res) => {
-  res.send('✅ ChatSphere backend is live and running!');
-});
-
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'API route working fine!' });
-});
-
-app.get('/api/welcome', (req, res) => {
-  console.log(`Request: ${req.method} ${req.path}`);
-  res.json({ message: 'Welcome to ChatSphere!' });
-});
-
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-
-  socket.on('send_message', (data) => {
-    const { roomId, message } = data;
-    // Emit to all clients in the room, including sender for sync
-    io.to(roomId).emit('receive_message', { message });
-
-    // Confirm delivery to sender
-    socket.emit('message_delivered', { messageId: message.id });
-
-    console.log(`Message sent in room ${roomId}:`, message.id);
-  });
-
-  socket.on('create_room', (data) => {
-    const { roomId, userName } = data;
-    socket.join(roomId);
-    const systemMessage = {
-      id: `msg-system-${Date.now()}`,
-      timestamp: Date.now(),
-      text: `${userName} created the room`,
-      type: 'system',
-      reactions: [],
-      roomId
-    };
-    io.to(roomId).emit('receive_system_message', { message: systemMessage });
-    console.log(`Room created: ${roomId} by ${userName}`);
-  });
-
-  socket.on('join_room', (data) => {
-    let roomId, userName;
-    if (typeof data === 'string') {
-      roomId = data;
-      userName = null;
-    } else {
-      ({ roomId, userName } = data);
-    }
-    socket.join(roomId);
-    if (userName) {
-      const systemMessage = {
-        id: `msg-system-${Date.now()}`,
-        timestamp: Date.now(),
-        text: `${userName} joined the room`,
-        type: 'system',
-        reactions: [],
-        roomId
-      };
-      io.to(roomId).emit('receive_system_message', { message: systemMessage });
-      console.log(`${userName} joined room ${roomId}`);
-    } else {
-      console.log(`User ${socket.id} joined room ${roomId}`);
-    }
-  });
-
-  socket.on('vote_poll', (data) => {
-    const { roomId, messageId, optionId, userId } = data;
-    // Emit vote update to all clients in the room
-    io.to(roomId).emit('poll_vote', { messageId, optionId, userId });
-    console.log(`Vote in room ${roomId}: message ${messageId}, option ${optionId}, user ${userId}`);
-  });
-
-  socket.on('start_call', (data) => {
-    const { roomId, callerId } = data;
-    socket.to(roomId).emit('incoming_call', { roomId, callerId });
-    console.log(`Call started in room ${roomId} by ${callerId}`);
-  });
-
-  socket.on('join_call', (data) => {
-    const { roomId, userId } = data;
-    socket.to(roomId).emit('user_joined_call', { roomId, userId });
-    console.log(`${userId} joined call in room ${roomId}`);
-  });
-
-  socket.on('leave_call', (data) => {
-    const { roomId, userId } = data;
-    socket.to(roomId).emit('user_left_call', { roomId, userId });
-    console.log(`${userId} left call in room ${roomId}`);
-  });
-
-  socket.on('webrtc_offer', (data) => {
-    const { roomId, offer, fromId, toId } = data;
-    socket.to(toId).emit('webrtc_offer', { offer, fromId });
-  });
-
-  socket.on('webrtc_answer', (data) => {
-    const { roomId, answer, fromId, toId } = data;
-    socket.to(toId).emit('webrtc_answer', { answer, fromId });
-  });
-
-  socket.on('webrtc_ice_candidate', (data) => {
-    const { roomId, candidate, fromId, toId } = data;
-    socket.to(toId).emit('webrtc_ice_candidate', { candidate, fromId });
-  });
-
-  socket.on('edit_message', (data) => {
-    const { roomId, messageId, newText } = data;
-    // Emit edit update to all clients in the room
-    io.to(roomId).emit('message_edited', { messageId, newText, roomId });
-    console.log(`Message edited in room ${roomId}: ${messageId}`);
-  });
-
-  socket.on('message_seen', (data) => {
-    const { from, to, messageIds, timestamp } = data;
-    // Update message status for sender
-    socket.to(to).emit('message_status_update', { messageIds, status: 'seen', timestamp });
-    console.log(`Messages seen by ${from}: ${messageIds.join(', ')}`);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
-});
-
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

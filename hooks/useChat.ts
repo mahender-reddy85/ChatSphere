@@ -463,15 +463,6 @@ export const useChat = (currentUser: User) => {
     setIsSearching(false);
   }, []);
 
-  const updateRoomState = (roomId: string, update: (room: Room) => Room) => {
-    setRooms(prevRooms => prevRooms.map(r => r.id === roomId ? update(r) : r));
-    if (activeRoom?.id === roomId) {
-        setActiveRoom(prevActiveRoom => prevActiveRoom ? update(prevActiveRoom) : null);
-    }
-  };
-
-
-
   const deleteRoom = useCallback((roomId: string) => {
     // Don't allow deleting self or AI chats
     const roomToDelete = rooms.find(r => r.id === roomId);
