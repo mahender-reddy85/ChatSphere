@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --chat-font-size: 1rem; /* 16px */
+  --chat-line-height: 1.5rem; /* 24px */
+}
+.font-size-sm {
+  --chat-font-size: 0.875rem; /* 14px */
+  --chat-line-height: 1.25rem; /* 20px */
+}
+.font-size-md {
+  --chat-font-size: 1rem; /* 16px */
+  --chat-line-height: 1.5rem; /* 24px */
+}
+.font-size-lg {
+  --chat-font-size: 1.125rem; /* 18px */
+  --chat-line-height: 1.75rem; /* 28px */
+}
+.chat-text {
+  font-size: var(--chat-font-size);
+  line-height: var(--chat-line-height);
+}
+
+/* Mobile responsive enhancements */
+@media (max-width: 768px) {
+  .mobile-touch-friendly {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .mobile-padding {
+    padding: 0.5rem;
+  }
+  .mobile-text {
+    font-size: 0.875rem;
+  }
+
+  /* Theme-specific mobile adjustments */
+  .dark .bg-gray-800 {
+    background-color: #1f2937; /* Slightly lighter for better contrast on mobile */
+  }
+  .dark .bg-gray-700 {
+    background-color: #374151;
+  }
+  .dark .text-gray-200 {
+    color: #f3f4f6;
+  }
+
+  /* Ensure buttons are properly sized for touch */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improve readability on small screens */
+  .chat-text {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  /* Better spacing for mobile layouts */
+  .mobile-padding {
+    padding: 0.75rem;
+  }
+
+  /* Ensure modals don't overflow on small screens */
+  .modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
+
+/* Smooth transitions for better UX */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Additional mobile theme enhancements */
+@media (max-width: 768px) {
+  /* Dark theme specific adjustments */
+  .dark {
+    --bg-primary: #111827;
+    --bg-secondary: #1f2937;
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+  }
+
+  /* Light theme specific adjustments */
+  .light {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9fafb;
+    --text-primary: #111827;
+    --text-secondary: #374151;
+  }
+
+  /* Ensure proper contrast for theme switching */
+  .theme-transition {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  }
+}
