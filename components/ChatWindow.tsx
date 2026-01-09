@@ -145,7 +145,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
         <div ref={messagesEndRef} />
       </div>
 
-      {typingUsers.length > 0 && <TypingIndicator users={typingUsers} />}
+      {/* Typing Indicator */}
+      <div className="px-4 py-1 h-8">
+        {typingUsers.length > 0 && (
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-1 inline-block">
+            <TypingIndicator users={typingUsers} />
+          </div>
+        )}
+      </div>
 
       <ChatInput
         onSendMessage={handleSendMessage}
