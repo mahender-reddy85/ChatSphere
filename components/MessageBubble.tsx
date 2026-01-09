@@ -312,136 +312,126 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                        <PollDisplay
                             poll={message.poll}
                             currentUser={currentUser}
-                            onVote={handleVote}
-                            isCurrentUserMessage={isCurrentUserMessage}
-                       />
-                    )}
-                </div>
-                {showContextMenu && (
-                    <div 
-                        className="fixed z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 py-1"
-                        style={{
-                            left: `${contextMenuPosition.x}px`,
-                            top: `${contextMenuPosition.y}px`,
-                            transform: 'translateY(-100%)',
-                        }}
-                        onClick={(e) => e.stopPropagation()}
                     >
+                        <IconCopy className="w-4 h-4" /> Copy Text
+                    </button>
+                    
+                    <button 
+                        onClick={() => {
+                            onTogglePin(message.id);
+                            setShowContextMenu(false);
+                        }} 
+                        className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+                    >
+                        <IconPin className="w-4 h-4" /> {message.isPinned ? 'Unpin' : 'Pin'} Message
+                    </button>
+                    
+                    <button 
+                        onClick={() => {
+                            onReply(message);
+                            setShowContextMenu(false);
+                        }} 
+                        className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+                    >
+                        <IconReply className="w-4 h-4" /> Reply
+                    </button>
+                    
+                    <button 
+                        onClick={() => {
+                            setIsEmojiPickerOpen(true);
+                            setShowContextMenu(false);
+                        }} 
+                        className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+                    >
+                        <IconSmile className="w-4 h-4" /> Add Reaction
+                    </button>
+                    
+                    {isCurrentUserMessage && Date.now() - message.timestamp <= 900000 && (
                         <button 
                             onClick={() => {
-                                setIsEmojiPickerOpen(true);
+                                onSetEditingMessage(message);
                                 setShowContextMenu(false);
                             }} 
                             className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
                         >
-                            <IconSmile className="w-4 h-4" /> Add Reaction
+                            <IconEdit className="w-4 h-4" /> Edit
                         </button>
-                        <button 
-                            onClick={() => {
-                                onReply(message);
-                                setShowContextMenu(false);
-                            }} 
-                            className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
-                        >
-                            <IconReply className="w-4 h-4" /> Reply
-                        </button>
-                        {isCurrentUserMessage && (
-                            <>
-                                <div className="my-1 h-px bg-gray-200 dark:bg-gray-600" />
-                                <button 
-                                    onClick={() => {
-                                        onSetEditingMessage(message);
-                                        setShowContextMenu(false);
-                                    }} 
-                                    className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
-                                >
-                                    <IconEdit className="w-4 h-4" /> Edit
-                                </button>
-                                <button 
-                                    onClick={() => {
-                                        setIsDeleteMenuOpen(true);
-                                        setShowContextMenu(false);
-                                    }} 
-                                    className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
-                                >
-                                    <IconTrash className="w-4 h-4" /> Delete
-                                </button>
-                            </>
-                        )}
-                    </div>
-                )}
-                <div className={`flex ${isCurrentUserMessage ? 'justify-end' : 'justify-start'} mt-1`}>
-                    <div className="flex items-center gap-1">
+                    )}
+                    
+                    {isCurrentUserMessage && (
                         <div className="relative">
-                            <button onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)} className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500 min-w-[40px] min-h-[40px] flex items-center justify-center touch-manipulation">
-                                <IconSmile className="w-5 h-5" />
-                            </button>
-                            {isEmojiPickerOpen && (
-                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-10">
-                                    <EmojiPicker onSelect={(emoji) => { onReaction(message.id, emoji); setIsEmojiPickerOpen(false); }} onClose={() => setIsEmojiPickerOpen(false)} />
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsDeleteMenuOpen(!isDeleteMenuOpen);
+                                }} 
+                                className="w-full text-left flex items-center justify-between gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <IconTrash className="w-4 h-4" />
+                                    <span>Delete</span>
                                 </div>
-                            )}
-                        </div>
-                        <div className="relative">
-                            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500 min-w-[40px] min-h-[40px] flex items-center justify-center touch-manipulation">
-                                <IconDots className="w-5 h-5" />
+                                <span>›</span>
                             </button>
-                            {isMenuOpen && (
-                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-50" ref={menuRef}>
-                                    <button onClick={handleCopy} className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm">
-                                        <IconCopy className="w-4 h-4" /> Copy Text
-                                    </button>
-                                    <button onClick={() => { onTogglePin(message.id); setIsMenuOpen(false); }} className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm">
-                                        <IconPin className="w-4 h-4" /> {message.isPinned ? 'Unpin Message' : 'Pin Message'}
-                                    </button>
-                                    <button onClick={() => { onReply(message); setIsMenuOpen(false); }} className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm">
-                                        <IconReply className="w-4 h-4" /> Reply
-                                    </button>
-                                    {isCurrentUserMessage && (
-                                        <>
-                                            <div className="my-1 h-px bg-gray-200 dark:bg-gray-600" />
-                                            {Date.now() - message.timestamp <= 900000 && ( // 15 minutes = 900000ms
-                                                <button onClick={() => { onSetEditingMessage(message); setIsMenuOpen(false); }} className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm">
-                                                    <IconEdit className="w-4 h-4" /> Edit Message
-                                                </button>
-                                            )}
-                                             <button onClick={handleDeleteClick} className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm text-red-600 dark:text-red-400">
-                                                <IconTrash className="w-4 h-4" /> Delete Message
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            )}
+                            
                             {isDeleteMenuOpen && (
-                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-50" ref={deleteRef}>
-                                    <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-600">
-                                        <span className="text-sm font-medium">Delete Message</span>
-                                        <button onClick={() => setIsDeleteMenuOpen(false)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600">
-                                            <IconX className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                    <button onClick={handleDeleteForMe} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm">
-                                        <IconTrash className="w-4 h-4" /> Delete for me
+                                <div className="absolute left-full top-0 ml-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-50 w-48">
+                                    <button 
+                                        onClick={() => {
+                                            handleDeleteForMe();
+                                            setShowContextMenu(false);
+                                        }} 
+                                        className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+                                    >
+                                        Delete for me
                                     </button>
-                                    <button onClick={handleDeleteForEveryone} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm text-red-600 dark:text-red-400">
-                                        <IconTrash className="w-4 h-4" /> Delete for everyone
+                                    <button 
+                                        onClick={() => {
+                                            handleDeleteForEveryone();
+                                            setShowContextMenu(false);
+                                        }} 
+                                        className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
+                                    >
+                                        Delete for everyone
                                     </button>
                                     {message.isDeleted && (
-                                        <button onClick={() => { onDelete(message.id, 'permanent'); setIsDeleteMenuOpen(false); }} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 text-sm text-red-600 dark:text-red-400">
-                                            <IconTrash className="w-4 h-4" /> Delete permanently
+                                        <button 
+                                            onClick={() => {
+                                                onDelete(message.id, 'permanent');
+                                                setShowContextMenu(false);
+                                            }} 
+                                            className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
+                                        >
+                                            Delete permanently
                                         </button>
                                     )}
                                 </div>
                             )}
                         </div>
-                    </div>
+                    )}
                 </div>
-                
-                 <div className="flex flex-col gap-1 mt-1 px-1">
-                    <div className={`flex items-center gap-2 ${isCurrentUserMessage ? 'justify-end' : 'justify-start'}`}>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {message.isEdited && "Edited "}
-                            {isCurrentUserMessage && message.status === 'seen' && 'Seen'}
+            )}
+            
+            <div className="flex flex-col gap-1 mt-1 px-1">
+                <div className={`flex items-center gap-2 ${isCurrentUserMessage ? 'justify-end' : 'justify-start'}`}>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {message.isEdited && "Edited "}
+                        {isCurrentUserMessage && message.status === 'seen' && 'Seen'}
+                    </span>
+                    {isCurrentUserMessage && message.status && (
+                        <div className="flex items-center gap-1 ml-2">
+                            {message.status === 'sent' && <IconCheck className="w-3 h-3 text-gray-400" />}
+                            {message.status === 'delivered' && <IconDoubleCheck className="w-3 h-3 text-gray-400" />}
+                            {message.status === 'seen' && <IconDoubleCheck className="w-3 h-3 text-blue-500" />}
+                        </div>
+                    )}
+                </div>
+                {message.reactions && message.reactions.length > 0 && (
+                    <div className={`${reactionContainer} overflow-x-auto`}>
+                        {message.reactions.map(reaction => (
+                            <div key={reaction.emoji} className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded-full text-xs touch-manipulation flex-shrink-0">
+                                <span>{reaction.emoji}</span>
+                                <span className="font-semibold text-gray-700 dark:text-gray-200">{reaction.users.length}</span>
                         </span>
                         {isCurrentUserMessage && message.status && (
                             <div className="flex items-center gap-1 ml-2">
