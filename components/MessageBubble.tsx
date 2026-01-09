@@ -123,39 +123,107 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const [isDeleteMenuOpen, setIsDeleteMenuOpen] = useState(false);
+    const [showContextMenu, setShowContextMenu] = useState(false);
+    const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
     const menuRef = useRef<HTMLDivElement>(null);
     const emojiRef = useRef<HTMLDivElement>(null);
     const deleteRef = useRef<HTMLDivElement>(null);
+    const messageContentRef = useRef<HTMLDivElement>(null);
+    const longPressTimer = useRef<number | null>(null);
+    const isLongPressing = useRef(false);
 
+    // Handle click outside for all menus
     useEffect(() => {
-        const handleMenuClickOutside = (event: MouseEvent) => {
+        const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setIsMenuOpen(false);
             }
+            if (emojiRef.current && !emojiRef.current.contains(event.target as Node)) {
+                setIsEmojiPickerOpen(false);
+            }
+            if (deleteRef.current && !deleteRef.current.contains(event.target as Node)) {
+                setIsDeleteMenuOpen(false);
+            }
+            if (showContextMenu) {
+                setShowContextMenu(false);
+            }
         };
 
-        const handleEmojiClickOutside = (event: MouseEvent) => {
-            if (emojiRef.current && !emojiRef.current.contains(event.target as Node)) {
+        // Prevent context menu on the document
+        const handleContextMenu = (e: MouseEvent) => {
+            if ((e.target as HTMLElement).closest('.message-content')) {
+                e.preventDefault();
+                setContextMenuPosition({ x: e.clientX, y: e.clientY });
+                setShowContextMenu(true);
+                setIsMenuOpen(false);
                 setIsEmojiPickerOpen(false);
             }
         };
 
-        const handleDeleteClickOutside = (event: MouseEvent) => {
-            if (deleteRef.current && !deleteRef.current.contains(event.target as Node)) {
-                setIsDeleteMenuOpen(false);
+        // Handle long press on mobile
+        const handleTouchStart = (e: TouchEvent) => {
+            if ((e.target as HTMLElement).closest('.message-content')) {
+                isLongPressing.current = true;
+                const touch = e.touches[0];
+                const target = e.target as HTMLElement;
+                const rect = target.getBoundingClientRect();
+                
+                longPressTimer.current = window.setTimeout(() => {
+                    if (isLongPressing.current) {
+                        setContextMenuPosition({ 
+                            x: touch.clientX, 
+                            y: touch.clientY 
+                        });
+                        setShowContextMenu(true);
+                        setIsMenuOpen(false);
+                        setIsEmojiPickerOpen(false);
+                    }
+                }, 500); // 500ms for long press
             }
         };
 
-        document.addEventListener('mousedown', handleMenuClickOutside);
-        document.addEventListener('mousedown', handleEmojiClickOutside);
-        document.addEventListener('mousedown', handleDeleteClickOutside);
+        const handleTouchEnd = () => {
+            isLongPressing.current = false;
+            if (longPressTimer.current) {
+                clearTimeout(longPressTimer.current);
+            }
+        };
+
+        const handleTouchMove = () => {
+            isLongPressing.current = false;
+            if (longPressTimer.current) {
+                clearTimeout(longPressTimer.current);
+            }
+        };
+
+        // Prevent text selection when long pressing
+        const handleSelectStart = (e: Event) => {
+            if (isLongPressing.current) {
+                e.preventDefault();
+                return false;
+            }
+            return true;
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('contextmenu', handleContextMenu);
+        document.addEventListener('touchstart', handleTouchStart, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd, { passive: true });
+        document.addEventListener('touchmove', handleTouchMove, { passive: true });
+        document.addEventListener('selectstart', handleSelectStart);
 
         return () => {
-            document.removeEventListener('mousedown', handleMenuClickOutside);
-            document.removeEventListener('mousedown', handleEmojiClickOutside);
-            document.removeEventListener('mousedown', handleDeleteClickOutside);
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('contextmenu', handleContextMenu);
+            document.removeEventListener('touchstart', handleTouchStart);
+            document.removeEventListener('touchend', handleTouchEnd);
+            document.removeEventListener('touchmove', handleTouchMove);
+            document.removeEventListener('selectstart', handleSelectStart);
+            if (longPressTimer.current) {
+                clearTimeout(longPressTimer.current);
+            }
         };
-    }, []);
+    }, [showContextMenu]);
 
     const handleCopy = () => {
         navigator.clipboard.writeText(message.text);
@@ -216,7 +284,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                     </div>
                 )}
 
-                <div className={bubbleClasses}>
+                <div 
+                    className={`${bubbleClasses} message-content`}
+                    ref={messageContentRef}
+                    onContextMenu={(e) => {
+                        e.preventDefault();
+                        setContextMenuPosition({ x: e.clientX, y: e.clientY });
+                        setShowContextMenu(true);
+                    }}
+                >
                     {message.replyTo && repliedToMessage && (
                         <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-600 rounded border-l-4 border-blue-500">
                             <p className="text-xs text-gray-600 dark:text-gray-400">Replying to {repliedToMessage.author?.name}</p>
@@ -241,6 +317,59 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                        />
                     )}
                 </div>
+                {showContextMenu && (
+                    <div 
+                        className="fixed z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 py-1"
+                        style={{
+                            left: `${contextMenuPosition.x}px`,
+                            top: `${contextMenuPosition.y}px`,
+                            transform: 'translateY(-100%)',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button 
+                            onClick={() => {
+                                setIsEmojiPickerOpen(true);
+                                setShowContextMenu(false);
+                            }} 
+                            className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+                        >
+                            <IconSmile className="w-4 h-4" /> Add Reaction
+                        </button>
+                        <button 
+                            onClick={() => {
+                                onReply(message);
+                                setShowContextMenu(false);
+                            }} 
+                            className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+                        >
+                            <IconReply className="w-4 h-4" /> Reply
+                        </button>
+                        {isCurrentUserMessage && (
+                            <>
+                                <div className="my-1 h-px bg-gray-200 dark:bg-gray-600" />
+                                <button 
+                                    onClick={() => {
+                                        onSetEditingMessage(message);
+                                        setShowContextMenu(false);
+                                    }} 
+                                    className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+                                >
+                                    <IconEdit className="w-4 h-4" /> Edit
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        setIsDeleteMenuOpen(true);
+                                        setShowContextMenu(false);
+                                    }} 
+                                    className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
+                                >
+                                    <IconTrash className="w-4 h-4" /> Delete
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
                 <div className={`flex ${isCurrentUserMessage ? 'justify-end' : 'justify-start'} mt-1`}>
                     <div className="flex items-center gap-1">
                         <div className="relative">
