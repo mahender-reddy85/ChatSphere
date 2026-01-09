@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { io } from 'socket.io-client';
 import type { Message, MessageLocation } from '../types';
 import type { Settings } from '../hooks/useSettings';
 import CreatePollModal from './CreatePollModal';
@@ -37,6 +38,56 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onCreatePoll, isSe
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<number | null>(null);
+  const socketRef = useRef<any>(null);
+
+  useEffect(() => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? 'https://chatsphere-7t8g.onrender.com' : 'http://localhost:5000');
+    const socket = io(backendUrl, {
+      transports: ['websocket']
+    });
+    socketRef.current = socket;
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  const handleTyping = useCallback((isTyping: boolean) => {
+    if (!socketRef.current || !replyingMessage?.roomId) return;
+    
+    socketRef.current.emit('typing', {
+      roomId: replyingMessage.roomId,
+      userId: replyingMessage.author.id,
+      isTyping
+    });
+  }, [replyingMessage]);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value);
+    
+    if (e.target.value.trim() !== '') {
+      handleTyping(true);
+      
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      typingTimeoutRef.current = window.setTimeout(() => {
+        handleTyping(false);
+      }, 2000);
+    } else {
+      handleTyping(false);
+    }
+  }, [handleTyping]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (editingMessage) {
@@ -81,7 +132,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onCreatePoll, isSe
       onSendMessage({ text: text.trim(), audio: recordedAudio });
       setRecordedAudio(null);
     } else if (attachedFiles.length > 0) {
-      // Send text with first file, then send remaining files without text
       attachedFiles.forEach((file, index) => {
         onSendMessage({ text: index === 0 ? text.trim() : '', file });
       });
@@ -108,7 +158,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onCreatePoll, isSe
     if (files.length > 0) {
       setAttachedFiles(prev => [...prev, ...files]);
     }
-    // Reset file input
     if(fileInputRef.current) fileInputRef.current.value = "";
   };
   
@@ -263,8 +312,9 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onCreatePoll, isSe
           <textarea
             ref={textareaRef}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            onBlur={() => handleTyping(false)}
             placeholder="Type a message..."
             rows={1}
             className="flex-1 resize-none bg-gray-100 dark:bg-gray-700 rounded-lg px-4 py-2.5 border-transparent focus:outline-none focus:ring-2 focus:ring-primary-500"

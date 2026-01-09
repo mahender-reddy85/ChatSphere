@@ -15,6 +15,7 @@ export const useChat = (currentUser: User) => {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const [typingUsers, setTypingUsers] = useState<Record<string, Set<string>>>({}); // roomId -> Set of user IDs
   const socketRef = useRef<Socket | null>(null);
 
   // Load rooms from localStorage on initial load
@@ -69,6 +70,17 @@ export const useChat = (currentUser: User) => {
         const newSet = new Set(prev);
         newSet.delete(data.userId);
         return newSet;
+      });
+      // Remove user from typing indicators when they go offline
+      setTypingUsers(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(roomId => {
+          updated[roomId].delete(data.userId);
+          if (updated[roomId].size === 0) {
+            delete updated[roomId];
+          }
+        });
+        return updated;
       });
     });
 
@@ -143,6 +155,41 @@ export const useChat = (currentUser: User) => {
           ? { ...r, messages: r.messages.map(m => data.messageIds.includes(m.id) ? { ...m, status: 'seen' as const } : m) }
           : r
       ));
+    });
+
+    // Handle typing indicators
+    socket.on('user_typing', (data: { userId: string, roomId: string, isTyping: boolean }) => {
+      setTypingUsers(prev => {
+        const updated = { ...prev };
+        if (data.isTyping) {
+          if (!updated[data.roomId]) {
+            updated[data.roomId] = new Set();
+          }
+          updated[data.roomId].add(data.userId);
+          
+          // Set a timeout to remove the typing indicator after 3 seconds if no further typing
+          setTimeout(() => {
+            setTypingUsers(current => {
+              const currentSet = current[data.roomId];
+              if (currentSet && currentSet.has(data.userId)) {
+                const newSet = new Set(currentSet);
+                newSet.delete(data.userId);
+                return {
+                  ...current,
+                  [data.roomId]: newSet
+                };
+              }
+              return current;
+            });
+          }, 3000);
+        } else if (updated[data.roomId]) {
+          updated[data.roomId].delete(data.userId);
+          if (updated[data.roomId].size === 0) {
+            delete updated[data.roomId];
+          }
+        }
+        return updated;
+      });
     });
 
     return () => {
@@ -521,6 +568,21 @@ export const useChat = (currentUser: User) => {
     }
   }, [rooms, activeRoom]);
 
+  // Get active typing users for a room
+  const getActiveTypingUsers = useCallback((roomId: string): User[] => {
+    const userIds = Array.from(typingUsers[roomId] || []);
+    return userIds
+      .map(userId => {
+        // Find the user in any of the rooms
+        for (const room of rooms) {
+          const user = room.users.find(u => u === userId);
+          if (user) return MOCK_USERS[user] || { id: user, name: 'Unknown User' };
+        }
+        return null;
+      })
+      .filter(Boolean) as User[];
+  }, [typingUsers, rooms]);
+
   // Check if a user is online
   const isUserOnline = useCallback((userId: string) => {
     return onlineUsers.has(userId);
@@ -539,7 +601,7 @@ export const useChat = (currentUser: User) => {
     joinRoom,
     deleteMessage,
     togglePinMessage,
-    activeTypingUsers,
+    activeTypingUsers: activeRoom ? getActiveTypingUsers(activeRoom.id) : [],
     unreadCounts,
     searchMessages,
     clearSearch,
