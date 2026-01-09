@@ -2,9 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { User, Room, Message, Poll, SearchResult, MessageLocation } from '../types';
 import { MOCK_USERS } from '../constants';
 import { getAIBotResponse } from '../services/geminiService';
-import io from 'socket.io-client';
-
-
+import io, { Socket } from 'socket.io-client';
 
 const aiBot = MOCK_USERS['ai-bot'];
 
@@ -16,18 +14,63 @@ export const useChat = (currentUser: User) => {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const socketRef = useRef<Socket | null>(null);
 
+  // Load rooms from localStorage on initial load
+  useEffect(() => {
+    const savedRooms = localStorage.getItem('chatRooms');
+    if (savedRooms) {
+      try {
+        const parsedRooms = JSON.parse(savedRooms);
+        setRooms(prevRooms => {
+          // Only set rooms if we don't have any yet (first load)
+          return prevRooms.length === 0 ? parsedRooms : prevRooms;
+        });
+      } catch (e) {
+        console.error('Failed to parse saved rooms', e);
+      }
+    }
+  }, []);
 
-  const socketRef = useRef<any>(null);
+  // Save rooms to localStorage whenever they change
+  useEffect(() => {
+    if (rooms.length > 0) {
+      localStorage.setItem('chatRooms', JSON.stringify(rooms));
+    }
+  }, [rooms]);
 
   useEffect(() => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? 'https://chatsphere-7t8g.onrender.com' : 'http://localhost:5000');
     const socket = io(backendUrl, {
-      transports: ['websocket']
+      transports: ['websocket'],
+      auth: { userId: currentUser.id }
     });
     socketRef.current = socket;
 
-    socket.on('connect', () => console.log('Connected to backend server'));
+    socket.on('connect', () => {
+      console.log('Connected to backend server');
+      // Notify server that user is online
+      socket.emit('user_online', { userId: currentUser.id });
+    });
+
+    // Handle online users update
+    socket.on('online_users', (data: { users: string[] }) => {
+      setOnlineUsers(new Set(data.users));
+    });
+
+    // Handle user online/offline events
+    socket.on('user_online', (data: { userId: string }) => {
+      setOnlineUsers(prev => new Set(prev).add(data.userId));
+    });
+
+    socket.on('user_offline', (data: { userId: string }) => {
+      setOnlineUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(data.userId);
+        return newSet;
+      });
+    });
 
     socket.on('receive_message', (data: { message: Message }) => {
       const { message } = data;
@@ -94,8 +137,6 @@ export const useChat = (currentUser: User) => {
       }));
     });
 
-
-
     socket.on('message_status_update', (data: { messageIds: string[], status: 'seen' }) => {
       setRooms(prev => prev.map(r =>
         r.id === activeRoom?.id
@@ -105,9 +146,13 @@ export const useChat = (currentUser: User) => {
     });
 
     return () => {
+      // Notify server that user is going offline
+      if (socket.connected) {
+        socket.emit('user_offline', { userId: currentUser.id });
+      }
       socket.disconnect();
     };
-  }, []);
+  }, [currentUser.id]);
 
   useEffect(() => {
     if (socketRef.current && rooms.length > 0) {
@@ -118,35 +163,33 @@ export const useChat = (currentUser: User) => {
       });
     }
   }, [rooms, currentUser.id]);
-  
-  useEffect(() => {
-      const selfChatInitialMessage: Message = {
-        id: `msg-self-intro-${currentUser.id}`,
-        author: currentUser,
-        timestamp: Date.now(),
-        text: "This is your personal space. You can send messages, files, and notes to yourself here.",
-        reactions: [],
-      };
-      
-      const aiChatInitialMessage: Message = {
-        id: `msg-ai-intro-${currentUser.id}`,
-        author: aiBot,
-        timestamp: Date.now(),
-        text: "Hello! I'm your AI Assistant. How can I help you today?",
-        reactions: [],
-      };
 
-      // Fix: Explicitly type `allRooms` as `Room[]` to ensure its properties match the `Room` type,
-      // resolving assignment errors for `setRooms` and `setActiveRoom`.
-      const allRooms: Room[] = [
-        { id: `self-chat-${currentUser.id}`, name: '(You)', type: 'self', users: [currentUser.id], messages: [selfChatInitialMessage], privacy: 'private' },
-        { id: `ai-chat-${currentUser.id}`, name: 'AI Assistant', type: 'ai', users: [currentUser.id, 'ai-bot'], messages: [aiChatInitialMessage], privacy: 'private' },
-      ];
-      setRooms(allRooms);
-      if(!activeRoom){
-        const firstRoom = allRooms.find(r => r.type === 'self') || allRooms[0];
-        setActiveRoom(firstRoom);
-      }
+  useEffect(() => {
+    const selfChatInitialMessage: Message = {
+      id: `msg-self-intro-${currentUser.id}`,
+      author: currentUser,
+      timestamp: Date.now(),
+      text: "This is your personal space. You can send messages, files, and notes to yourself here.",
+      reactions: [],
+    };
+    
+    const aiChatInitialMessage: Message = {
+      id: `msg-ai-intro-${currentUser.id}`,
+      author: aiBot,
+      timestamp: Date.now(),
+      text: "Hello! I'm your AI Assistant. How can I help you today?",
+      reactions: [],
+    };
+
+    const allRooms: Room[] = [
+      { id: `self-chat-${currentUser.id}`, name: '(You)', type: 'self', users: [currentUser.id], messages: [selfChatInitialMessage], privacy: 'private' },
+      { id: `ai-chat-${currentUser.id}`, name: 'AI Assistant', type: 'ai', users: [currentUser.id, 'ai-bot'], messages: [aiChatInitialMessage], privacy: 'private' },
+    ];
+    setRooms(allRooms);
+    if(!activeRoom){
+      const firstRoom = allRooms.find(r => r.type === 'self') || allRooms[0];
+      setActiveRoom(firstRoom);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser.id, currentUser]);
 
@@ -155,7 +198,7 @@ export const useChat = (currentUser: User) => {
         setUnreadCounts(prev => ({...prev, [activeRoom.id]: 0}));
     }
   }, [activeRoom]);
-  
+
   const createRoom = (name: string): string => {
     const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     const newRoomId = `${slug}-${Math.random().toString(36).substr(2, 4)}`;
@@ -347,7 +390,6 @@ export const useChat = (currentUser: User) => {
       ));
   }, [activeRoom]);
 
-
   const sendPoll = useCallback((pollData: { question: string, options: string[], location?: string }) => {
     if (!activeRoom) return;
     const newPoll: Poll = {
@@ -479,5 +521,31 @@ export const useChat = (currentUser: User) => {
     }
   }, [rooms, activeRoom]);
 
-  return { rooms, activeRoom, setActiveRoom, sendMessage, sendPoll, handleVote, handleReaction, isSending, createRoom, joinRoom, activeTypingUsers, unreadCounts, deleteMessage, togglePinMessage, searchMessages, clearSearch, searchResults, isSearching, deleteRoom };
+  // Check if a user is online
+  const isUserOnline = useCallback((userId: string) => {
+    return onlineUsers.has(userId);
+  }, [onlineUsers]);
+
+  return {
+    rooms,
+    activeRoom,
+    setActiveRoom,
+    sendMessage,
+    sendPoll,
+    handleVote,
+    handleReaction,
+    isSending,
+    createRoom,
+    joinRoom,
+    deleteMessage,
+    togglePinMessage,
+    activeTypingUsers,
+    unreadCounts,
+    searchMessages,
+    clearSearch,
+    searchResults,
+    isSearching,
+    deleteRoom,
+    isUserOnline,
+  };
 };
