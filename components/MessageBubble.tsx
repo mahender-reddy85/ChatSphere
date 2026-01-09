@@ -4,7 +4,7 @@ import Avatar from './Avatar';
 import PollDisplay from './PollDisplay';
 import ImageModal from './ImageModal';
 import EmojiPicker from './EmojiPicker';
-import { IconFile, IconMapPin, IconTrash, IconCheck, IconDoubleCheck, IconSmile, IconDots, IconCopy, IconPin, IconReply, IconEdit, IconX } from './Icons';
+import { IconFile, IconMapPin, IconTrash, IconCheck, IconDoubleCheck, IconSmile, IconCopy, IconPin, IconReply, IconEdit, IconX } from './Icons';
 
 interface MessageBubbleProps {
     message: Message;
@@ -120,7 +120,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [selectedImageUrl, setSelectedImageUrl] = useState('');
     const [selectedImageName, setSelectedImageName] = useState('');
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const [isDeleteMenuOpen, setIsDeleteMenuOpen] = useState(false);
     const [showContextMenu, setShowContextMenu] = useState(false);
@@ -135,9 +134,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
     // Handle click outside for all menus
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setIsMenuOpen(false);
-            }
             if (emojiRef.current && !emojiRef.current.contains(event.target as Node)) {
                 setIsEmojiPickerOpen(false);
             }
@@ -155,7 +151,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                 e.preventDefault();
                 setContextMenuPosition({ x: e.clientX, y: e.clientY });
                 setShowContextMenu(true);
-                setIsMenuOpen(false);
                 setIsEmojiPickerOpen(false);
             }
         };
@@ -165,8 +160,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
             if ((e.target as HTMLElement).closest('.message-content')) {
                 isLongPressing.current = true;
                 const touch = e.touches[0];
-                const target = e.target as HTMLElement;
-                const rect = target.getBoundingClientRect();
                 
                 longPressTimer.current = window.setTimeout(() => {
                     if (isLongPressing.current) {
@@ -175,7 +168,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                             y: touch.clientY 
                         });
                         setShowContextMenu(true);
-                        setIsMenuOpen(false);
                         setIsEmojiPickerOpen(false);
                     }
                 }, 500); // 500ms for long press
@@ -226,22 +218,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
     }, [showContextMenu]);
 
     const handleCopy = () => {
-        navigator.clipboard.writeText(message.text);
-        setIsMenuOpen(false);
-    };
-
-    const handleDeleteClick = () => {
-        setIsDeleteMenuOpen(true);
-        setIsMenuOpen(false);
+        if (message.text) {
+            navigator.clipboard.writeText(message.text);
+        }
+        setShowContextMenu(false);
     };
 
     const handleDeleteForMe = () => {
         onDelete(message.id, 'for_me');
-        setIsDeleteMenuOpen(false);
-    };
-
-    const handleDeleteForEveryone = () => {
-        onDelete(message.id, 'for_everyone');
         setIsDeleteMenuOpen(false);
     };
 
@@ -312,6 +296,54 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                        <PollDisplay
                             poll={message.poll}
                             currentUser={currentUser}
+                            onVote={handleVote}
+                            isCurrentUserMessage={isCurrentUserMessage}
+                        />
+                    )}
+                </div>
+
+                <div className="flex items-center gap-2 mt-1 px-1">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {message.isEdited ? 'Edited ' : ''}
+                        {isCurrentUserMessage && message.status === 'seen' ? 'Seen' : ''}
+                    </span>
+                    {isCurrentUserMessage && message.status && (
+                        <div className="flex items-center gap-1 ml-2">
+                            {message.status === 'sent' && <IconCheck className="w-3 h-3 text-gray-400" />}
+                            {message.status === 'delivered' && <IconDoubleCheck className="w-3 h-3 text-gray-400" />}
+                            {message.status === 'seen' && <IconDoubleCheck className="w-3 h-3 text-blue-500" />}
+                        </div>
+                    )}
+                </div>
+
+                {message.reactions && message.reactions.length > 0 && (
+                    <div className={`${reactionContainer} overflow-x-auto`}>
+                        {message.reactions.map(reaction => (
+                            <div key={reaction.emoji} className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded-full text-xs touch-manipulation flex-shrink-0">
+                                <span>{reaction.emoji}</span>
+                                <span className="font-semibold text-gray-700 dark:text-gray-200">
+                                    {reaction.users.length}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Context Menu - Shows on right-click or long-press */}
+            {showContextMenu && (
+                <div 
+                    className="fixed z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 py-1 w-48"
+                    style={{
+                        left: `${Math.min(contextMenuPosition.x, window.innerWidth - 200)}px`,
+                        top: `${Math.min(contextMenuPosition.y, window.innerHeight - 300)}px`,
+                    }}
+                    ref={menuRef}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <button 
+                        onClick={handleCopy}
+                        className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
                     >
                         <IconCopy className="w-4 h-4" /> Copy Text
                     </button>
@@ -378,7 +410,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                                 <div className="absolute left-full top-0 ml-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-50 w-48">
                                     <button 
                                         onClick={() => {
-                                            handleDeleteForMe();
+                                            onDelete(message.id, 'for_me');
                                             setShowContextMenu(false);
                                         }} 
                                         className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
@@ -387,7 +419,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                                     </button>
                                     <button 
                                         onClick={() => {
-                                            handleDeleteForEveryone();
+                                            onDelete(message.id, 'for_everyone');
                                             setShowContextMenu(false);
                                         }} 
                                         className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
@@ -412,54 +444,37 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                 </div>
             )}
             
-            <div className="flex flex-col gap-1 mt-1 px-1">
-                <div className={`flex items-center gap-2 ${isCurrentUserMessage ? 'justify-end' : 'justify-start'}`}>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {message.isEdited && "Edited "}
-                        {isCurrentUserMessage && message.status === 'seen' && 'Seen'}
-                    </span>
-                    {isCurrentUserMessage && message.status && (
-                        <div className="flex items-center gap-1 ml-2">
-                            {message.status === 'sent' && <IconCheck className="w-3 h-3 text-gray-400" />}
-                            {message.status === 'delivered' && <IconDoubleCheck className="w-3 h-3 text-gray-400" />}
-                            {message.status === 'seen' && <IconDoubleCheck className="w-3 h-3 text-blue-500" />}
-                        </div>
-                    )}
+            {imageModalOpen && (
+                <ImageModal
+                    isOpen={imageModalOpen}
+                    imageUrl={selectedImageUrl}
+                    imageName={selectedImageName}
+                    onClose={() => setImageModalOpen(false)}
+                />
+            )}
+            
+            {/* Emoji Picker */}
+            {isEmojiPickerOpen && (
+                <div 
+                    ref={emojiRef}
+                    className="fixed z-50"
+                    style={{
+                        left: `${Math.min(contextMenuPosition.x, window.innerWidth - 300)}px`,
+                        top: `${Math.min(contextMenuPosition.y, window.innerHeight - 400)}px`,
+                    }}
+                >
+                    <EmojiPicker
+                        onEmojiClick={(_: any, emojiObject: { unified: string }) => {
+                            handleReaction(String.fromCodePoint(parseInt(emojiObject.unified, 16)));
+                            setIsEmojiPickerOpen(false);
+                        }}
+                        disableSearchBar={true}
+                        disableSkinTonePicker={true}
+                        native={true}
+                        style={{ width: '300px', height: '350px' }}
+                    />
                 </div>
-                {message.reactions && message.reactions.length > 0 && (
-                    <div className={`${reactionContainer} overflow-x-auto`}>
-                        {message.reactions.map(reaction => (
-                            <div key={reaction.emoji} className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded-full text-xs touch-manipulation flex-shrink-0">
-                                <span>{reaction.emoji}</span>
-                                <span className="font-semibold text-gray-700 dark:text-gray-200">{reaction.users.length}</span>
-                        </span>
-                        {isCurrentUserMessage && message.status && (
-                            <div className="flex items-center gap-1 ml-2">
-                                {message.status === 'sent' && <IconCheck className="w-3 h-3 text-gray-400" />}
-                                {message.status === 'delivered' && <IconDoubleCheck className="w-3 h-3 text-gray-400" />}
-                                {message.status === 'seen' && <IconDoubleCheck className="w-3 h-3 text-blue-500" />}
-                            </div>
-                        )}
-                    </div>
-                    {message.reactions && message.reactions.length > 0 && (
-                        <div className={`${reactionContainer} overflow-x-auto`}>
-                            {message.reactions.map(reaction => (
-                                <div key={reaction.emoji} className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded-full text-xs touch-manipulation flex-shrink-0">
-                                    <span>{reaction.emoji}</span>
-                                    <span className="font-semibold text-gray-700 dark:text-gray-200">{reaction.users.length}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                 </div>
-            </div>
-
-            <ImageModal
-                isOpen={imageModalOpen}
-                onClose={() => setImageModalOpen(false)}
-                imageUrl={selectedImageUrl}
-                imageName={selectedImageName}
-            />
+            )}
         </div>
     );
 };
