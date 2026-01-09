@@ -45,6 +45,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [replyingMessage, setReplyingMessage] = useState<Message | null>(null);
   const [showMembersModal, setShowMembersModal] = useState(false);
+  
+  // Debug: Log typing users
+  useEffect(() => {
+    console.log('Current typing users:', typingUsers);
+  }, [typingUsers]);
 
   useEffect(() => {
     if (!jumpToMessageId) {
@@ -140,7 +145,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ room, currentUser, sendMessage,
         <div ref={messagesEndRef} />
       </div>
 
-      <TypingIndicator users={typingUsers} />
+      {typingUsers.length > 0 && <TypingIndicator users={typingUsers} />}
 
       <ChatInput
         onSendMessage={handleSendMessage}

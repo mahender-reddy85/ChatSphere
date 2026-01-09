@@ -17,6 +17,7 @@ export const useChat = (currentUser: User) => {
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [typingUsers, setTypingUsers] = useState<Record<string, Set<string>>>({}); // roomId -> Set of user IDs
   const socketRef = useRef<Socket | null>(null);
+  const typingTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
 
   // Load rooms from localStorage on initial load
   useEffect(() => {
@@ -159,8 +160,14 @@ export const useChat = (currentUser: User) => {
 
     // Handle typing indicators
     socket.on('user_typing', (data: { userId: string, roomId: string, isTyping: boolean }) => {
+      console.log('Received typing event:', data);
+      
+      // Skip if it's the current user
+      if (data.userId === currentUser.id) return;
+      
       setTypingUsers(prev => {
         const updated = { ...prev };
+        
         if (data.isTyping) {
           if (!updated[data.roomId]) {
             updated[data.roomId] = new Set();
@@ -168,12 +175,13 @@ export const useChat = (currentUser: User) => {
           updated[data.roomId].add(data.userId);
           
           // Set a timeout to remove the typing indicator after 3 seconds if no further typing
-          setTimeout(() => {
+          const timeoutId = setTimeout(() => {
             setTypingUsers(current => {
               const currentSet = current[data.roomId];
               if (currentSet && currentSet.has(data.userId)) {
                 const newSet = new Set(currentSet);
                 newSet.delete(data.userId);
+                console.log('Auto-removed typing indicator for user', data.userId, 'in room', data.roomId);
                 return {
                   ...current,
                   [data.roomId]: newSet
@@ -182,12 +190,26 @@ export const useChat = (currentUser: User) => {
               return current;
             });
           }, 3000);
+          
+          // Store the timeout ID so we can clear it if needed
+          const timeoutKey = `${data.roomId}-${data.userId}`;
+          typingTimeouts.current[timeoutKey] = timeoutId;
+          
         } else if (updated[data.roomId]) {
+          // Clear any pending timeout for this user
+          const timeoutKey = `${data.roomId}-${data.userId}`;
+          if (typingTimeouts.current[timeoutKey]) {
+            clearTimeout(typingTimeouts.current[timeoutKey]);
+            delete typingTimeouts.current[timeoutKey];
+          }
+          
           updated[data.roomId].delete(data.userId);
           if (updated[data.roomId].size === 0) {
             delete updated[data.roomId];
           }
         }
+        
+        console.log('Updated typing users:', updated);
         return updated;
       });
     });
@@ -570,9 +592,16 @@ export const useChat = (currentUser: User) => {
 
   // Get active typing users for a room
   const getActiveTypingUsers = useCallback((roomId: string): User[] => {
+    if (!roomId) return [];
+    
     const userIds = Array.from(typingUsers[roomId] || []);
+    console.log('Typing users for room', roomId, ':', userIds);
+    
     return userIds
       .map(userId => {
+        // Skip the current user
+        if (userId === currentUser.id) return null;
+        
         // Find the user in any of the rooms
         for (const room of rooms) {
           const user = room.users.find(u => u === userId);
@@ -581,7 +610,7 @@ export const useChat = (currentUser: User) => {
         return null;
       })
       .filter(Boolean) as User[];
-  }, [typingUsers, rooms]);
+  }, [typingUsers, rooms, currentUser.id]);
 
   // Check if a user is online
   const isUserOnline = useCallback((userId: string) => {
