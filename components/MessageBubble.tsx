@@ -224,9 +224,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
         setShowContextMenu(false);
     };
 
-    const handleDeleteForMe = () => {
-        onDelete(message.id, 'for_me');
+    const handleDelete = (type: 'for_me' | 'for_everyone' | 'permanent') => {
+        onDelete(message.id, type);
         setIsDeleteMenuOpen(false);
+        setShowContextMenu(false);
     };
 
     const handleVote = (optionId: string) => {
@@ -409,34 +410,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                             {isDeleteMenuOpen && (
                                 <div className="absolute left-full top-0 ml-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-50 w-48">
                                     <button 
-                                        onClick={() => {
-                                            onDelete(message.id, 'for_me');
-                                            setShowContextMenu(false);
-                                        }} 
+                                        onClick={() => handleDelete('for_me')} 
                                         className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
                                     >
                                         Delete for me
                                     </button>
                                     <button 
-                                        onClick={() => {
-                                            onDelete(message.id, 'for_everyone');
-                                            setShowContextMenu(false);
-                                        }} 
+                                        onClick={() => handleDelete('for_everyone')} 
                                         className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
                                     >
-                                        Delete for everyone
+                                        Delete permanently
                                     </button>
-                                    {message.isDeleted && (
-                                        <button 
-                                            onClick={() => {
-                                                onDelete(message.id, 'permanent');
-                                                setShowContextMenu(false);
-                                            }} 
-                                            className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
-                                        >
-                                            Delete permanently
-                                        </button>
-                                    )}
                                 </div>
                             )}
                         </div>
