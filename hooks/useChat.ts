@@ -220,6 +220,27 @@ export const useChat = (currentUser: User) => {
       });
     });
 
+    // Update activeTypingUsers when typingUsers or activeRoom changes
+    useEffect(() => {
+      if (!activeRoom) return;
+      
+      const userIds = Array.from(typingUsers[activeRoom.id] || []);
+      const users = userIds
+        .filter(userId => userId !== currentUser.id) // Filter out current user
+        .map(userId => {
+          // Find the user in any of the rooms
+          for (const room of rooms) {
+            const user = room.users.find(u => u === userId);
+            if (user) return MOCK_USERS[user] || { id: user, name: 'Unknown User' };
+          }
+          return null;
+        })
+        .filter(Boolean) as User[];
+      
+      setActiveTypingUsers(users);
+      console.log('Active typing users updated:', users);
+    }, [typingUsers, activeRoom, currentUser.id, rooms]);
+
     return () => {
       // Notify server that user is going offline
       if (socket.connected) {
