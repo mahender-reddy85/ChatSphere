@@ -6,6 +6,7 @@ import CreatePollModal from './CreatePollModal';
 import CameraCaptureModal from './CameraCaptureModal';
 import LocationModal from './LocationModal';
 import { IconSend, IconPaperclip, IconX, IconPoll, IconFile, IconCamera, IconMic, IconTrash, IconMapPin } from './Icons';
+import { useChat } from '../hooks/useChat';
 
 interface ChatInputProps {
   onSendMessage: (payload: { text: string; audio?: { blob: Blob; duration: number }; file?: File, location?: MessageLocation }, editingMessageId?: string) => void;
@@ -17,9 +18,15 @@ interface ChatInputProps {
   onOpenSettings: () => void;
   replyingMessage: Message | null;
   onCancelReply: () => void;
+  currentUser: any;
+  room: {
+    id: string;
+    type: string;
+    name: string;
+  };
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onCreatePoll, isSending, settings, editingMessage, onCancelEdit, replyingMessage, onCancelReply }) => {
+const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onCreatePoll, isSending, settings, editingMessage, onCancelEdit, replyingMessage, onCancelReply, currentUser, room }) => {
   const [text, setText] = useState('');
   const [isPollModalOpen, setPollModalOpen] = useState(false);
   const [isCameraModalOpen, setCameraModalOpen] = useState(false);
@@ -40,6 +47,8 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onCreatePoll, isSe
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const socketRef = useRef<any>(null);
+  // Get the current user from the replying message or use a default
+  const currentUserId = currentUser?.id;
 
   useEffect(() => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? 'https://chatsphere-7t8g.onrender.com' : 'http://localhost:5000');
@@ -54,25 +63,31 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onCreatePoll, isSe
   }, []);
 
   const handleTyping = useCallback((isTyping: boolean) => {
-    if (!socketRef.current || !replyingMessage?.roomId) return;
+    if (!socketRef.current || !currentUserId || !room?.id) return;
+    
+    console.log(`Sending typing event:`, { roomId: room.id, userId: currentUserId, isTyping });
     
     socketRef.current.emit('typing', {
-      roomId: replyingMessage.roomId,
-      userId: replyingMessage.author.id,
+      roomId: room.id,
+      userId: currentUserId,
       isTyping
     });
-  }, [replyingMessage]);
+  }, [currentUserId, room?.id]);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setText(e.target.value);
+    const newValue = e.target.value;
+    setText(newValue);
     
-    if (e.target.value.trim() !== '') {
+    // Clear any existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Only send typing indicator if there's actual content
+    if (newValue.trim() !== '') {
       handleTyping(true);
       
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      
+      // Set a timeout to stop the typing indicator after 2 seconds of inactivity
       typingTimeoutRef.current = window.setTimeout(() => {
         handleTyping(false);
       }, 2000);
@@ -128,6 +143,13 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onCreatePoll, isSe
   }, [isRecording]);
 
   const handleSend = () => {
+    // Clear any pending typing indicator timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    // Send stop typing indicator
+    handleTyping(false);
     if (recordedAudio) {
       onSendMessage({ text: text.trim(), audio: recordedAudio });
       setRecordedAudio(null);
