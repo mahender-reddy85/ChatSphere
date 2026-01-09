@@ -159,11 +159,11 @@ export const useChat = (currentUser: User) => {
     });
 
     // Handle typing indicators
-    socket.on('user_typing', (data: { userId: string, roomId: string, isTyping: boolean }) => {
+    socket.on('user_typing', (data: { userId: string, roomId: string, isTyping: boolean, isSelf?: boolean, timestamp?: number }) => {
       console.log('Received typing event:', data);
       
-      // Skip if it's the current user
-      if (data.userId === currentUser.id) return;
+      // Skip if it's the current user (unless it's a self-event for debugging)
+      if (data.userId === currentUser.id && !data.isSelf) return;
       
       setTypingUsers(prev => {
         const updated = { ...prev };
@@ -174,7 +174,14 @@ export const useChat = (currentUser: User) => {
           }
           updated[data.roomId].add(data.userId);
           
-          // Set a timeout to remove the typing indicator after 3 seconds if no further typing
+          // Clear any existing timeout for this user
+          const timeoutKey = `${data.roomId}-${data.userId}`;
+          if (typingTimeouts.current[timeoutKey]) {
+            clearTimeout(typingTimeouts.current[timeoutKey]);
+            delete typingTimeouts.current[timeoutKey];
+          }
+          
+          // Set a new timeout to remove the typing indicator after 3 seconds if no further typing
           const timeoutId = setTimeout(() => {
             setTypingUsers(current => {
               const currentSet = current[data.roomId];
@@ -191,12 +198,11 @@ export const useChat = (currentUser: User) => {
             });
           }, 3000);
           
-          // Store the timeout ID so we can clear it if needed
-          const timeoutKey = `${data.roomId}-${data.userId}`;
+          // Store the new timeout ID
           typingTimeouts.current[timeoutKey] = timeoutId;
           
         } else if (updated[data.roomId]) {
-          // Clear any pending timeout for this user
+          // User stopped typing - clear the indicator
           const timeoutKey = `${data.roomId}-${data.userId}`;
           if (typingTimeouts.current[timeoutKey]) {
             clearTimeout(typingTimeouts.current[timeoutKey]);

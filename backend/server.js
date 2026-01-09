@@ -130,8 +130,24 @@ io.on("connection", (socket) => {
 
   // Handle typing indicators
   socket.on('typing', ({ roomId, userId, isTyping }) => {
+    console.log(`User ${userId} is ${isTyping ? 'typing' : 'not typing'} in room ${roomId}`);
     if (roomId && userId) {
-      socket.to(roomId).emit('user_typing', { userId, isTyping });
+      // Broadcast to everyone in the room except the sender
+      socket.to(roomId).emit('user_typing', { 
+        userId, 
+        roomId, 
+        isTyping,
+        timestamp: Date.now()
+      });
+      
+      // Also send to the sender (for debugging and consistency)
+      socket.emit('user_typing', {
+        userId,
+        roomId,
+        isTyping,
+        timestamp: Date.now(),
+        isSelf: true
+      });
     }
   });
 
