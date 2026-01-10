@@ -93,7 +93,10 @@ app.use(express.json());
 /* =========================
    REST ROUTES
 ========================= */
-app.use('/api/users', userRoutes);
+// Routes with /api/auth prefix for authentication
+app.use('/api/auth', userRoutes);
+
+// Other API routes
 app.use('/api/messages', messageRoutes);
 app.use('/api/rooms', roomRoutes);
 
