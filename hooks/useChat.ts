@@ -49,6 +49,31 @@ export const useChat = (currentUser: User) => {
   const socketRef = useRef<Socket | null>(null);
   const typingTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
 
+  // Helper function to get active typing users
+  const getActiveTypingUsers = useCallback((roomId: string): User[] => {
+    if (!roomId) return [];
+    
+    const userIds = Array.from(typingUsers[roomId] || []);
+    return userIds
+      .map(userId => {
+        // Skip the current user
+        if (userId === currentUser.id) return null;
+        
+        // Find the user in any of the rooms
+        for (const room of rooms) {
+          const user = room.users.find(u => u === userId);
+          if (user) return MOCK_USERS[user] || { id: user, name: 'Unknown User' };
+        }
+        return null;
+      })
+      .filter(Boolean) as User[];
+  }, [typingUsers, currentUser.id, rooms]);
+
+  // Helper function to check if a user is online
+  const isUserOnline = useCallback((userId: string): boolean => {
+    return onlineUsers.has(userId);
+  }, [onlineUsers]);
+
   // Initialize rooms on first render
   useEffect(() => {
     // Helper function to create a properly typed message
@@ -84,15 +109,17 @@ export const useChat = (currentUser: User) => {
         type: 'self', 
         users: [currentUser.id], 
         messages: [selfChatInitialMessage],
-        privacy: 'private' as const
+        privacy: 'private' as const,
+        activeCall: undefined
       },
       { 
         id: aiChatId,
         name: 'AI Assistant', 
-        type: 'ai', 
+        type: 'ai' as const, 
         users: [currentUser.id, 'ai-bot'], 
         messages: [aiChatInitialMessage],
-        privacy: 'private' as const
+        privacy: 'private' as const,
+        activeCall: undefined
       },
     ];
     
@@ -324,50 +351,6 @@ export const useChat = (currentUser: User) => {
     }
   }, [rooms, currentUser.id]);
 
-  useEffect(() => {
-    const selfChatInitialMessage: Message = {
-      id: `msg-self-intro-${currentUser.id}`,
-      author: currentUser,
-      timestamp: Date.now(),
-      text: "This is your personal space. You can send messages, files, and notes to yourself here.",
-      reactions: [],
-    };
-    
-    const aiChatInitialMessage: Message = {
-      id: `msg-ai-intro-${currentUser.id}`,
-      author: aiBot,
-      timestamp: Date.now(),
-      text: "Hello! I'm your AI Assistant. How can I help you today?",
-      reactions: [],
-    };
-
-    const allRooms: Room[] = [
-      { 
-        id: `self-chat-${currentUser.id}`, 
-        name: '(You)', 
-        type: 'self', 
-        users: [currentUser.id], 
-        messages: [selfChatInitialMessage], 
-        privacy: 'private' 
-      },
-      { 
-        id: `ai-chat-${currentUser.id}`, 
-        name: 'AI Assistant', 
-        type: 'ai', 
-        users: [currentUser.id, 'ai-bot'], 
-        messages: [aiChatInitialMessage],
-        privacy: 'private' 
-      },
-    ];
-    
-    setRooms(prevRooms => prevRooms.length > 0 ? prevRooms : allRooms);
-    
-    if (!activeRoom) {
-      const firstRoom = allRooms.find(r => r.type === 'self') || allRooms[0];
-      setActiveRoom(firstRoom);
-    }
-  }, [currentUser.id]);
-
   const updateReactions = useCallback((message: ExtendedMessage, existingReaction: Reaction | undefined, newReactions: Reaction[]) => {
     if (existingReaction) {
       const userIndex = existingReaction.users.indexOf(currentUser.id);
@@ -417,285 +400,69 @@ export const useChat = (currentUser: User) => {
     }
   }, [currentUser.id]);
 
-  const handleReaction = useCallback((messageId: string, emoji: string) => {
-    if (!activeRoom) {
-      console.log('No active room');
-      return;
-    }
-
+  const handleVote = useCallback((messageId: string, optionId: string) => {
+    if (!activeRoom) return;
+    
     setRooms(prevRooms => {
       return prevRooms.map(room => {
         if (room.id !== activeRoom.id) return room;
-    id: `poll-${Date.now()}`,
-    question,
-    options: options.map((text, index) => ({
-      id: `opt-${index}`,
-      text,
-      votes: [],
-    })),
-  };
-
-  const message: ExtendedMessage = {
-    id: `msg-${Date.now()}`,
-    author: currentUser,
-    text: question,
-    timestamp: Date.now(),
-    status: 'sending',
-    reactions: [],
-    type: 'poll',
-    roomId: activeRoom.id,
-    poll,
-  };
-
-  // Emit poll to server
-  if (socketRef.current) {
-    socketRef.current.emit('send_message', {
-      ...message,
-      roomId: activeRoom.id,
+        
+        const updatedMessages = room.messages.map(message => {
+          if (message.id !== messageId || !message.poll) return message;
+          
+          const newOptions = message.poll.options.map(option => {
+            // Remove user's vote from all options
+            const votes = option.votes.filter(voterId => voterId !== currentUser.id);
+            
+            // Add vote to selected option if not already voted
+            if (option.id === optionId && !option.votes.includes(currentUser.id)) {
+              votes.push(currentUser.id);
+            }
+            
+            return { ...option, votes };
+          });
+          
+          return {
+            ...message,
+            poll: {
+              ...message.poll,
+              options: newOptions,
+              totalVotes: newOptions.reduce((sum, opt) => sum + opt.votes.length, 0)
+            }
+          } as ExtendedMessage; // Cast to ExtendedMessage to satisfy type checker
+        });
+        
+        return { ...room, messages: updatedMessages };
+      });
     });
-  }
-
-  // Update local state optimistically
-  setRooms(prev => prev.map(room => 
-    room.id === activeRoom.id
-      ? { ...room, messages: [...room.messages, message] }
-      : room
-  ));
-}, [activeRoom, currentUser, socketRef]);
-
-const handleVote = useCallback((messageId: string, optionId: string) => {
-  if (!activeRoom) return;
-  
-  // Update local state
-  setRooms(prev => prev.map(room => {
-    if (room.id !== activeRoom.id) return room;
     
-    return {
-      ...room,
-      messages: room.messages.map(message => {
-        if (message.id !== messageId || !message.poll) return message;
-        
-        // Toggle vote
-        const newOptions = message.poll.options.map(option => {
-          // Remove user's vote from all options
-          const votes = option.votes.filter(voterId => voterId !== currentUser.id);
-          
-          // Add vote to selected option if not already voted
-          if (option.id === optionId && !option.votes.includes(currentUser.id)) {
-            votes.push(currentUser.id);
-          }
-          
-          return { ...option, votes };
-        });
-        
-        return {
-          ...message,
-          poll: {
-            ...message.poll,
-            options: newOptions,
-            totalVotes: newOptions.reduce((sum, opt) => sum + opt.votes.length, 0)
-          }
-        };
-      })
-    };
-  }));
-  
-  // Emit vote to server
-  if (socketRef.current) {
-    socketRef.current.emit('vote_poll', {
-      roomId: activeRoom.id,
-      messageId,
-      optionId,
-      userId: currentUser.id
-    });
-  }
-}, [activeRoom, currentUser.id, socketRef]);
-
-const createRoom = useCallback((name: string, userIds: string[], type: 'group' | 'ai' | 'self' = 'group', privacy: 'public' | 'private' = 'private') => {
-  const roomId = `room-${Date.now()}`;
-  const newRoom: Room = {
-    id: roomId,
-    name,
-    type,
-    users: [currentUser.id, ...userIds],
-    messages: [],
-    privacy,
-  };
-  
-  setRooms(prev => [...prev, newRoom]);
-  
-  // Emit to server if needed
-  if (socketRef.current) {
-    socketRef.current.emit('create_room', newRoom);
-  }
-  
-  return newRoom;
-}, [currentUser.id, socketRef]);
-
-const joinRoom = useCallback((roomId: string, password?: string) => {
-  if (socketRef.current) {
-    socketRef.current.emit('join_room', { roomId, password });
-  }
-  
-  // The actual room joining logic will be handled by the socket event handlers
-  // that update the rooms state when the server confirms the join
-}, [socketRef]);
-
-const deleteMessage = useCallback((messageId: string) => {
-  if (!activeRoom) return;
-  
-  // Update local state
-  setRooms(prev => prev.map(room => 
-    room.id === activeRoom.id
-      ? { ...room, messages: room.messages.filter(m => m.id !== messageId) }
-      : room
-  ));
-  
-  // Emit to server
-  if (socketRef.current) {
-    socketRef.current.emit('delete_message', {
-      roomId: activeRoom.id,
-      messageId,
-    });
-  }
-}, [activeRoom, socketRef]);
-
-const togglePinMessage = useCallback((messageId: string, pin: boolean) => {
-  if (!activeRoom) return;
-  
-  // Update local state
-  setRooms(prev => prev.map(room => 
-    room.id === activeRoom.id
-      ? {
-          ...room,
-          messages: room.messages.map(m => 
-            m.id === messageId 
-              ? { ...m, isPinned: pin }
-              : pin && m.isPinned 
-                ? { ...m, isPinned: false } // Unpin other messages if needed
-                : m
-          )
-        }
-      : room
-  ));
-  
-  // Emit to server
-  if (socketRef.current) {
-    socketRef.current.emit(pin ? 'pin_message' : 'unpin_message', {
-      roomId: activeRoom.id,
-      messageId,
-    });
-  }
-}, [activeRoom, socketRef]);
-
-const clearSearch = useCallback(() => {
-  setSearchResults([]);
-  setIsSearching(false);
-}, []);
-
-const searchMessages = useCallback((query: string, scope: 'all' | 'current' = 'all') => {
-  if (!query.trim()) {
-    setSearchResults([]);
-    setIsSearching(false);
-    return;
-  }
-  
-  const lowerCaseQuery = query.toLowerCase();
-  const results: SearchResult[] = [];
-  
-  const roomsToSearch = scope === 'current' && activeRoom ? [activeRoom] : rooms;
-
-  for (const room of roomsToSearch) {
-    for (const message of room.messages) {
-      if (message.text && message.text.toLowerCase().includes(lowerCaseQuery)) {
-        results.push({
-          message,
-          roomId: room.id,
-          roomName: room.name,
-        });
-      }
-    }
-  }
-
-  setSearchResults(results.sort((a, b) => b.message.timestamp - a.message.timestamp));
-  setIsSearching(true);
-}, [rooms, activeRoom]);
-
-const deleteRoom = useCallback((roomId: string) => {
-  try {
-    // Don't allow deleting self or AI chats
-    const roomToDelete = rooms.find(r => r.id === roomId);
-    if (!roomToDelete || roomToDelete.type === 'self' || roomToDelete.type === 'ai') {
-      console.warn('Cannot delete self or AI chats');
-      return false;
-    }
-
-    // Update rooms state
-    setRooms(prev => {
-      const updatedRooms = prev.filter(r => r.id !== roomId);
-      return updatedRooms;
-    });
-
-    // If the deleted room was active, switch to self chat
-    if (activeRoom?.id === roomId) {
-      const selfRoom = rooms.find(r => r.type === 'self');
-      if (selfRoom) {
-        setActiveRoom(selfRoom);
-      }
-    }
-
-    // Emit delete event to server if needed
+    // Emit vote to server
     if (socketRef.current) {
-      socketRef.current.emit('delete_room', { roomId });
+      socketRef.current.emit('vote_poll', {
+        roomId: activeRoom.id,
+        messageId,
+        optionId,
+        userId: currentUser.id
+      });
     }
+  }, [activeRoom, currentUser.id, socketRef]);
 
-    return true;
-  } catch (error) {
-    console.error('Error deleting room:', error);
-    return false;
-  }
-}, [rooms, activeRoom, setActiveRoom, socketRef]);
-
-const getActiveTypingUsers = useCallback((roomId: string): User[] => {
-  if (!roomId) return [];
-  
-  const userIds = Array.from(typingUsers[roomId] || []);
-  console.log('Typing users for room', roomId, ':', userIds);
-  
-  return userIds
-    .map(userId => {
-      // Skip the current user
-      if (userId === currentUser.id) return null;
-      
-      // Find the user in any of the rooms
-      for (const room of rooms) {
-        const user = room.users.find(u => u === userId);
-        if (user) return MOCK_USERS[user] || { id: user, name: 'Unknown User' };
-      }
-      return null;
-    })
-    .filter(Boolean) as User[];
-}, [typingUsers, rooms, currentUser.id]);
-
-const isUserOnline = useCallback((userId: string) => {
-  return onlineUsers.has(userId);
-}, [onlineUsers]);
-
-return {
-  rooms,
-  activeRoom,
-  setActiveRoom,
-  sendMessage,
-  sendPoll,
-  handleVote,
-  handleReaction,
-  isSending,
-  createRoom,
-  joinRoom,
-  deleteMessage,
-  togglePinMessage,
-  activeTypingUsers: activeRoom ? getActiveTypingUsers(activeRoom.id) : [],
-  unreadCounts,
+  return {
+    rooms,
+    activeRoom,
+    setActiveRoom,
+    sendMessage,
+    deleteMessage,
+    togglePinMessage,
+    activeTypingUsers: activeRoom ? getActiveTypingUsers(activeRoom.id) : [],
+    unreadCounts,
+    searchMessages,
+    clearSearch,
+    searchResults,
+    isSearching,
+    deleteRoom,
+    isUserOnline,
+  };
   searchMessages,
   clearSearch,
   searchResults,
