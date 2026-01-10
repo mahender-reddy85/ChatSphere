@@ -113,7 +113,9 @@ const getOnlineUsers = () => {
    SOCKET EVENTS
 ========================= */
 io.on('connection', (socket) => {
-  // Initialize socket data for every new connection
+  console.log(`🟢 New connection: ${socket.id}`);
+  
+  // ✅ ALWAYS initialize here for every socket
   socket.data.joinedRooms = new Set();
   
   // Update connection stats
@@ -124,7 +126,7 @@ io.on('connection', (socket) => {
     connectionStats.activeConnections
   );
 
-  console.log(`🟢 New connection: ${socket.id} (${connectionStats.activeConnections} active)`);
+  console.log(`Active connections: ${connectionStats.activeConnections}`);
   
   // Set up heartbeat for connection monitoring
   let isAlive = true;
@@ -142,8 +144,10 @@ io.on('connection', (socket) => {
   });
 
   // Clean up on disconnect
-  socket.on('disconnect', () => {
-    // Leave all joined rooms
+  socket.on('disconnect', (reason) => {
+    console.log(`🔴 User disconnected (${socket.id}): ${reason}`);
+    
+    // Clean up rooms
     if (socket.data.joinedRooms) {
       socket.data.joinedRooms.forEach(roomId => {
         socket.leave(roomId);
@@ -154,7 +158,7 @@ io.on('connection', (socket) => {
     clearInterval(heartbeatInterval);
     connectionStats.activeConnections--;
     connectionStats.lastDisconnect = new Date();
-    console.log(`🔴 Disconnected: ${socket.id} (${connectionStats.activeConnections} active)`);
+    console.log(`Active connections: ${connectionStats.activeConnections}`);
   });
 
   // Handle user authentication and track online status
@@ -188,6 +192,9 @@ io.on('connection', (socket) => {
     // Handle room joining with validation and duplicate prevention
   socket.on('join_room', (data, callback) => {
     try {
+      // ✅ extra safety: if for any reason it's missing, recreate
+      if (!socket.data.joinedRooms) socket.data.joinedRooms = new Set();
+      
       // Validate input
       if (!data) {
         throw new Error('Join data is required');
@@ -201,12 +208,20 @@ io.on('connection', (socket) => {
         throw new Error('roomId is required');
       }
 
-      // Get or create user data
-      const userData = connectedUsers.get(userId) || { socketId: socket.id, joinedRooms: new Set() };
-      
+      // Get or create user data if userId is provided
+      let userData = null;
+      if (userId) {
+        userData = connectedUsers.get(userId) || { 
+          socketId: socket.id, 
+          username: userName || 'Anonymous',
+          joinedRooms: new Set() 
+        };
+        connectedUsers.set(userId, userData);
+      }
+
       // Check if already in room
-      if (userData.joinedRooms.has(roomId)) {
-        console.log(`User ${userId || socket.id} already in room ${roomId}`);
+      if (socket.data.joinedRooms.has(roomId)) {
+        console.log(`User ${userName || userId || socket.id} already in room ${roomId}`);
         safeEmit(socket, 'join_room_response', { 
           success: true, 
           roomId, 
@@ -218,10 +233,16 @@ io.on('connection', (socket) => {
 
       // Join room and update tracking
       socket.join(roomId);
-      userData.joinedRooms.add(roomId);
-      userData.username = userName || userData.username || 'Anonymous';
+      socket.data.joinedRooms.add(roomId);
       
-      if (userId) {
+      // Update user data if available
+      if (userData) {
+        userData.joinedRooms.add(roomId);
+        userData.username = userName || userData.username || 'Anonymous';
+        userData.socketId = socket.id; // Update socket ID in case of reconnection
+      }
+      
+      console.log(`User ${userName || userId || 'Anonymous'} joined room ${roomId}`);
 
       // Broadcast to room that user has joined (except sender)
       if (userName) {
@@ -237,11 +258,11 @@ io.on('connection', (socket) => {
       }
 
       // Send success response to the client
-      socket.emit('room_joined', { 
+      safeEmit(socket, 'join_room_response', { 
+        success: true, 
         roomId, 
-        success: true,
         message: `Successfully joined room ${roomId}`
-      });
+      }, callback);
       
     } catch (error) {
       console.error('Error joining room:', error);
