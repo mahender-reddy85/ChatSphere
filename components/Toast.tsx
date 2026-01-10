@@ -1,8 +1,10 @@
 import React, { useEffect } from 'react';
 
-interface ToastProps {
+export type ToastType = 'success' | 'error' | 'info';
+
+export interface ToastProps {
     message: string;
-    type: 'success' | 'error' | 'info';
+    type: ToastType;
     onClose: () => void;
 }
 

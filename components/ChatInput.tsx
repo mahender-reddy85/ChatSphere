@@ -7,6 +7,7 @@ import CameraCaptureModal from './CameraCaptureModal';
 import LocationModal from './LocationModal';
 import { IconSend, IconPaperclip, IconX, IconPoll, IconFile, IconCamera, IconMic, IconTrash, IconMapPin } from './Icons';
 import { useChat } from '../hooks/useChat';
+import { toast } from '../hooks/useToast';
 
 interface ChatInputProps {
   onSendMessage: (payload: { text: string; audio?: { blob: Blob; duration: number }; file?: File, location?: MessageLocation }, editingMessageId?: string) => void;
@@ -221,7 +222,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onCreatePoll, isSe
         setIsRecording(true);
       } catch (err) {
         console.error("Error accessing microphone:", err);
-        alert("Could not access microphone. Please check permissions.");
       }
     }
   };

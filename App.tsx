@@ -3,6 +3,7 @@ import ChatRoom from './components/ChatRoom';
 import AuthForm from './components/AuthForm';
 import { useAuth } from './hooks/useAuth';
 import { useSettings } from './hooks/useSettings';
+import { ToastProvider } from './hooks/useToast';
 
 const App: React.FC = () => {
   // Fix: Destructure `login` from `useAuth` to pass it to the AuthForm.
@@ -39,10 +40,12 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`h-screen font-sans text-gray-800 dark:text-gray-200 overflow-hidden`}>
-      {/* Fix: Pass the login and logout functions to child components. */}
-      {user && !showLoginPage ? <ChatRoom user={user} updateUser={updateUser} logout={logout} onOpenLogin={handleOpenLogin} {...settingProps} /> : <AuthForm onLogin={handleLogin} />}
-    </div>
+    <ToastProvider>
+      <div className={`h-screen font-sans text-gray-800 dark:text-gray-200 overflow-hidden`}>
+        {/* Fix: Pass the login and logout functions to child components. */}
+        {user && !showLoginPage ? <ChatRoom user={user} updateUser={updateUser} logout={logout} onOpenLogin={handleOpenLogin} {...settingProps} /> : <AuthForm onLogin={handleLogin} />}
+      </div>
+    </ToastProvider>
   );
 };
 
