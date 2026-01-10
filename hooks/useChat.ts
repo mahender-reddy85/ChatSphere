@@ -636,3 +636,4 @@ export const useChat = (currentUser: User) => {
     deleteRoom,
     isUserOnline,
   };
+};
