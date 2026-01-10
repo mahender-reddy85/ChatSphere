@@ -124,6 +124,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
     const [isDeleteMenuOpen, setIsDeleteMenuOpen] = useState(false);
     const [showContextMenu, setShowContextMenu] = useState(false);
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+    const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
     const menuRef = useRef<HTMLDivElement>(null);
     const emojiRef = useRef<HTMLDivElement>(null);
     const deleteRef = useRef<HTMLDivElement>(null);
@@ -217,9 +218,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
         };
     }, [showContextMenu]);
 
-    const handleCopy = () => {
-        if (message.text) {
-            navigator.clipboard.writeText(message.text);
+    const handleCopy = async () => {
+        try {
+            if (message.text) {
+                await navigator.clipboard.writeText(message.text);
+                setCopyStatus('copied');
+                setTimeout(() => setCopyStatus('idle'), 2000);
+            }
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
         }
         setShowContextMenu(false);
     };
@@ -346,7 +353,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                         onClick={handleCopy}
                         className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
                     >
-                        <IconCopy className="w-4 h-4" /> Copy Text
+                        <IconCopy className="w-4 h-4" /> {copyStatus === 'copied' ? 'Copied!' : 'Copy Text'}
                     </button>
                     
                     <button 
@@ -448,14 +455,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                     }}
                 >
                     <EmojiPicker
-                        onEmojiClick={(_: any, emojiObject: { unified: string }) => {
-                            handleReaction(String.fromCodePoint(parseInt(emojiObject.unified, 16)));
-                            setIsEmojiPickerOpen(false);
-                        }}
-                        disableSearchBar={true}
-                        disableSkinTonePicker={true}
-                        native={true}
-                        style={{ width: '300px', height: '350px' }}
+                        onSelect={handleReaction}
+                        onClose={() => setIsEmojiPickerOpen(false)}
                     />
                 </div>
             )}
