@@ -57,11 +57,27 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSendLo
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClose();
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          onClose();
+        }
+      }}
     >
       <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
       >
         <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
           <h2 className="text-lg font-semibold dark:text-white">Share Location</h2>

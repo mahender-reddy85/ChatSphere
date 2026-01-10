@@ -6,7 +6,6 @@ import ImageModal from './ImageModal';
 import EmojiPicker from './EmojiPicker';
 import {
   IconFile,
-  IconMapPin,
   IconTrash,
   IconCheck,
   IconDoubleCheck,
@@ -51,19 +50,34 @@ const FileAttachment = ({
 }) => {
   if (file.type.startsWith('image/')) {
     return (
-      <img
-        src={file.url}
-        alt={file.name}
-        className="max-w-xs max-h-64 rounded-lg mt-2 cursor-pointer hover:opacity-90 transition-opacity"
+      <button
         onClick={() => onImageClick(file.url, file.name)}
-      />
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onImageClick(file.url, file.name);
+          }
+        }}
+        className="max-w-xs max-h-64 rounded-lg mt-2 cursor-pointer hover:opacity-90 transition-opacity p-0 border-0 bg-transparent"
+        aria-label={`Open ${file.name}`}
+      >
+        <img src={file.url} alt={file.name} className="w-full h-full object-contain rounded-lg" />
+      </button>
     );
   }
   if (file.type.startsWith('video/')) {
-    return <video src={file.url} controls className="max-w-xs rounded-lg mt-2" />;
+    return (
+      <video src={file.url} controls className="max-w-xs rounded-lg mt-2">
+        <track kind="captions" srcLang="en" src="" />
+      </video>
+    );
   }
   if (file.type.startsWith('audio/')) {
-    return <audio src={file.url} controls className="w-full mt-2" />;
+    return (
+      <audio src={file.url} controls className="w-full mt-2">
+        <track kind="captions" srcLang="en" src="" />
+      </audio>
+    );
   }
   return (
     <a
@@ -92,7 +106,9 @@ const AudioAttachment = ({
         controls
         src={audio.url}
         className={`w-full ${isCurrentUserMessage ? 'filter-audio-white' : ''}`}
-      ></audio>
+      >
+        <track kind="captions" srcLang="en" src="" />
+      </audio>
       <style>{`
                 .filter-audio-white {
                     filter: invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1000%) contrast(100%);
@@ -325,6 +341,40 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     };
   }, [showContextMenu]);
 
+  // Focus delete dialog when it's shown so keyboard events (Escape) are captured
+  useEffect(() => {
+    if (showDeleteConfirm) {
+      setTimeout(() => deleteRef.current?.focus(), 0);
+    }
+  }, [showDeleteConfirm]);
+
+  // Close delete dialog when clicking outside (uses document listener to avoid adding handlers to non-interactive elements)
+  useEffect(() => {
+    if (!showDeleteConfirm) return;
+    const handleDocClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (deleteRef.current && !deleteRef.current.contains(target)) {
+        setShowDeleteConfirm(false);
+      }
+    };
+
+    const handleDocKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowDeleteConfirm(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleDocClick);
+    document.addEventListener('touchstart', handleDocClick);
+    document.addEventListener('keydown', handleDocKeydown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleDocClick);
+      document.removeEventListener('touchstart', handleDocClick);
+      document.removeEventListener('keydown', handleDocKeydown);
+    };
+  }, [showDeleteConfirm]);
+
   const handleCopy = async () => {
     try {
       let textToCopy = message.text || '';
@@ -430,11 +480,24 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         <div
           className={`${bubbleClasses} message-content`}
           ref={messageContentRef}
+          role="button"
+          tabIndex={0}
           onContextMenu={(e) => {
             e.preventDefault();
             e.stopPropagation();
             setContextMenuPosition({ x: e.clientX, y: e.clientY });
             setShowContextMenu(true);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+              e.preventDefault();
+              const rect = (e.target as HTMLElement).getBoundingClientRect();
+              setContextMenuPosition({
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2,
+              });
+              setShowContextMenu(true);
+            }
           }}
         >
           {message.replyTo && repliedToMessage && (
@@ -511,6 +574,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             overflowY: 'auto',
           }}
           ref={menuRef}
+          role="menu"
+          tabIndex={-1}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -644,7 +713,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           <div
             className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden transform transition-all"
             ref={deleteRef}
-            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
           >
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import type { Room, User } from '../types';
 import {
   IconAI,
@@ -9,8 +9,6 @@ import {
   IconLock,
   IconGlobe,
   IconTrash,
-  IconCheck,
-  IconX,
 } from './Icons';
 import JoinRoomModal from './JoinRoomModal';
 import CreateRoomModal from './CreateRoomModal';
@@ -20,8 +18,8 @@ import Avatar from './Avatar';
 import { toast } from '../hooks/toastService';
 
 interface RoomListProps {
-  rooms: any[];
-  activeRoom: any | null;
+  rooms: Room[];
+  activeRoom: Room | null;
   setActiveRoom: (room: any) => void;
   createRoom: (name: string) => string;
   joinRoom: (
@@ -106,7 +104,9 @@ const RoomList: React.FC<RoomListProps> = ({
                     <Avatar user={currentUser} size="sm" />
                     <div className="ml-3 flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="truncate font-semibold">{room.name}</span>
+                        <div className="flex items-center">
+                          <span className="truncate font-semibold">{room.name}</span>
+                        </div>
                       </div>
                     </div>
                   </>
@@ -115,7 +115,14 @@ const RoomList: React.FC<RoomListProps> = ({
                     <RoomIcon room={room} />
                     <div className="ml-3 flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="truncate font-semibold">{room.name}</span>
+                        <div className="flex items-center">
+                          <span className="truncate font-semibold">{room.name}</span>
+                          {unreadCount > 0 && (
+                            <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-600 text-white">
+                              {unreadCount}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       {isGroup && (
                         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">

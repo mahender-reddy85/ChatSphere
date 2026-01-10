@@ -70,11 +70,27 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose, onJoin }
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"
-      onClick={handleClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleClose();
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          handleClose();
+        }
+      }}
     >
       <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
       >
         <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
           <h2 className="text-lg font-semibold dark:text-white">Join a Room</h2>
@@ -118,7 +134,6 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose, onJoin }
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="This room is private"
                 className="w-full mt-1 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                autoFocus
               />
             </div>
           )}

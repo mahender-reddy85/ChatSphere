@@ -37,7 +37,9 @@ const CallView: React.FC<CallViewProps> = ({
     <div className="fixed inset-0 bg-black flex flex-col">
       <div className="flex-1 relative">
         {remoteStream ? (
-          <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+          <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover">
+            <track kind="captions" srcLang="en" src="" />
+          </video>
         ) : (
           <div className="w-full h-full bg-gray-800 flex items-center justify-center">
             <p className="text-white">Connecting...</p>
@@ -50,7 +52,9 @@ const CallView: React.FC<CallViewProps> = ({
             playsInline
             muted
             className="absolute top-4 right-4 w-32 h-24 rounded-lg border-2 border-white"
-          />
+          >
+            <track kind="captions" srcLang="en" src="" />
+          </video>
         )}
       </div>
       <div className="p-4 flex justify-center space-x-4">

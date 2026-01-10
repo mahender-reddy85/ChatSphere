@@ -65,6 +65,7 @@ For AI features, set `VITE_GEMINI_API_KEY` in a GitHub Actions secret or note th
 ## Environment Variables
 
 See `.env.example` for configuration. Key variables:
+
 - `VITE_GEMINI_API_KEY`: Required for AI bot responses.
 - `VITE_BASE_URL`: Optional for custom base paths in builds (e.g., subdomains).
 

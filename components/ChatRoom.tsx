@@ -117,6 +117,14 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
         <div
           className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
           onClick={() => setIsSidebarOpen(false)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsSidebarOpen(false);
+            }
+          }}
         ></div>
       )}
 

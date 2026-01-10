@@ -121,11 +121,27 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClose();
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          onClose();
+        }
+      }}
     >
       <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
       >
         <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
           <h2 className="text-lg font-semibold dark:text-white">Profile & Settings</h2>
@@ -144,6 +160,14 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
               <div
                 className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center cursor-pointer"
                 onClick={() => document.getElementById('profile-picture-upload')?.click()}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    document.getElementById('profile-picture-upload')?.click();
+                  }
+                }}
               >
                 {profilePicture ? (
                   <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
@@ -197,6 +221,7 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
+                    aria-label="Toggle Enter to send"
                     checked={settings.enterToSend}
                     onChange={toggleEnterToSend}
                     className="sr-only peer"

@@ -1,10 +1,5 @@
 {
   "name": "ChatSphere",
   "description": "A real-time chat application featuring persistent messaging, typing indicators, and a powerful AI chatbot.",
-  "requestFramePermissions": [
-    "microphone",
-    "camera",
-    "display-capture",
-    "geolocation"
-  ]
+  "requestFramePermissions": ["microphone", "camera", "display-capture", "geolocation"]
 }

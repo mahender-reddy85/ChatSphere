@@ -153,7 +153,9 @@ const VideoCallModal: React.FC<VideoCallModalProps> = ({ room, currentUser, onLe
             autoPlay
             muted
             className={`w-full h-full object-cover ${isCameraOff ? 'hidden' : ''}`}
-          />
+          >
+            <track kind="captions" srcLang="en" src="" />
+          </video>
           {isCameraOff && (
             <div className="w-full h-full flex items-center justify-center bg-gray-900">
               <Avatar user={participant} size={isThumb ? 'md' : 'lg'} />
@@ -178,7 +180,9 @@ const VideoCallModal: React.FC<VideoCallModalProps> = ({ room, currentUser, onLe
       >
         <div className="flex-1 bg-black rounded-lg overflow-hidden flex items-center justify-center">
           {isScreenSharing ? (
-            <video ref={screenVideoRef} autoPlay className="w-full h-full object-contain" />
+            <video ref={screenVideoRef} autoPlay className="w-full h-full object-contain">
+              <track kind="captions" srcLang="en" src="" />
+            </video>
           ) : (
             <div className={`w-full h-full grid ${gridClasses} gap-4`}>
               {participants.map((p) => (

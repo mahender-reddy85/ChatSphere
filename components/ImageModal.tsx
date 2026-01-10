@@ -23,9 +23,23 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, imageUrl, imag
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-90 z-50 flex justify-center items-center p-4"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClose();
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          onClose();
+        }
+      }}
     >
-      <div className="relative max-w-4xl max-h-full" onClick={(e) => e.stopPropagation()}>
+      <div className="relative max-w-4xl max-h-full" role="dialog" aria-modal="true" tabIndex={-1}>
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-70"

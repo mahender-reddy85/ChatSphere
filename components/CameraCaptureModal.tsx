@@ -99,11 +99,27 @@ const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ isOpen, onClose
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-80 z-50 flex justify-center items-center p-4"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClose();
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          onClose();
+        }
+      }}
     >
       <div
         className="bg-gray-900 rounded-lg shadow-xl w-full max-w-2xl"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
       >
         <div className="relative aspect-video bg-black flex items-center justify-center rounded-t-lg">
           {error ? (
@@ -119,7 +135,9 @@ const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ isOpen, onClose
               className="w-full h-full object-contain rounded-t-lg"
             />
           ) : (
-            <video ref={videoRef} autoPlay playsInline className="w-full h-full rounded-t-lg" />
+            <video ref={videoRef} autoPlay playsInline className="w-full h-full rounded-t-lg">
+              <track kind="captions" srcLang="en" src="" />
+            </video>
           )}
           <button
             onClick={onClose}

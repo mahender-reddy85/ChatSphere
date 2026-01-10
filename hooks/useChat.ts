@@ -38,12 +38,9 @@ import io, { Socket } from 'socket.io-client';
 const aiBot = MOCK_USERS['ai-bot'];
 
 export const useChat = (currentUser: User) => {
-
-
   const [rooms, setRooms] = useState<ExtendedRoom[]>([]);
   const [activeRoom, setActiveRoom] = useState<ExtendedRoom | null>(null);
-  const [isSending, _setIsSending] = useState(false);
-  const [activeTypingUsers, _setActiveTypingUsers] = useState<User[]>([]);
+  const [isSending] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -561,7 +558,7 @@ export const useChat = (currentUser: User) => {
       if (payload.file) {
         try {
           const url = await uploadFile(payload.file, roomId, messageId);
-          message.file = { url, name: payload.file.name, type: payload.file.type } as any;
+          message.file = { url, name: payload.file.name, type: payload.file.type } as MessageFile;
         } catch (e) {
           // upload failed; continue without file
           console.error('File upload failed', e);

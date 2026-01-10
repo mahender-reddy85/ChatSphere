@@ -132,12 +132,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         ) : (
           <>
             <RoomIcon room={room} />
-            <h2
-              className="text-lg font-semibold ml-3 text-gray-800 dark:text-gray-100 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300"
+            <button
+              type="button"
+              className="text-lg font-semibold ml-3 text-gray-800 dark:text-gray-100"
               onClick={() => setShowMembersModal(true)}
             >
               {room.name}
-            </h2>
+            </button>
           </>
         )}
         <div className="ml-auto"></div>
@@ -214,10 +215,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         <div
           className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"
           onClick={() => setShowMembersModal(false)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setShowMembersModal(false);
+            }
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              setShowMembersModal(false);
+            }
+          }}
         >
           <div
             className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
           >
             <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
               <h2 className="text-lg font-semibold dark:text-white">Members</h2>

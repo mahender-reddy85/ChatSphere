@@ -51,7 +51,9 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
     if (isVideo(file.type)) {
       return (
         <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
-          <video src={previewUrl} controls className="w-full h-full object-cover" />
+          <video src={previewUrl} controls className="w-full h-full object-cover">
+            <track kind="captions" srcLang="en" src="" />
+          </video>
           {isUploading && (
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
               <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -71,7 +73,9 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
               <div className="text-sm text-gray-500">
                 {fileSize ? formatFileSize(fileSize) : 'Calculating...'}
               </div>
-              <audio src={previewUrl} controls className="w-full mt-2" />
+              <audio src={previewUrl} controls className="w-full mt-2">
+                <track kind="captions" srcLang="en" src="" />
+              </audio>
             </div>
           </div>
           {isUploading && (

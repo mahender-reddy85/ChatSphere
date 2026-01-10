@@ -13,7 +13,7 @@ interface SearchResultsModalProps {
 
 const highlightText = (text: string, query: string): React.ReactNode => {
   if (!query.trim()) return text;
-  const regex = new RegExp(`(${query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+  const regex = new RegExp(`(${query.replace(/[-\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
   const parts = text.split(regex);
   return (
     <>
@@ -54,14 +54,32 @@ const SearchResultsModal: React.FC<SearchResultsModalProps> = ({
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-start pt-16 p-4"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClose();
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          onClose();
+        }
+      }}
     >
       <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl h-[70vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
       >
         <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center flex-shrink-0">
-          <h2 className="text-lg font-semibold dark:text-white">Search Results for "{query}"</h2>
+          <h2 className="text-lg font-semibold dark:text-white">
+            Search Results for &quot;{query}&quot;
+          </h2>
           <button
             onClick={onClose}
             className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"

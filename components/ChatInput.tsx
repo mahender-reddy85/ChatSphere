@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
-import type { Message, MessageLocation } from '../types';
+import type { Socket } from 'socket.io-client';
+import type { Message, MessageLocation, User } from '../types';
 import type { Settings } from '../hooks/useSettings';
 import CreatePollModal from './CreatePollModal';
 import CameraCaptureModal from './CameraCaptureModal';
@@ -35,7 +36,7 @@ interface ChatInputProps {
   onOpenSettings: () => void;
   replyingMessage: Message | null;
   onCancelReply: () => void;
-  currentUser: any;
+  currentUser: User;
   room: {
     id: string;
     type: string;
@@ -74,7 +75,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
-  const socketRef = useRef<any>(null);
+  const socketRef = useRef<Socket | null>(null);
   // Get the current user from the replying message or use a default
   const currentUserId = currentUser?.id;
 
