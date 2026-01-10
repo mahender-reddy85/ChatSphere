@@ -8,12 +8,20 @@ interface JoinRoomModalProps {
     roomId: string,
     password?: string
   ) =>
-    | Promise<'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined'>
+    | Promise<
+        | 'joined'
+        | 'needs_password'
+        | 'invalid_password'
+        | 'not_found'
+        | 'already_joined'
+        | 'server_error'
+      >
     | 'joined'
     | 'needs_password'
     | 'invalid_password'
     | 'not_found'
-    | 'already_joined';
+    | 'already_joined'
+    | 'server_error';
 }
 
 const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose, onJoin }) => {
@@ -42,6 +50,9 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose, onJoin }
           break;
         case 'not_found':
           setError('Invalid invite code.');
+          break;
+        case 'server_error':
+          setError('Unable to reach the server. Please try again later.');
           break;
         case 'already_joined':
           setError('You are already in this room.');

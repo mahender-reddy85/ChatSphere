@@ -1,44 +1,43 @@
 import express from 'express';
-import { pool } from '../db.js';
+import { rooms } from '../dataStore.js';
 
 const router = express.Router();
 
 // Get all rooms
-router.get('/', async (req, res) => {
+router.get('/', (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM rooms');
-    res.json(rows);
+    res.json(rooms);
   } catch (err) {
-    console.error(err);
+    console.error('Error fetching rooms (in-memory):', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
 // Create a room
-router.post('/', async (req, res) => {
-  const { name, type, privacy, password, createdBy } = req.body;
+router.post('/', (req, res) => {
+  const { name, type = 'group', privacy = 'public', password, createdBy } = req.body;
   try {
     const id = `room-${Date.now()}`;
-    await pool.query(
-      'INSERT INTO rooms (id, name, type, privacy, password, created_by) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, name, type, privacy, password, createdBy]
-    );
+    const room = { id, name, type, privacy, password, createdBy };
+    rooms.push(room);
     res.status(201).json({ id, name, type, privacy, createdBy });
   } catch (err) {
-    console.error(err);
+    console.error('Error creating room (in-memory):', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
 // Join a room
-router.post('/:roomId/join', async (req, res) => {
+router.post('/:roomId/join', (req, res) => {
   const { roomId } = req.params;
-  const { userId } = req.body;
   try {
-    await pool.query('INSERT INTO room_users (room_id, user_id) VALUES (?, ?)', [roomId, userId]);
+    const room = rooms.find((r) => r.id === roomId);
+    if (!room) return res.status(404).json({ message: 'Room not found' });
+    // In-memory membership handling is lightweight for now
+    // (client keeps users in its own state)
     res.json({ message: 'Joined room successfully' });
   } catch (err) {
-    console.error(err);
+    console.error('Error joining room (in-memory):', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

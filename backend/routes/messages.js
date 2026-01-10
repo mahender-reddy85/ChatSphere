@@ -1,36 +1,33 @@
 import express from 'express';
-import { pool } from '../db.js';
+import { messages } from '../dataStore.js';
 
 const router = express.Router();
 
 // Get messages for a room
-router.get('/:roomId', async (req, res) => {
+router.get('/:roomId', (req, res) => {
   const { roomId } = req.params;
   try {
-    const [rows] = await pool.query(
-      'SELECT * FROM messages WHERE room_id = ? ORDER BY timestamp ASC',
-      [roomId]
-    );
-    res.json(rows);
+    const roomMessages = messages
+      .filter((m) => m.roomId === roomId)
+      .sort((a, b) => a.timestamp - b.timestamp);
+    res.json(roomMessages);
   } catch (err) {
-    console.error(err);
+    console.error('Error fetching messages (in-memory):', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
 // Send a message
-router.post('/', async (req, res) => {
+router.post('/', (req, res) => {
   const { roomId, authorId, text, type = 'text' } = req.body;
   try {
     const timestamp = Date.now();
     const id = `msg-${timestamp}`;
-    await pool.query(
-      'INSERT INTO messages (id, room_id, author_id, text, type, timestamp) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, roomId, authorId, text, type, timestamp]
-    );
-    res.status(201).json({ id, roomId, authorId, text, type, timestamp });
+    const message = { id, roomId, authorId, text, type, timestamp };
+    messages.push(message);
+    res.status(201).json(message);
   } catch (err) {
-    console.error(err);
+    console.error('Error sending message (in-memory):', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

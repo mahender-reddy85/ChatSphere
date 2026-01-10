@@ -802,7 +802,12 @@ export const useChat = (currentUser: User) => {
       roomId: string,
       password?: string
     ): Promise<
-      'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined'
+      | 'joined'
+      | 'needs_password'
+      | 'invalid_password'
+      | 'not_found'
+      | 'already_joined'
+      | 'server_error'
     > => {
       // Trim and normalize the room ID
       const normalizedRoomId = roomId.trim();
@@ -820,10 +825,18 @@ export const useChat = (currentUser: User) => {
               : 'http://localhost:5000');
           const resp = await fetch(`${backendUrl.replace(/\/$/, '')}/api/rooms`);
           if (!resp.ok) {
-            console.warn('Could not fetch rooms from backend');
-            return 'not_found';
+            console.warn('Could not fetch rooms from backend', resp.status, resp.statusText);
+            return 'server_error';
           }
-          const serverRooms: Array<Record<string, any>> = await resp.json();
+          interface ServerRoom {
+            id: string;
+            name?: string;
+            privacy?: 'private' | 'public';
+            password?: string;
+            type?: string;
+          }
+
+          const serverRooms: ServerRoom[] = await resp.json();
           const found = serverRooms.find(
             (r) => r.id && r.id.toLowerCase() === normalizedRoomId.toLowerCase()
           );
@@ -878,7 +891,7 @@ export const useChat = (currentUser: User) => {
           return 'joined';
         } catch (err) {
           console.error('Error looking up room on backend:', err);
-          return 'not_found';
+          return 'server_error';
         }
       }
 

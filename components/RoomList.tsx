@@ -20,18 +20,26 @@ import { toast } from '../hooks/toastService';
 interface RoomListProps {
   rooms: Room[];
   activeRoom: Room | null;
-  setActiveRoom: (room: any) => void;
+  setActiveRoom: (room: Room | null) => void;
   createRoom: (name: string) => string;
   joinRoom: (
     roomId: string,
     password?: string
   ) =>
-    | Promise<'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined'>
+    | Promise<
+        | 'joined'
+        | 'needs_password'
+        | 'invalid_password'
+        | 'not_found'
+        | 'already_joined'
+        | 'server_error'
+      >
     | 'joined'
     | 'needs_password'
     | 'invalid_password'
     | 'not_found'
-    | 'already_joined';
+    | 'already_joined'
+    | 'server_error';
   deleteRoom: (roomId: string) => void;
   unreadCounts: Record<string, number>;
   onSearch: (query: string, scope: 'current' | 'all') => void;
