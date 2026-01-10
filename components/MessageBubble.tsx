@@ -117,14 +117,27 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
             </div>
         );
     }
+
+    // State for image modal
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [selectedImageUrl, setSelectedImageUrl] = useState('');
     const [selectedImageName, setSelectedImageName] = useState('');
+    
+    // State for emoji picker
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-    const [isDeleteMenuOpen, setIsDeleteMenuOpen] = useState(false);
+    
+    // State for context menu
     const [showContextMenu, setShowContextMenu] = useState(false);
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+    
+    // State for delete functionality
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteForEveryone, setDeleteForEveryone] = useState(false);
+    const [isDeleteMenuOpen, setIsDeleteMenuOpen] = useState(false);
+    
+    // State for copy feedback
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
+
     const menuRef = useRef<HTMLDivElement>(null);
     const emojiRef = useRef<HTMLDivElement>(null);
     const deleteRef = useRef<HTMLDivElement>(null);
@@ -138,8 +151,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
             if (emojiRef.current && !emojiRef.current.contains(event.target as Node)) {
                 setIsEmojiPickerOpen(false);
             }
-            if (deleteRef.current && !deleteRef.current.contains(event.target as Node)) {
-                setIsDeleteMenuOpen(false);
+            if (deleteRef.current && !deleteRef.current.contains(event.target as Node) && showDeleteConfirm) {
+                setShowDeleteConfirm(false);
             }
             if (showContextMenu && menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setShowContextMenu(false);
@@ -151,19 +164,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
             const target = e.target as HTMLElement;
             const messageContent = target.closest('.message-content');
             const isInsideMessageBubble = target.closest(`#message-${message.id}`);
-            
+
             if (messageContent && isInsideMessageBubble) {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 // Calculate position to ensure menu stays within viewport
                 const x = Math.min(e.clientX, window.innerWidth - 200);
                 const y = Math.min(e.clientY, window.innerHeight - 300);
-                
+
                 setContextMenuPosition({ x, y });
                 setShowContextMenu(true);
                 setIsEmojiPickerOpen(false);
-                setIsDeleteMenuOpen(false);
             } else if (showContextMenu) {
                 setShowContextMenu(false);
             }
@@ -174,7 +186,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
             if ((e.target as HTMLElement).closest('.message-content')) {
                 isLongPressing.current = true;
                 const touch = e.touches[0];
-                
+
                 longPressTimer.current = window.setTimeout(() => {
                     if (isLongPressing.current) {
                         setContextMenuPosition({ 
@@ -241,7 +253,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
             } else if (message.location) {
                 textToCopy = `https://www.openstreetmap.org/?mlat=${message.location.latitude}&mlon=${message.location.longitude}`;
             }
-            
+
             if (textToCopy) {
                 await navigator.clipboard.writeText(textToCopy);
                 setCopyStatus('copied');
@@ -253,10 +265,20 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
         setShowContextMenu(false);
     };
 
-    const handleDelete = (type: 'for_me' | 'for_everyone' | 'permanent') => {
-        onDelete(message.id, type);
-        setIsDeleteMenuOpen(false);
+    const handleDelete = (forEveryone: boolean) => {
+        setDeleteForEveryone(forEveryone);
+        setShowDeleteConfirm(true);
         setShowContextMenu(false);
+        setIsDeleteMenuOpen(false);
+    };
+
+    const confirmDelete = () => {
+        onDelete(message.id, deleteForEveryone ? 'for_everyone' : 'for_me');
+        setShowDeleteConfirm(false);
+    };
+
+    const cancelDelete = () => {
+        setShowDeleteConfirm(false);
     };
 
     const handleVote = (optionId: string) => {
@@ -270,7 +292,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
             const userHasReacted = message.reactions?.some(
                 r => r.emoji === emoji && r.users.includes(currentUser.id)
             );
-            
+
             if (userHasReacted) {
                 // If user already reacted, remove their reaction
                 onReaction(message.id, emoji);
@@ -463,17 +485,19 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                             {isDeleteMenuOpen && (
                                 <div className="absolute left-full top-0 ml-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-50 w-48">
                                     <button 
-                                        onClick={() => handleDelete('for_me')} 
+                                        onClick={() => handleDelete(false)} 
                                         className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
                                     >
                                         Delete for me
                                     </button>
-                                    <button 
-                                        onClick={() => handleDelete('for_everyone')} 
-                                        className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
-                                    >
-                                        Delete permanently
-                                    </button>
+                                    {message.author.id === currentUser.id && (
+                                        <button 
+                                            onClick={() => handleDelete(true)} 
+                                            className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
+                                        >
+                                            Delete for everyone
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -511,6 +535,40 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                                 setIsEmojiPickerOpen(false);
                             }}
                         />
+                    </div>
+                </div>
+            )}
+            
+            {/* Delete Confirmation Popup */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div 
+                        className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl"
+                        ref={deleteRef}
+                    >
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                            {deleteForEveryone ? 'Delete for everyone' : 'Delete for me'}
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-300 mb-6">
+                            {deleteForEveryone 
+                                ? 'This will delete the message for all participants. This action cannot be undone.'
+                                : 'This will delete the message from your view. Other participants will still see it.'
+                            }
+                        </p>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={cancelDelete}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
+                            >
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
