@@ -9,16 +9,16 @@ import Avatar from './Avatar';
 import { toast } from '../hooks/toastService';
 
 interface RoomListProps {
-  rooms: Room[];
-  activeRoom: Room | null;
-  setActiveRoom: (room: Room) => void;
+  rooms: any[];
+  activeRoom: any | null;
+  setActiveRoom: (room: any) => void;
   createRoom: (name: string) => string;
   joinRoom: (roomId: string, password?: string) => 'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined';
   deleteRoom: (roomId: string) => void;
   unreadCounts: Record<string, number>;
   onSearch: (query: string, scope: 'current' | 'all') => void;
   currentUser: User;
-}
+} 
 
 const RoomIcon = ({ room }: { room: Room }) => {
     if (room.type === 'ai') {

@@ -446,24 +446,51 @@ export const useChat = (currentUser: User) => {
     }
   }, [activeRoom, currentUser.id, socketRef]);
 
-  // Send a new message
-  const sendMessage = useCallback((content: string, roomId: string, type: 'text' | 'system' | 'poll' = 'text') => {
-    if (!socketRef.current || !content.trim()) return;
+  // Send a new message (accepts a payload and optionally editingMessageId/replyTo)
+  const sendMessage = useCallback(async (payload: { text: string; audio?: { blob: Blob; duration: number }; file?: File; location?: MessageLocation }, editingMessageId?: string, replyTo?: string) => {
+    const roomId = activeRoom?.id;
+    if (!socketRef.current || !roomId || !payload.text?.trim()) return;
 
+    // If editing an existing message
+    if (editingMessageId) {
+      setRooms(prevRooms => prevRooms.map(room => room.id === roomId ? { ...room, messages: room.messages.map(m => m.id === editingMessageId ? { ...m, text: payload.text, isEdited: true } : m) } : room));
+      socketRef.current.emit('edit_message', { roomId, messageId: editingMessageId, text: payload.text });
+      return;
+    }
+
+    const messageId = `msg-${Date.now()}`;
     const message: ExtendedMessage = {
-      id: `msg-${Date.now()}`,
+      id: messageId,
       author: currentUser,
-      text: content,
+      text: payload.text,
       timestamp: Date.now(),
       status: 'sending',
       reactions: [],
-      type,
+      type: 'text',
       roomId,
       isPinned: false,
-      isEdited: false
-    };
+      isEdited: false,
+      roomId,
+    } as ExtendedMessage;
 
-    // Update local state optimistically
+    if (payload.file) {
+      try {
+        const url = await uploadFile(payload.file, roomId, messageId);
+        message.file = { url, name: payload.file.name, type: payload.file.type } as any;
+      } catch (e) {
+        // upload failed; continue without file
+        console.error('File upload failed', e);
+      }
+    }
+
+    if (payload.location) {
+      message.location = payload.location;
+    }
+
+    if (replyTo) {
+      message.replyTo = replyTo;
+    }
+
     setRooms(prevRooms => 
       prevRooms.map(room => 
         room.id === roomId
@@ -472,9 +499,8 @@ export const useChat = (currentUser: User) => {
       )
     );
 
-    // Emit to server
     socketRef.current.emit('send_message', { message });
-  }, [currentUser]);
+  }, [currentUser, activeRoom]);
 
   // Delete a message
   const deleteMessage = useCallback((messageId: string) => {
@@ -500,31 +526,35 @@ export const useChat = (currentUser: User) => {
     }
   }, [activeRoom]);
 
-  // Toggle pin status of a message
-  const togglePinMessage = useCallback((messageId: string, pin: boolean) => {
-    if (!activeRoom) return;
-    
+  // Toggle pin status of a message (toggle based on current state)
+  const togglePinMessage = useCallback((messageId: string) => {
+    const roomId = activeRoom?.id;
+    if (!roomId) return;
+    let newPinState = false;
+
     setRooms(prevRooms => 
-      prevRooms.map(room => 
-        room.id === activeRoom.id
-          ? {
-              ...room,
-              messages: room.messages.map(m => 
-                m.id === messageId 
-                  ? { ...m, isPinned: pin }
-                  : pin && m.isPinned 
-                    ? { ...m, isPinned: false } // Unpin other messages if needed
-                    : m
-              )
-            }
-          : room
-      )
+      prevRooms.map(room => {
+        if (room.id !== roomId) return room;
+        let newMessages = room.messages.map(m => {
+          if (m.id === messageId) {
+            newPinState = !m.isPinned;
+            return { ...m, isPinned: !m.isPinned };
+          }
+          return m;
+        });
+
+        if (newPinState) {
+          newMessages = newMessages.map(m => m.id === messageId ? m : { ...m, isPinned: false });
+        }
+
+        return { ...room, messages: newMessages };
+      })
     );
-    
+
     // Emit to server
     if (socketRef.current) {
-      socketRef.current.emit(pin ? 'pin_message' : 'unpin_message', {
-        roomId: activeRoom.id,
+      socketRef.current.emit(newPinState ? 'pin_message' : 'unpin_message', {
+        roomId,
         messageId,
       });
     }
@@ -704,25 +734,25 @@ export const useChat = (currentUser: User) => {
     return 'joined';
   }, [currentUser.id, currentUser.name, rooms, socketRef]);
 
-  // Send a poll message
-  const sendPoll = useCallback((question: string, options: string[], roomId: string) => {
-    if (!socketRef.current || !question.trim() || options.length < 2) return;
+  // Send a poll message (accepts an object)
+  const sendPoll = useCallback((pollPayload: { question: string; options: string[]; location?: string }) => {
+    const roomId = activeRoom?.id;
+    if (!socketRef.current || !roomId || !pollPayload.question.trim() || pollPayload.options.length < 2) return;
 
     const poll: Poll = {
       id: `poll-${Date.now()}`,
-      question,
-      options: options.map((text, index) => ({
+      question: pollPayload.question,
+      options: pollPayload.options.map((text, index) => ({
         id: `opt-${index}`,
         text,
         votes: []
       }))
     };
-    
-    // Create the extended message with poll data
+
     const extendedMessage: ExtendedMessage = {
       id: `msg-${Date.now()}`,
       author: currentUser,
-      text: question,
+      text: pollPayload.question,
       timestamp: Date.now(),
       status: 'sending',
       reactions: [],
@@ -733,18 +763,16 @@ export const useChat = (currentUser: User) => {
       poll
     };
 
-    // Create a base message for the server (without extended properties)
     const baseMessage: MessageWithRoomId = {
       id: extendedMessage.id,
       author: extendedMessage.author,
       text: extendedMessage.text,
       timestamp: extendedMessage.timestamp,
-      type: 'text', // Use 'text' as the base type for the server
+      type: 'text',
       roomId: extendedMessage.roomId,
       reactions: []
     };
 
-    // Update local state with the extended message
     setRooms(prevRooms => 
       prevRooms.map(room => 
         room.id === roomId
@@ -753,13 +781,13 @@ export const useChat = (currentUser: User) => {
       )
     );
 
-    // Emit to server with the base message
     socketRef.current.emit('send_message', { message: baseMessage });
-  }, [currentUser]);
+  }, [currentUser, activeRoom]);
 
-  // Handle message reactions
-  const handleReaction = useCallback((messageId: string, emoji: string, roomId: string) => {
-    if (!socketRef.current) return;
+  // Handle message reactions (uses current active room)
+  const handleReaction = useCallback((messageId: string, emoji: string) => {
+    const roomId = activeRoom?.id;
+    if (!socketRef.current || !roomId) return;
     
     setRooms(prevRooms => 
       prevRooms.map(room => 
@@ -783,7 +811,7 @@ export const useChat = (currentUser: User) => {
       emoji,
       userId: currentUser.id
     });
-  }, [currentUser.id, updateReactions]);
+  }, [currentUser.id, updateReactions, activeRoom]);
 
   return {
     rooms,

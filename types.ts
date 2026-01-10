@@ -47,7 +47,7 @@ export interface Message {
   author?: User;
   timestamp: number;
   text: string;
-  type?: 'text' | 'system';
+  type?: 'text' | 'system' | 'poll';
   reactions: Reaction[];
   poll?: Poll;
   file?: MessageFile;
