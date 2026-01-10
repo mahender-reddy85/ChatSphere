@@ -610,11 +610,13 @@ export const useChat = (currentUser: User) => {
   const createRoom = useCallback((name: string, privacy: 'public' | 'private' = 'public'): string => {
     // Generate a random 4-character alphanumeric ID
     const randomId = Math.random().toString(36).substring(2, 6);
-    // Create URL-friendly room name by converting to lowercase and replacing spaces with hyphens
-    const formattedName = name.toLowerCase()
+    
+    // Create URL-friendly room name
+    const formattedName = name
+      .toLowerCase()
       .replace(/\s+/g, '-')        // Replace spaces with hyphens
       .replace(/[^a-z0-9-]/g, ''); // Remove any non-alphanumeric characters except hyphens
-    
+
     const newRoom: ExtendedRoom = {
       id: `${formattedName}-${randomId}`, // Format: room-name-abc1
       name,
