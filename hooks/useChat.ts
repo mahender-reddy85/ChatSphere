@@ -1,14 +1,44 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { User, Room, Message, Poll, SearchResult, MessageLocation } from '../types';
+import type { User, Room, Message, Poll, SearchResult, MessageLocation, Reaction, MessageFile } from '../types';
+
+type MessageStatus = 'sent' | 'delivered' | 'seen';
+
+// Extend the Message type to include additional fields
+interface ExtendedMessage extends Omit<Message, 'status' | 'reactions' | 'type' | 'file'> {
+  status?: 'sent' | 'delivered' | 'seen' | 'sending';
+  reactions: Reaction[];
+  file?: (MessageFile & { size?: number }) | undefined;
+  poll?: Poll;
+  isPinned?: boolean;
+  isEdited?: boolean;
+  type: 'text' | 'system' | 'poll';
+  roomId: string;
+}
+
+// Room type with extended message type
+type ExtendedRoom = Omit<Room, 'messages'> & {
+  messages: ExtendedMessage[];
+}
+
 import { MOCK_USERS } from '../constants';
 import { getAIBotResponse } from '../services/geminiService';
+import { uploadFile } from '../services/fileService';
 import io, { Socket } from 'socket.io-client';
 
 const aiBot = MOCK_USERS['ai-bot'];
 
 export const useChat = (currentUser: User) => {
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [activeRoom, setActiveRoom] = useState<Room | null>(null);
+  // Helper function to convert Message to ExtendedMessage
+  const toExtendedMessage = (msg: Message): ExtendedMessage => ({
+    ...msg,
+    status: 'sent',
+    reactions: msg.reactions || [],
+    type: msg.type || 'text',
+    roomId: msg.roomId || ''
+  });
+
+  const [rooms, setRooms] = useState<ExtendedRoom[]>([]);
+  const [activeRoom, setActiveRoom] = useState<ExtendedRoom | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [activeTypingUsers, setActiveTypingUsers] = useState<User[]>([]);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
@@ -18,6 +48,61 @@ export const useChat = (currentUser: User) => {
   const [typingUsers, setTypingUsers] = useState<Record<string, Set<string>>>({}); // roomId -> Set of user IDs
   const socketRef = useRef<Socket | null>(null);
   const typingTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
+
+  // Initialize rooms on first render
+  useEffect(() => {
+    // Helper function to create a properly typed message
+    const createMessage = (msg: Omit<Message, 'reactions' | 'type'>, roomId: string): ExtendedMessage => ({
+      ...msg,
+      status: 'sent',
+      reactions: [],
+      type: 'text',
+      roomId,
+    });
+
+    const selfChatId = `self-chat-${currentUser.id}`;
+    const aiChatId = `ai-chat-${currentUser.id}`;
+
+    const selfChatInitialMessage = createMessage({
+      id: `msg-self-intro-${currentUser.id}`,
+      author: currentUser,
+      timestamp: Date.now(),
+      text: "This is your personal space. You can send messages, files, and notes to yourself here."
+    }, selfChatId);
+
+    const aiChatInitialMessage = createMessage({
+      id: `msg-ai-intro-${currentUser.id}`,
+      author: aiBot,
+      timestamp: Date.now(),
+      text: "Hello! I'm your AI Assistant. How can I help you today?"
+    }, aiChatId);
+
+    const allRooms: ExtendedRoom[] = [
+      { 
+        id: selfChatId,
+        name: '(You)', 
+        type: 'self', 
+        users: [currentUser.id], 
+        messages: [selfChatInitialMessage],
+        privacy: 'private' as const
+      },
+      { 
+        id: aiChatId,
+        name: 'AI Assistant', 
+        type: 'ai', 
+        users: [currentUser.id, 'ai-bot'], 
+        messages: [aiChatInitialMessage],
+        privacy: 'private' as const
+      },
+    ];
+    
+    setRooms(prevRooms => prevRooms.length > 0 ? prevRooms : allRooms);
+    
+    if (!activeRoom) {
+      const firstRoom = allRooms.find(r => r.type === 'self') || allRooms[0];
+      setActiveRoom(firstRoom);
+    }
+  }, [currentUser.id]);
 
   // Load rooms from localStorage on initial load
   useEffect(() => {
@@ -257,362 +342,364 @@ export const useChat = (currentUser: User) => {
     };
 
     const allRooms: Room[] = [
-      { id: `self-chat-${currentUser.id}`, name: '(You)', type: 'self', users: [currentUser.id], messages: [selfChatInitialMessage], privacy: 'private' },
-      { id: `ai-chat-${currentUser.id}`, name: 'AI Assistant', type: 'ai', users: [currentUser.id, 'ai-bot'], messages: [aiChatInitialMessage], privacy: 'private' },
+      { 
+        id: `self-chat-${currentUser.id}`, 
+        name: '(You)', 
+        type: 'self', 
+        users: [currentUser.id], 
+        messages: [selfChatInitialMessage], 
+        privacy: 'private' 
+      },
+      { 
+        id: `ai-chat-${currentUser.id}`, 
+        name: 'AI Assistant', 
+        type: 'ai', 
+        users: [currentUser.id, 'ai-bot'], 
+        messages: [aiChatInitialMessage],
+        privacy: 'private' 
+      },
     ];
-    setRooms(allRooms);
-    if(!activeRoom){
+    
+    setRooms(prevRooms => prevRooms.length > 0 ? prevRooms : allRooms);
+    
+    if (!activeRoom) {
       const firstRoom = allRooms.find(r => r.type === 'self') || allRooms[0];
       setActiveRoom(firstRoom);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser.id, currentUser]);
+  }, [currentUser.id]);
 
-  useEffect(() => {
-    if (activeRoom) {
-        setUnreadCounts(prev => ({...prev, [activeRoom.id]: 0}));
-    }
-  }, [activeRoom]);
-
-  const createRoom = (name: string): string => {
-    const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    const newRoomId = `${slug}-${Math.random().toString(36).substr(2, 4)}`;
-    const newRoom: Room = {
-      id: newRoomId,
-      name,
-      privacy: 'public',
-      type: 'group',
-      users: [currentUser.id],
-      messages: [],
-    };
-    setRooms(prev => [...prev, newRoom]);
-
-    // Emit create_room event to backend
-    if (socketRef.current) {
-      socketRef.current.emit('create_room', { roomId: newRoomId, userName: currentUser.name });
-      socketRef.current.emit('join_room', newRoomId);
-    }
-
-    return newRoomId;
-  };
-  
-  const joinRoom = (roomId: string, password?: string): 'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined' => {
-    let roomToJoin = rooms.find(r => r.id === roomId);
-
-    if (!roomToJoin) {
-        // Create room if not found (invite code is roomId)
-        const derivedName = roomId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        roomToJoin = {
-            id: roomId,
-            name: derivedName,
-            type: 'group',
-            users: [currentUser.id],
-            messages: [],
-            privacy: 'public',
-        };
-        setRooms(prev => [...prev, roomToJoin]);
-
-        // Emit join_room event to backend
-        if (socketRef.current) {
-          socketRef.current.emit('join_room', { roomId, userName: currentUser.name });
-        }
-
-        return 'joined';
-    }
-
-    if (roomToJoin.users.includes(currentUser.id)) {
-        return 'already_joined';
-    }
-
-    if (roomToJoin.privacy === 'public') {
-        setRooms(prev => prev.map(r => r.id === roomId ? { ...r, users: [...r.users, currentUser.id] } : r));
-
-        // Emit join_room event to backend
-        if (socketRef.current) {
-          socketRef.current.emit('join_room', { roomId, userName: currentUser.name });
-        }
-
-        return 'joined';
-    }
-
-    // Room is private
-    if (roomToJoin.password) {
-        if (!password) {
-            return 'needs_password';
-        }
-        if (password === roomToJoin.password) {
-            setRooms(prev => prev.map(r => r.id === roomId ? { ...r, users: [...r.users, currentUser.id] } : r));
-
-            // Emit join_room event to backend
-            if (socketRef.current) {
-              socketRef.current.emit('join_room', { roomId, userName: currentUser.name });
-            }
-
-            return 'joined';
+  const updateReactions = useCallback((message: ExtendedMessage, existingReaction: Reaction | undefined, newReactions: Reaction[]) => {
+    if (existingReaction) {
+      const userIndex = existingReaction.users.indexOf(currentUser.id);
+      
+      if (userIndex > -1) {
+        // Remove user's reaction
+        const updatedUsers = [...existingReaction.users];
+        updatedUsers.splice(userIndex, 1);
+        
+        if (updatedUsers.length === 0) {
+          // Remove reaction if no users left
+          return {
+            ...message,
+            reactions: newReactions.filter(r => r.emoji !== existingReaction.emoji)
+          };
         } else {
-            return 'invalid_password';
+          // Update reaction with remaining users
+          return {
+            ...message,
+            reactions: newReactions.map(r => 
+              r.emoji === existingReaction.emoji 
+                ? { ...r, users: updatedUsers }
+                : r
+            )
+          };
         }
+      } else {
+        // Add user to reaction
+        return {
+          ...message,
+          reactions: newReactions.map(r => 
+            r.emoji === existingReaction?.emoji
+              ? { ...r, users: [...r.users, currentUser.id] }
+              : r
+          )
+        };
+      }
+    } else {
+      // Add new reaction
+      return {
+        ...message,
+        reactions: [
+          ...newReactions,
+          { emoji: emoji, users: [currentUser.id] }
+        ]
+      };
     }
-
-    // Private room without a password (legacy or other reason) can be joined.
-    setRooms(prev => prev.map(r => r.id === roomId ? { ...r, users: [...r.users, currentUser.id] } : r));
-
-    // Emit join_room event to backend
-    if (socketRef.current) {
-      socketRef.current.emit('join_room', { roomId, userName: currentUser.name });
-  };
-
-  // Handle file uploads
-  if (payload.file) {
-    const formData = new FormData();
-    formData.append('file', payload.file);
-    formData.append('roomId', activeRoom.id);
-    formData.append('messageId', newMessage.id);
-
-      id: `poll-${Date.now()}`,
-      question: pollData.question,
-      options: pollData.options.map((opt, i) => ({ id: `opt-${Date.now()}-${i}`, text: opt, votes: [] })),
-      location: pollData.location,
-    };
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      author: currentUser,
-      timestamp: Date.now(),
-      text: `Poll: ${pollData.question}`,
-      poll: newPoll,
-      reactions: [],
-      roomId: activeRoom.id,
-    };
-    setRooms(prev => prev.map(r => r.id === activeRoom.id ? { ...r, messages: [...r.messages, newMessage] } : r));
-
-    // Emit to backend for synchronization
-  }, [activeRoom, currentUser]);
-
-  const handleVote = useCallback((messageId: string, optionId: string) => {
-    if (!activeRoom) return;
-    setRooms(prev => prev.map(r => {
-      if (r.id !== activeRoom.id) return r;
-      const newMessages = r.messages.map(m => {
-        if (m.id !== messageId || !m.poll) return m;
-
-        const newOptions = m.poll.options.map(opt => {
-            if (opt.id === optionId) {
-              // Toggle vote: if user has voted for this option, remove vote; otherwise add vote
-              const hasVoted = opt.votes.includes(currentUser.id);
-              const newVotes = hasVoted
-                ? opt.votes.filter(voterId => voterId !== currentUser.id)
-                : [...opt.votes, currentUser.id];
-              return { ...opt, votes: newVotes };
-            }
-            // Keep votes on other options (multiple choice poll)
-            return opt;
-        });
-
-        return { ...m, poll: { ...m.poll, options: newOptions } };
-      });
-      return { ...r, messages: newMessages };
-    }));
-
-    // Emit vote update to backend for synchronization
-    if (socketRef.current) {
-      socketRef.current.emit('vote_poll', {
-        roomId: activeRoom.id,
-        messageId,
-        optionId,
-        userId: currentUser.id
-      });
-    }
-  }, [activeRoom, currentUser.id, socketRef]);
+  }, [currentUser.id]);
 
   const handleReaction = useCallback((messageId: string, emoji: string) => {
-    console.log('handleReaction called with:', { messageId, emoji });
     if (!activeRoom) {
       console.log('No active room');
       return;
     }
 
-    setRooms(prev => {
-      const updatedRooms = prev.map(r => {
-        if (r.id !== activeRoom.id) return r;
+    setRooms(prevRooms => {
+      return prevRooms.map(room => {
+        if (room.id !== activeRoom.id) return room;
+    id: `poll-${Date.now()}`,
+    question,
+    options: options.map((text, index) => ({
+      id: `opt-${index}`,
+      text,
+      votes: [],
+    })),
+  };
+
+  const message: ExtendedMessage = {
+    id: `msg-${Date.now()}`,
+    author: currentUser,
+    text: question,
+    timestamp: Date.now(),
+    status: 'sending',
+    reactions: [],
+    type: 'poll',
+    roomId: activeRoom.id,
+    poll,
+  };
+
+  // Emit poll to server
+  if (socketRef.current) {
+    socketRef.current.emit('send_message', {
+      ...message,
+      roomId: activeRoom.id,
+    });
+  }
+
+  // Update local state optimistically
+  setRooms(prev => prev.map(room => 
+    room.id === activeRoom.id
+      ? { ...room, messages: [...room.messages, message] }
+      : room
+  ));
+}, [activeRoom, currentUser, socketRef]);
+
+const handleVote = useCallback((messageId: string, optionId: string) => {
+  if (!activeRoom) return;
+  
+  // Update local state
+  setRooms(prev => prev.map(room => {
+    if (room.id !== activeRoom.id) return room;
+    
+    return {
+      ...room,
+      messages: room.messages.map(message => {
+        if (message.id !== messageId || !message.poll) return message;
         
-        const newMessages = r.messages.map(m => {
-          if (m.id !== messageId) return m;
+        // Toggle vote
+        const newOptions = message.poll.options.map(option => {
+          // Remove user's vote from all options
+          const votes = option.votes.filter(voterId => voterId !== currentUser.id);
           
-          const existingReaction = m.reactions?.find(re => re.emoji === emoji);
-          let newReactions = [...(m.reactions || [])];
-          
-          if (existingReaction) {
-            // Check if current user already reacted with this emoji
-            const userIndex = existingReaction.users.indexOf(currentUser.id);
-            
-            if (userIndex > -1) {
-              // User already reacted - remove their reaction
-              const updatedUsers = [...existingReaction.users];
-              updatedUsers.splice(userIndex, 1);
-              
-              if (updatedUsers.length === 0) {
-                // No more users for this reaction - remove it
-                newReactions = newReactions.filter(re => re.emoji !== emoji);
-              } else {
-                // Update the reaction with remaining users
-                newReactions = newReactions.map(re => 
-                  re.emoji === emoji 
-                    ? { ...re, users: updatedUsers } 
-                    : re
-                );
-              }
-            } else {
-              // User hasn't reacted yet - add their reaction
-              newReactions = newReactions.map(re => 
-                re.emoji === emoji 
-                  ? { ...re, users: [...re.users, currentUser.id] } 
-                  : re
-              );
-            }
-          } else {
-            // Add new reaction with current user
-            newReactions = [
-              ...newReactions,
-              { emoji, users: [currentUser.id] }
-            ];
+          // Add vote to selected option if not already voted
+          if (option.id === optionId && !option.votes.includes(currentUser.id)) {
+            votes.push(currentUser.id);
           }
           
-          return { ...m, reactions: newReactions };
+          return { ...option, votes };
         });
         
-        return { ...r, messages: newMessages };
-      });
-      
-      return updatedRooms;
+        return {
+          ...message,
+          poll: {
+            ...message.poll,
+            options: newOptions,
+            totalVotes: newOptions.reduce((sum, opt) => sum + opt.votes.length, 0)
+          }
+        };
+      })
+    };
+  }));
+  
+  // Emit vote to server
+  if (socketRef.current) {
+    socketRef.current.emit('vote_poll', {
+      roomId: activeRoom.id,
+      messageId,
+      optionId,
+      userId: currentUser.id
     });
-    
-    // Emit reaction to server
-    if (socketRef.current) {
-      console.log('Emitting reaction to server');
-      socketRef.current.emit('message_reaction', {
-        roomId: activeRoom.id,
-        messageId,
-        emoji,
-        userId: currentUser.id
-      });
-    }
-  }, [activeRoom, currentUser.id, socketRef]);
+  }
+}, [activeRoom, currentUser.id, socketRef]);
 
-  const clearSearch = useCallback(() => {
+const createRoom = useCallback((name: string, userIds: string[], type: 'group' | 'ai' | 'self' = 'group', privacy: 'public' | 'private' = 'private') => {
+  const roomId = `room-${Date.now()}`;
+  const newRoom: Room = {
+    id: roomId,
+    name,
+    type,
+    users: [currentUser.id, ...userIds],
+    messages: [],
+    privacy,
+  };
+  
+  setRooms(prev => [...prev, newRoom]);
+  
+  // Emit to server if needed
+  if (socketRef.current) {
+    socketRef.current.emit('create_room', newRoom);
+  }
+  
+  return newRoom;
+}, [currentUser.id, socketRef]);
+
+const joinRoom = useCallback((roomId: string, password?: string) => {
+  if (socketRef.current) {
+    socketRef.current.emit('join_room', { roomId, password });
+  }
+  
+  // The actual room joining logic will be handled by the socket event handlers
+  // that update the rooms state when the server confirms the join
+}, [socketRef]);
+
+const deleteMessage = useCallback((messageId: string) => {
+  if (!activeRoom) return;
+  
+  // Update local state
+  setRooms(prev => prev.map(room => 
+    room.id === activeRoom.id
+      ? { ...room, messages: room.messages.filter(m => m.id !== messageId) }
+      : room
+  ));
+  
+  // Emit to server
+  if (socketRef.current) {
+    socketRef.current.emit('delete_message', {
+      roomId: activeRoom.id,
+      messageId,
+    });
+  }
+}, [activeRoom, socketRef]);
+
+const togglePinMessage = useCallback((messageId: string, pin: boolean) => {
+  if (!activeRoom) return;
+  
+  // Update local state
+  setRooms(prev => prev.map(room => 
+    room.id === activeRoom.id
+      ? {
+          ...room,
+          messages: room.messages.map(m => 
+            m.id === messageId 
+              ? { ...m, isPinned: pin }
+              : pin && m.isPinned 
+                ? { ...m, isPinned: false } // Unpin other messages if needed
+                : m
+          )
+        }
+      : room
+  ));
+  
+  // Emit to server
+  if (socketRef.current) {
+    socketRef.current.emit(pin ? 'pin_message' : 'unpin_message', {
+      roomId: activeRoom.id,
+      messageId,
+    });
+  }
+}, [activeRoom, socketRef]);
+
+const clearSearch = useCallback(() => {
+  setSearchResults([]);
+  setIsSearching(false);
+}, []);
+
+const searchMessages = useCallback((query: string, scope: 'all' | 'current' = 'all') => {
+  if (!query.trim()) {
     setSearchResults([]);
     setIsSearching(false);
-  }, []);
+    return;
+  }
+  
+  const lowerCaseQuery = query.toLowerCase();
+  const results: SearchResult[] = [];
+  
+  const roomsToSearch = scope === 'current' && activeRoom ? [activeRoom] : rooms;
 
-  const deleteRoom = useCallback((roomId: string) => {
-    try {
-      // Don't allow deleting self or AI chats
-      const roomToDelete = rooms.find(r => r.id === roomId);
-      if (!roomToDelete || roomToDelete.type === 'self' || roomToDelete.type === 'ai') {
-        console.warn('Cannot delete self or AI chats');
-        return false;
+  for (const room of roomsToSearch) {
+    for (const message of room.messages) {
+      if (message.text && message.text.toLowerCase().includes(lowerCaseQuery)) {
+        results.push({
+          message,
+          roomId: room.id,
+          roomName: room.name,
+        });
       }
+    }
+  }
 
-      // Update rooms state
-      setRooms(prev => {
-        const updatedRooms = prev.filter(r => r.id !== roomId);
-        return updatedRooms;
-      });
+  setSearchResults(results.sort((a, b) => b.message.timestamp - a.message.timestamp));
+  setIsSearching(true);
+}, [rooms, activeRoom]);
 
-      // If the deleted room was active, switch to self chat
-      if (activeRoom?.id === roomId) {
-        const selfRoom = rooms.find(r => r.type === 'self');
-        if (selfRoom) {
-          setActiveRoom(selfRoom);
-        }
-      }
-
-      // Emit delete event to server if needed
-      if (socketRef.current) {
-        socketRef.current.emit('delete_room', { roomId });
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error deleting room:', error);
+const deleteRoom = useCallback((roomId: string) => {
+  try {
+    // Don't allow deleting self or AI chats
+    const roomToDelete = rooms.find(r => r.id === roomId);
+    if (!roomToDelete || roomToDelete.type === 'self' || roomToDelete.type === 'ai') {
+      console.warn('Cannot delete self or AI chats');
       return false;
     }
-  }, [rooms, activeRoom, setActiveRoom, socketRef]);
 
-  // Get active typing users for a room
-  const getActiveTypingUsers = useCallback((roomId: string): User[] => {
-    if (!roomId) return [];
-    
-    const userIds = Array.from(typingUsers[roomId] || []);
-    console.log('Typing users for room', roomId, ':', userIds);
-    
-    return userIds
-      .map(userId => {
-        // Skip the current user
-        if (userId === currentUser.id) return null;
-        
-        // Find the user in any of the rooms
-        for (const room of rooms) {
-          const user = room.users.find(u => u === userId);
-          if (user) return MOCK_USERS[user] || { id: user, name: 'Unknown User' };
-        }
-        return null;
-      })
-      .filter(Boolean) as User[];
-  }, [typingUsers, rooms, currentUser.id]);
+    // Update rooms state
+    setRooms(prev => {
+      const updatedRooms = prev.filter(r => r.id !== roomId);
+      return updatedRooms;
+    });
 
-  // Check if a user is online
-  const isUserOnline = useCallback((userId: string) => {
-    return onlineUsers.has(userId);
-  }, [onlineUsers]);
-
-  const searchMessages = useCallback((query: string, scope: 'all' | 'current' = 'all') => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
-    
-    const lowerCaseQuery = query.toLowerCase();
-    const results: SearchResult[] = [];
-    
-    const roomsToSearch = scope === 'current' && activeRoom ? [activeRoom] : rooms;
-
-    for (const room of roomsToSearch) {
-      for (const message of room.messages) {
-        if (message.text && message.text.toLowerCase().includes(lowerCaseQuery)) {
-          results.push({
-            message,
-            roomId: room.id,
-            roomName: room.name,
-          });
-        }
+    // If the deleted room was active, switch to self chat
+    if (activeRoom?.id === roomId) {
+      const selfRoom = rooms.find(r => r.type === 'self');
+      if (selfRoom) {
+        setActiveRoom(selfRoom);
       }
     }
 
-    setSearchResults(results.sort((a, b) => b.message.timestamp - a.message.timestamp));
-    setIsSearching(true);
-  }, [rooms, activeRoom]);
+    // Emit delete event to server if needed
+    if (socketRef.current) {
+      socketRef.current.emit('delete_room', { roomId });
+    }
 
-  return {
-    rooms,
-    activeRoom,
-    setActiveRoom,
-    sendMessage,
-    sendPoll,
-    handleVote,
-    handleReaction,
-    isSending,
-    createRoom,
-    joinRoom,
-    deleteMessage,
-    togglePinMessage,
-    activeTypingUsers: activeRoom ? getActiveTypingUsers(activeRoom.id) : [],
-    unreadCounts,
-    searchMessages,
-    clearSearch,
-    searchResults,
-    isSearching,
-    deleteRoom,
-    isUserOnline,
-  };
+    return true;
+  } catch (error) {
+    console.error('Error deleting room:', error);
+    return false;
+  }
+}, [rooms, activeRoom, setActiveRoom, socketRef]);
+
+const getActiveTypingUsers = useCallback((roomId: string): User[] => {
+  if (!roomId) return [];
+  
+  const userIds = Array.from(typingUsers[roomId] || []);
+  console.log('Typing users for room', roomId, ':', userIds);
+  
+  return userIds
+    .map(userId => {
+      // Skip the current user
+      if (userId === currentUser.id) return null;
+      
+      // Find the user in any of the rooms
+      for (const room of rooms) {
+        const user = room.users.find(u => u === userId);
+        if (user) return MOCK_USERS[user] || { id: user, name: 'Unknown User' };
+      }
+      return null;
+    })
+    .filter(Boolean) as User[];
+}, [typingUsers, rooms, currentUser.id]);
+
+const isUserOnline = useCallback((userId: string) => {
+  return onlineUsers.has(userId);
+}, [onlineUsers]);
+
+return {
+  rooms,
+  activeRoom,
+  setActiveRoom,
+  sendMessage,
+  sendPoll,
+  handleVote,
+  handleReaction,
+  isSending,
+  createRoom,
+  joinRoom,
+  deleteMessage,
+  togglePinMessage,
+  activeTypingUsers: activeRoom ? getActiveTypingUsers(activeRoom.id) : [],
+  unreadCounts,
+  searchMessages,
+  clearSearch,
+  searchResults,
+  isSearching,
+  deleteRoom,
+  isUserOnline,
 };
