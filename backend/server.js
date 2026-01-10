@@ -1,9 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import http from 'http';
+import { createServer } from 'http';
 import { Server } from 'socket.io';
-
+import { testConnection } from './db.js';
 import userRoutes from './routes/users.js';
 import messageRoutes from './routes/messages.js';
 import roomRoutes from './routes/rooms.js';
@@ -11,10 +11,18 @@ import roomRoutes from './routes/rooms.js';
 dotenv.config();
 
 const app = express();
-const server = http.createServer(app);
+const server = createServer(app);
 
 // Track connected users and their socket IDs
 const connectedUsers = new Map();
+
+// Test database connection on startup
+testConnection().then(isConnected => {
+  if (!isConnected) {
+    console.error('Failed to connect to database. Exiting...');
+    process.exit(1);
+  }
+});
 
 /* =========================
    SOCKET.IO CONFIG
@@ -25,6 +33,9 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
   },
 });
+
+// Make io accessible to routes
+app.set('io', io);
 
 /* =========================
    MIDDLEWARE
