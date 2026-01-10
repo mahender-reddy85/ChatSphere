@@ -8,7 +8,8 @@ export default defineConfig(() => {
     server: {
       port: 3000,
       host: '0.0.0.0',
-      proxy: {
+      proxy: process.env.NODE_ENV === 'development' ? {
+        // Development proxy settings
         '/api': {
           target: 'http://localhost:3001',
           changeOrigin: true,
@@ -20,11 +21,11 @@ export default defineConfig(() => {
           ws: true,
           changeOrigin: true
         }
-      },
-      cors: {
+      } : undefined,
+      cors: process.env.NODE_ENV === 'development' ? {
         origin: 'http://localhost:3000',
         credentials: true
-      }
+      } : false
     },
     plugins: [react()],
     resolve: {

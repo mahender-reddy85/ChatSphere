@@ -1,6 +1,7 @@
 import { getToken } from './auth';
 
-const BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+// Use VITE_BACKEND_URL from .env file
+const BASE = import.meta.env.VITE_BACKEND_URL || 'https://chatsphere-7t8g.onrender.com';
 
 export async function api(path, options = {}) {
   const token = getToken();
