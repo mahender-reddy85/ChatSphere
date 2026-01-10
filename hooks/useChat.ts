@@ -662,9 +662,13 @@ export const useChat = (currentUser: User) => {
 
   // Join an existing room
   const joinRoom = useCallback((roomId: string, password?: string): 'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined' => {
-    // Check if room exists
-    const room = rooms.find(r => r.id === roomId);
+    // Trim and normalize the room ID
+    const normalizedRoomId = roomId.trim();
+    
+    // Check if room exists (case-insensitive)
+    const room = rooms.find(r => r.id.toLowerCase() === normalizedRoomId.toLowerCase());
     if (!room) {
+      console.log('Room not found. Available rooms:', rooms.map(r => r.id));
       return 'not_found';
     }
 
@@ -678,22 +682,19 @@ export const useChat = (currentUser: User) => {
       return 'needs_password';
     }
 
-    // Here you would typically validate the password with the server
-    // For now, we'll assume the password is correct and join the room
-
     // Update local state optimistically
     setRooms(prevRooms => 
       prevRooms.map(r => 
-        r.id === roomId
+        r.id === room.id
           ? { ...r, users: [...r.users, currentUser.id] }
           : r
       )
     );
 
-    // Emit join_room event to server
+    // Emit join_room event to server with the exact room ID from the found room
     if (socketRef.current) {
       socketRef.current.emit('join_room', { 
-        roomId, 
+        roomId: room.id, // Use the exact room ID from the found room
         userId: currentUser.id,
         userName: currentUser.name,
         password
