@@ -529,64 +529,71 @@ export const useChat = (currentUser: User) => {
       console.log('No active room');
       return;
     }
-    
-    try {
-      setRooms(prev => {
-        console.log('Previous rooms state:', prev);
-        const updatedRooms = prev.map(r => {
-          if (r.id !== activeRoom.id) return r;
+
+    setRooms(prev => {
+      const updatedRooms = prev.map(r => {
+        if (r.id !== activeRoom.id) return r;
+        
+        const newMessages = r.messages.map(m => {
+          if (m.id !== messageId) return m;
           
-          const newMessages = r.messages.map(m => {
-            if (m.id !== messageId) return m;
+          const existingReaction = m.reactions?.find(re => re.emoji === emoji);
+          let newReactions = [...(m.reactions || [])];
+          
+          if (existingReaction) {
+            // Check if current user already reacted with this emoji
+            const userIndex = existingReaction.users.indexOf(currentUser.id);
             
-            console.log('Found message to update:', m);
-            const existingReaction = m.reactions?.find(re => re.emoji === emoji);
-            let newReactions = [...(m.reactions || [])];
-            
-            if (existingReaction) {
-                console.log('Toggling existing reaction');
-                // Toggle user's reaction
-                newReactions = newReactions.map(re => {
-                    if (re.emoji === emoji) {
-                        return re.users.includes(currentUser.id) 
-                            ? { ...re, users: re.users.filter(uId => uId !== currentUser.id) }
-                            : { ...re, users: [...re.users, currentUser.id] };
-                    }
-                    return re;
-                }).filter(re => re.users.length > 0);
+            if (userIndex > -1) {
+              // User already reacted - remove their reaction
+              const updatedUsers = [...existingReaction.users];
+              updatedUsers.splice(userIndex, 1);
+              
+              if (updatedUsers.length === 0) {
+                // No more users for this reaction - remove it
+                newReactions = newReactions.filter(re => re.emoji !== emoji);
+              } else {
+                // Update the reaction with remaining users
+                newReactions = newReactions.map(re => 
+                  re.emoji === emoji 
+                    ? { ...re, users: updatedUsers } 
+                    : re
+                );
+              }
             } else {
-                console.log('Adding new reaction');
-                // Add new reaction
-                newReactions = [
-                    ...newReactions,
-                    { emoji, users: [currentUser.id] }
-                ];
+              // User hasn't reacted yet - add their reaction
+              newReactions = newReactions.map(re => 
+                re.emoji === emoji 
+                  ? { ...re, users: [...re.users, currentUser.id] } 
+                  : re
+              );
             }
-            console.log('New reactions:', newReactions);
-            return { ...m, reactions: newReactions };
-          });
+          } else {
+            // Add new reaction with current user
+            newReactions = [
+              ...newReactions,
+              { emoji, users: [currentUser.id] }
+            ];
+          }
           
-          const updatedRoom = { ...r, messages: newMessages };
-          console.log('Updated room:', updatedRoom);
-          return updatedRoom;
+          return { ...m, reactions: newReactions };
         });
         
-        console.log('Updated rooms state:', updatedRooms);
-        return updatedRooms;
+        return { ...r, messages: newMessages };
       });
-
-      // Emit reaction to backend if using WebSocket
-      if (socketRef.current) {
-        console.log('Emitting reaction to server');
-        socketRef.current.emit('message_reaction', {
-          roomId: activeRoom.id,
-          messageId,
-          emoji,
-          userId: currentUser.id
-        });
-      }
-    } catch (error) {
-      console.error('Error handling reaction:', error);
+      
+      return updatedRooms;
+    });
+    
+    // Emit reaction to server
+    if (socketRef.current) {
+      console.log('Emitting reaction to server');
+      socketRef.current.emit('message_reaction', {
+        roomId: activeRoom.id,
+        messageId,
+        emoji,
+        userId: currentUser.id
+      });
     }
   }, [activeRoom, currentUser.id, socketRef]);
 

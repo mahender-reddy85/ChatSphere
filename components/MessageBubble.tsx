@@ -266,7 +266,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
     const handleReaction = (emoji: string) => {
         console.log('Reaction selected:', emoji);
         try {
-            onReaction(message.id, emoji);
+            // Check if the current user has already reacted with this emoji
+            const userHasReacted = message.reactions?.some(
+                r => r.emoji === emoji && r.users.includes(currentUser.id)
+            );
+            
+            if (userHasReacted) {
+                // If user already reacted, remove their reaction
+                onReaction(message.id, emoji);
+            } else {
+                // Otherwise, add their reaction
+                onReaction(message.id, emoji);
+            }
             setIsEmojiPickerOpen(false);
         } catch (error) {
             console.error('Error handling reaction:', error);
