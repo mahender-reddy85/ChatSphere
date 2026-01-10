@@ -1,51 +1,47 @@
-const pool = require('../db');
+const { pool, store } = require('../db');
 
 class Room {
   static async create(roomData) {
-    const { id, name, type, privacy, password, createdBy } = roomData;
-    const [result] = await pool.execute(
-      'INSERT INTO rooms (id, name, type, privacy, password, created_by) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, name, type, privacy, password, createdBy]
-    );
-    return result.insertId;
+    return await store.createRoom(roomData);
   }
 
   static async findById(id) {
-    const [rows] = await pool.execute('SELECT * FROM rooms WHERE id = ?', [id]);
-    return rows[0];
+    return await store.findRoomById(id);
   }
 
   static async getAll() {
-    const [rows] = await pool.execute('SELECT * FROM rooms');
-    return rows;
+    return Array.from(store.rooms.values());
   }
 
   static async getRoomsForUser(userId) {
-    const [rows] = await pool.execute(
-      `
-      SELECT r.* FROM rooms r
-      JOIN room_users ru ON r.id = ru.room_id
-      WHERE ru.user_id = ?
-    `,
-      [userId]
-    );
-    return rows;
+    // Find all rooms where the user is a member
+    const userRooms = [];
+    for (const [roomId, room] of store.rooms) {
+      if (room.members && room.members.has(userId)) {
+        userRooms.push(room);
+      }
+    }
+    return userRooms;
   }
 
   static async addUser(roomId, userId) {
-    const [result] = await pool.execute('INSERT INTO room_users (room_id, user_id) VALUES (?, ?)', [
-      roomId,
-      userId,
-    ]);
-    return result.insertId;
+    const room = await store.findRoomById(roomId);
+    if (!room) return false;
+    
+    if (!room.members) {
+      room.members = new Set();
+    }
+    
+    room.members.add(userId);
+    store.rooms.set(roomId, room);
+    return true;
   }
 
   static async removeUser(roomId, userId) {
-    const [result] = await pool.execute(
-      'DELETE FROM room_users WHERE room_id = ? AND user_id = ?',
-      [roomId, userId]
-    );
-    return result.affectedRows > 0;
+    const room = await store.findRoomById(roomId);
+    if (!room || !room.members) return false;
+    
+    return room.members.delete(userId);
   }
 
   static async getUsers(roomId) {
