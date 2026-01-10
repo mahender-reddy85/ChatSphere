@@ -242,7 +242,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
     };
 
     const handleReaction = (emoji: string) => {
-        onReaction(message.id, emoji);
+        console.log('Reaction selected:', emoji);
+        try {
+            onReaction(message.id, emoji);
+            setIsEmojiPickerOpen(false);
+        } catch (error) {
+            console.error('Error handling reaction:', error);
+        }
     }
 
     const handleImageClick = (url: string, name?: string) => {
@@ -454,10 +460,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                         top: `${Math.min(contextMenuPosition.y, window.innerHeight - 400)}px`,
                     }}
                 >
-                    <EmojiPicker
-                        onSelect={handleReaction}
-                        onClose={() => setIsEmojiPickerOpen(false)}
-                    />
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2">
+                        <EmojiPicker
+                            onSelect={(emoji) => {
+                                console.log('Emoji selected from picker:', emoji);
+                                handleReaction(emoji);
+                            }}
+                            onClose={() => {
+                                console.log('Emoji picker closed');
+                                setIsEmojiPickerOpen(false);
+                            }}
+                        />
+                    </div>
                 </div>
             )}
         </div>

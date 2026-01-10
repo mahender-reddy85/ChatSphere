@@ -485,9 +485,6 @@ export const useChat = (currentUser: User) => {
     setRooms(prev => prev.map(r => r.id === activeRoom.id ? { ...r, messages: [...r.messages, newMessage] } : r));
 
     // Emit to backend for synchronization
-    if (socketRef.current) {
-      socketRef.current.emit('send_message', { roomId: activeRoom.id, message: newMessage });
-    }
   }, [activeRoom, currentUser]);
 
   const handleVote = useCallback((messageId: string, optionId: string) => {
@@ -517,23 +514,37 @@ export const useChat = (currentUser: User) => {
 
     // Emit vote update to backend for synchronization
     if (socketRef.current) {
-      socketRef.current.emit('vote_poll', { roomId: activeRoom.id, messageId, optionId, userId: currentUser.id });
+      socketRef.current.emit('vote_poll', {
+        roomId: activeRoom.id,
+        messageId,
+        optionId,
+        userId: currentUser.id
+      });
     }
-  }, [activeRoom, currentUser.id]);
+  }, [activeRoom, currentUser.id, socketRef]);
 
   const handleReaction = useCallback((messageId: string, emoji: string) => {
-    if (!activeRoom) return;
+    console.log('handleReaction called with:', { messageId, emoji });
+    if (!activeRoom) {
+      console.log('No active room');
+      return;
+    }
     
-    setRooms(prev => prev.map(r => {
-        if (r.id !== activeRoom.id) return r;
-        
-        const newMessages = r.messages.map(m => {
+    try {
+      setRooms(prev => {
+        console.log('Previous rooms state:', prev);
+        const updatedRooms = prev.map(r => {
+          if (r.id !== activeRoom.id) return r;
+          
+          const newMessages = r.messages.map(m => {
             if (m.id !== messageId) return m;
             
+            console.log('Found message to update:', m);
             const existingReaction = m.reactions?.find(re => re.emoji === emoji);
             let newReactions = [...(m.reactions || [])];
             
             if (existingReaction) {
+                console.log('Toggling existing reaction');
                 // Toggle user's reaction
                 newReactions = newReactions.map(re => {
                     if (re.emoji === emoji) {
@@ -544,45 +555,40 @@ export const useChat = (currentUser: User) => {
                     return re;
                 }).filter(re => re.users.length > 0);
             } else {
+                console.log('Adding new reaction');
                 // Add new reaction
                 newReactions = [
                     ...newReactions,
                     { emoji, users: [currentUser.id] }
                 ];
             }
+            console.log('New reactions:', newReactions);
             return { ...m, reactions: newReactions };
+          });
+          
+          const updatedRoom = { ...r, messages: newMessages };
+          console.log('Updated room:', updatedRoom);
+          return updatedRoom;
         });
-        return { ...r, messages: newMessages };
-    }));
-  }, [activeRoom, currentUser.id]);
-  
-  const searchMessages = useCallback((query: string, scope: 'current' | 'all') => {
-    if (!query.trim()) {
-        setSearchResults([]);
-        setIsSearching(false);
-        return;
-    }
-    
-    const lowerCaseQuery = query.toLowerCase();
-    const results: SearchResult[] = [];
-    
-    const roomsToSearch = scope === 'current' && activeRoom ? [activeRoom] : rooms;
+        
+        console.log('Updated rooms state:', updatedRooms);
+        return updatedRooms;
+      });
 
-    for (const room of roomsToSearch) {
-        for (const message of room.messages) {
-            if (message.text.toLowerCase().includes(lowerCaseQuery)) {
-                results.push({
-                    message,
-                    roomId: room.id,
-                    roomName: room.name,
-                });
-            }
-        }
+      // Emit reaction to backend if using WebSocket
+      if (socketRef.current) {
+        console.log('Emitting reaction to server');
+        socketRef.current.emit('message_reaction', {
+          roomId: activeRoom.id,
+          messageId,
+          emoji,
+          userId: currentUser.id
+        });
+      }
+    } catch (error) {
+      console.error('Error handling reaction:', error);
     }
-
-    setSearchResults(results.sort((a, b) => b.message.timestamp - a.message.timestamp)); // most recent first
-    setIsSearching(true);
-  }, [rooms, activeRoom]);
+  }, [activeRoom, currentUser.id, socketRef]);
 
   const clearSearch = useCallback(() => {
     setSearchResults([]);
@@ -631,6 +637,34 @@ export const useChat = (currentUser: User) => {
   const isUserOnline = useCallback((userId: string) => {
     return onlineUsers.has(userId);
   }, [onlineUsers]);
+
+  const searchMessages = useCallback((query: string, scope: 'all' | 'current' = 'all') => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+    
+    const lowerCaseQuery = query.toLowerCase();
+    const results: SearchResult[] = [];
+    
+    const roomsToSearch = scope === 'current' && activeRoom ? [activeRoom] : rooms;
+
+    for (const room of roomsToSearch) {
+      for (const message of room.messages) {
+        if (message.text && message.text.toLowerCase().includes(lowerCaseQuery)) {
+          results.push({
+            message,
+            roomId: room.id,
+            roomName: room.name,
+          });
+        }
+      }
+    }
+
+    setSearchResults(results.sort((a, b) => b.message.timestamp - a.message.timestamp));
+    setIsSearching(true);
+  }, [rooms, activeRoom]);
 
   return {
     rooms,
