@@ -30,9 +30,18 @@ module.exports = {
   rules: {
     'prettier/prettier': 'error',
     'react/react-in-jsx-scope': 'off',
+    'react/prop-types': 'off',
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/no-explicit-any': 'warn',
     'jsx-a11y/anchor-is-valid': 'off',
   },
+  overrides: [
+    {
+      files: ['backend/**/*.js'],
+      rules: {
+        '@typescript-eslint/no-require-imports': 'off'
+      }
+    }
+  ],
   ignorePatterns: ['dist/', 'node_modules/', '.vite/'],
 };
