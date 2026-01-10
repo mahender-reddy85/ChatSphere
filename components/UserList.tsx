@@ -3,7 +3,6 @@ import type { User } from '../types';
 import Avatar from './Avatar';
 import { IconShare } from './Icons';
 import { useChat } from '../hooks/useChat';
-import type { User as CurrentUser } from '../types';
 import { toast } from '../hooks/toastService';
 
 interface UserListProps {

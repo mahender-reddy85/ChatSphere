@@ -1,11 +1,6 @@
 import { toast } from '../hooks/toastService';
 
-export const uploadFile = async (
-  file: File,
-  roomId: string,
-  messageId: string,
-  onProgress?: (progress: number) => void
-): Promise<string> => {
+export const uploadFile = async (file: File, roomId: string, messageId: string): Promise<string> => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('roomId', roomId);

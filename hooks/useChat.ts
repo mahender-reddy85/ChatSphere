@@ -10,8 +10,6 @@ import type {
   MessageFile,
 } from '../types';
 
-type MessageStatus = 'sent' | 'delivered' | 'seen';
-
 // Helper type for messages with room ID
 type MessageWithRoomId = Message & { roomId: string };
 

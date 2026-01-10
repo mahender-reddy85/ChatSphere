@@ -5,8 +5,7 @@ import RoomList from './RoomList';
 import ChatWindow from './ChatWindow';
 import UserSettingsModal from './UserSettingsModal';
 import UserSettingsTrigger from './UserSettingsTrigger';
-import UserList from './UserList';
-import Avatar from './Avatar';
+
 import { MOCK_USERS } from '../constants';
 import type { Settings } from '../hooks/useSettings';
 import SearchResultsModal from './SearchResultsModal';

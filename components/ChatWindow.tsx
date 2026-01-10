@@ -4,7 +4,7 @@ import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
 import TypingIndicator from './TypingIndicator';
 import PinnedMessagesBar from './PinnedMessagesBar';
-import Avatar from './Avatar';
+
 import UserList from './UserList';
 import { IconUsers, IconAI, IconUser, IconMenu, IconX } from './Icons';
 

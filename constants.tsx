@@ -1,6 +1,4 @@
-import React from 'react';
 import type { User } from './types';
-import { IconAI, IconChat, IconUsers } from './components/Icons';
 
 export const MOCK_USERS: Record<string, User> = {
   'user-1': { id: 'user-1', name: 'Alex', isOnline: true },

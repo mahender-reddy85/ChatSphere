@@ -13,10 +13,8 @@ import {
   IconFile,
   IconCamera,
   IconMic,
-  IconTrash,
   IconMapPin,
 } from './Icons';
-import { useChat } from '../hooks/useChat';
 import { toast } from '../hooks/toastService';
 
 interface ChatInputProps {
