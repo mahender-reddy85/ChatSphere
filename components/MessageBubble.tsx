@@ -141,18 +141,31 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
             if (deleteRef.current && !deleteRef.current.contains(event.target as Node)) {
                 setIsDeleteMenuOpen(false);
             }
-            if (showContextMenu) {
+            if (showContextMenu && menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setShowContextMenu(false);
             }
         };
 
         // Prevent context menu on the document
         const handleContextMenu = (e: MouseEvent) => {
-            if ((e.target as HTMLElement).closest('.message-content')) {
+            const target = e.target as HTMLElement;
+            const messageContent = target.closest('.message-content');
+            const isInsideMessageBubble = target.closest(`#message-${message.id}`);
+            
+            if (messageContent && isInsideMessageBubble) {
                 e.preventDefault();
-                setContextMenuPosition({ x: e.clientX, y: e.clientY });
+                e.stopPropagation();
+                
+                // Calculate position to ensure menu stays within viewport
+                const x = Math.min(e.clientX, window.innerWidth - 200);
+                const y = Math.min(e.clientY, window.innerHeight - 300);
+                
+                setContextMenuPosition({ x, y });
                 setShowContextMenu(true);
                 setIsEmojiPickerOpen(false);
+                setIsDeleteMenuOpen(false);
+            } else if (showContextMenu) {
+                setShowContextMenu(false);
             }
         };
 
@@ -220,8 +233,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
 
     const handleCopy = async () => {
         try {
-            if (message.text) {
-                await navigator.clipboard.writeText(message.text);
+            let textToCopy = message.text || '';
+            if (message.file?.url) {
+                textToCopy = message.file.url;
+            } else if (message.audio?.url) {
+                textToCopy = message.audio.url;
+            } else if (message.location) {
+                textToCopy = `https://www.openstreetmap.org/?mlat=${message.location.latitude}&mlon=${message.location.longitude}`;
+            }
+            
+            if (textToCopy) {
+                await navigator.clipboard.writeText(textToCopy);
                 setCopyStatus('copied');
                 setTimeout(() => setCopyStatus('idle'), 2000);
             }
@@ -287,6 +309,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                     ref={messageContentRef}
                     onContextMenu={(e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         setContextMenuPosition({ x: e.clientX, y: e.clientY });
                         setShowContextMenu(true);
                     }}
@@ -347,13 +370,19 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
             {/* Context Menu - Shows on right-click or long-press */}
             {showContextMenu && (
                 <div 
-                    className="fixed z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 py-1 w-48"
+                    className="fixed z-[1000] bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 py-1 w-48"
                     style={{
-                        left: `${Math.min(contextMenuPosition.x, window.innerWidth - 200)}px`,
-                        top: `${Math.min(contextMenuPosition.y, window.innerHeight - 300)}px`,
+                        left: `${contextMenuPosition.x}px`,
+                        top: `${contextMenuPosition.y}px`,
+                        transform: 'translate(0, 0)',
+                        maxHeight: '80vh',
+                        overflowY: 'auto',
                     }}
                     ref={menuRef}
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                    }}
                 >
                     <button 
                         onClick={handleCopy}
