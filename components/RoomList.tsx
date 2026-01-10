@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { Room, User } from '../types';
 import { IconAI, IconUsers, IconPlusCircle, IconLogin, IconUser, IconLock, IconGlobe, IconTrash } from './Icons';
 import JoinRoomModal from './JoinRoomModal';
 import CreateRoomModal from './CreateRoomModal';
+import ConfirmationDialog from './ConfirmationDialog';
 import SearchBar from './SearchBar';
 import Avatar from './Avatar';
 
@@ -31,6 +32,7 @@ const RoomIcon = ({ room }: { room: Room }) => {
 const RoomList: React.FC<RoomListProps> = ({ rooms, activeRoom, setActiveRoom, createRoom, joinRoom, deleteRoom, unreadCounts, onSearch, currentUser }) => {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState<{id: string, name: string} | null>(null);
     
   return (
     <div className="flex-grow flex flex-col min-h-0">
@@ -92,9 +94,7 @@ const RoomList: React.FC<RoomListProps> = ({ rooms, activeRoom, setActiveRoom, c
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (window.confirm(`Are you sure you want to delete the room "${room.name}"? This action cannot be undone.`)) {
-                    deleteRoom(room.id);
-                  }
+                  setRoomToDelete({ id: room.id, name: room.name });
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/50 transition-opacity"
                 title="Delete room"
@@ -114,6 +114,21 @@ const RoomList: React.FC<RoomListProps> = ({ rooms, activeRoom, setActiveRoom, c
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreate={createRoom}
+      />
+      
+      <ConfirmationDialog
+        isOpen={!!roomToDelete}
+        title={`Delete "${roomToDelete?.name}"?`}
+        message={`Are you sure you want to delete the room "${roomToDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete Room"
+        variant="danger"
+        onConfirm={() => {
+          if (roomToDelete) {
+            deleteRoom(roomToDelete.id);
+            setRoomToDelete(null);
+          }
+        }}
+        onCancel={() => setRoomToDelete(null)}
       />
     </div>
   );
