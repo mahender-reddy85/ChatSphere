@@ -3,6 +3,9 @@ import type { User, Room, Message, Poll, SearchResult, MessageLocation, Reaction
 
 type MessageStatus = 'sent' | 'delivered' | 'seen';
 
+// Helper type for messages with room ID
+type MessageWithRoomId = Message & { roomId: string };
+
 // Extend the Message type to include additional fields
 interface ExtendedMessage extends Omit<Message, 'status' | 'reactions' | 'type' | 'file'> {
   status?: 'sent' | 'delivered' | 'seen' | 'sending';
@@ -13,6 +16,7 @@ interface ExtendedMessage extends Omit<Message, 'status' | 'reactions' | 'type' 
   isEdited?: boolean;
   type: 'text' | 'system' | 'poll';
   roomId: string;
+  isOnline?: boolean;
 }
 
 // Room type with extended message type
@@ -34,7 +38,8 @@ export const useChat = (currentUser: User) => {
     status: 'sent',
     reactions: msg.reactions || [],
     type: msg.type || 'text',
-    roomId: msg.roomId || ''
+    roomId: msg.roomId || '',
+    isOnline: false
   });
 
   const [rooms, setRooms] = useState<ExtendedRoom[]>([]);
@@ -58,6 +63,7 @@ export const useChat = (currentUser: User) => {
       reactions: [],
       type: 'text',
       roomId,
+      isOnline: false
     });
 
     const selfChatId = `self-chat-${currentUser.id}`;
@@ -613,12 +619,138 @@ export const useChat = (currentUser: User) => {
         // Find the user in any of the rooms
         for (const room of rooms) {
           const user = room.users.find(u => u === userId);
-          if (user) return MOCK_USERS[user] || { id: user, name: 'Unknown User' };
+          if (user) return { 
+            ...(MOCK_USERS[user] || { id: user, name: 'Unknown User' }),
+            isOnline: onlineUsers.has(user)
+          };
         }
         return null;
       })
       .filter(Boolean) as User[];
-  }, [typingUsers, currentUser.id, rooms]);
+  }, [typingUsers, currentUser.id, rooms, onlineUsers]);
+
+  // Join an existing room
+  const joinRoom = useCallback((roomId: string) => {
+    setRooms(prevRooms => 
+      prevRooms.map(room => 
+        room.id === roomId
+          ? { 
+              ...room, 
+              users: room.users.includes(currentUser.id) 
+                ? room.users 
+                : [...room.users, currentUser.id] 
+            }
+          : room
+      )
+    );
+
+    if (socketRef.current) {
+      socketRef.current.emit('join_room', { roomId, userId: currentUser.id });
+    }
+  }, [currentUser.id]);
+
+  // Create a new room
+  const createRoom = useCallback((name: string, isPrivate: boolean = false) => {
+    const newRoom: ExtendedRoom = {
+      id: `room-${Date.now()}`,
+      name,
+      type: 'group', // Only 'group', 'self', or 'ai' are allowed
+      users: [currentUser.id],
+      messages: [],
+      privacy: isPrivate ? 'private' : 'public' as const,
+      activeCall: undefined
+    };
+
+    setRooms(prevRooms => [...prevRooms, newRoom]);
+    setActiveRoom(newRoom);
+
+    if (socketRef.current) {
+      socketRef.current.emit('create_room', { room: newRoom });
+    }
+
+    return newRoom;
+  }, [currentUser.id]);
+
+  // Send a poll message
+  const sendPoll = useCallback((question: string, options: string[], roomId: string) => {
+    if (!socketRef.current || !question.trim() || options.length < 2) return;
+
+    const poll: Poll = {
+      id: `poll-${Date.now()}`,
+      question,
+      options: options.map((text, index) => ({
+        id: `opt-${index}`,
+        text,
+        votes: []
+      }))
+    };
+    
+    // Create the extended message with poll data
+    const extendedMessage: ExtendedMessage = {
+      id: `msg-${Date.now()}`,
+      author: currentUser,
+      text: question,
+      timestamp: Date.now(),
+      status: 'sending',
+      reactions: [],
+      type: 'poll',
+      roomId,
+      isPinned: false,
+      isEdited: false,
+      poll
+    };
+
+    // Create a base message for the server (without extended properties)
+    const baseMessage: MessageWithRoomId = {
+      id: extendedMessage.id,
+      author: extendedMessage.author,
+      text: extendedMessage.text,
+      timestamp: extendedMessage.timestamp,
+      type: 'text', // Use 'text' as the base type for the server
+      roomId: extendedMessage.roomId,
+      reactions: []
+    };
+
+    // Update local state with the extended message
+    setRooms(prevRooms => 
+      prevRooms.map(room => 
+        room.id === roomId
+          ? { ...room, messages: [...room.messages, extendedMessage] }
+          : room
+      )
+    );
+
+    // Emit to server with the base message
+    socketRef.current.emit('send_message', { message: baseMessage });
+  }, [currentUser]);
+
+  // Handle message reactions
+  const handleReaction = useCallback((messageId: string, emoji: string, roomId: string) => {
+    if (!socketRef.current) return;
+    
+    setRooms(prevRooms => 
+      prevRooms.map(room => 
+        room.id === roomId
+          ? {
+              ...room,
+              messages: room.messages.map(msg => 
+                msg.id === messageId
+                  ? updateReactions(msg, emoji, msg.reactions)
+                  : msg
+              )
+            }
+          : room
+      )
+    );
+
+    // Emit to server
+    socketRef.current.emit('react_to_message', {
+      roomId,
+      messageId,
+      emoji,
+      userId: currentUser.id
+    });
+  }, [currentUser.id, updateReactions]);
 
   return {
     rooms,
@@ -635,5 +767,12 @@ export const useChat = (currentUser: User) => {
     isSearching,
     deleteRoom,
     isUserOnline,
+    // Newly added functions
+    sendPoll,
+    handleVote,
+    handleReaction,
+    isSending,
+    createRoom,
+    joinRoom
   };
 };
