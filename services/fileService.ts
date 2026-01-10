@@ -1,6 +1,11 @@
 import { toast } from '../hooks/toastService';
 
-export const uploadFile = async (file: File, roomId: string, messageId: string, onProgress?: (progress: number) => void): Promise<string> => {
+export const uploadFile = async (
+  file: File,
+  roomId: string,
+  messageId: string,
+  onProgress?: (progress: number) => void
+): Promise<string> => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('roomId', roomId);
@@ -31,20 +36,24 @@ export const captureImage = async (video: HTMLVideoElement): Promise<Blob> => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
-    
+
     if (!ctx) {
       reject(new Error('Could not get canvas context'));
       return;
     }
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    canvas.toBlob((blob) => {
-      if (blob) {
-        resolve(blob);
-      } else {
-        reject(new Error('Failed to capture image'));
-      }
-    }, 'image/jpeg', 0.9);
+
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error('Failed to capture image'));
+        }
+      },
+      'image/jpeg',
+      0.9
+    );
   });
 };

@@ -43,18 +43,29 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
           <h2 className="text-lg font-semibold dark:text-white">Login</h2>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-            <IconX className="w-5 h-5 text-gray-600 dark:text-gray-300"/>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+          >
+            <IconX className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </button>
         </div>
         <div className="p-6 space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Username</label>
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Username
+              </label>
               <input
                 type="text"
                 value={username}
@@ -65,7 +76,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Password</label>
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Password
+              </label>
               <input
                 type="password"
                 value={password}
@@ -89,7 +102,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
               <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or continue with</span>
+              <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                Or continue with
+              </span>
             </div>
           </div>
 

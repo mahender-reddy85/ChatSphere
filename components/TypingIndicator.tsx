@@ -10,7 +10,7 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({ users }) => {
     return <div className="h-6 px-4" />;
   }
 
-  const names = users.map(u => u.name);
+  const names = users.map((u) => u.name);
   let text: string;
 
   if (names.length === 1) {

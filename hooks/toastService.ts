@@ -13,7 +13,7 @@ type ToastType = 'success' | 'error' | 'info';
 function showToast(message: string, type: ToastType = 'info', duration = 3000): void {
   // Create toast element
   const toast = document.createElement('div');
-  
+
   // Set toast styles
   const baseStyles = [
     'position: fixed',
@@ -25,25 +25,25 @@ function showToast(message: string, type: ToastType = 'info', duration = 3000): 
     'z-index: 50',
     'color: white',
     'max-width: 24rem',
-    'word-break: break-word'
+    'word-break: break-word',
   ];
 
   // Set type-specific styles
   const typeStyles = {
     success: 'background-color: #10B981', // green-500
-    error: 'background-color: #EF4444',   // red-500
-    info: 'background-color: #3B82F6'     // blue-500
+    error: 'background-color: #EF4444', // red-500
+    info: 'background-color: #3B82F6', // blue-500
   }[type];
 
   // Apply all styles
   toast.setAttribute('style', [...baseStyles, typeStyles].join(';'));
-  
+
   // Set content
   toast.textContent = message;
-  
+
   // Add to DOM
   document.body.appendChild(toast);
-  
+
   // Auto-remove after duration
   setTimeout(() => {
     if (toast.parentNode === document.body) {
@@ -56,7 +56,7 @@ function showToast(message: string, type: ToastType = 'info', duration = 3000): 
 export const toast = {
   success: (message: string, duration = 3000) => showToast(message, 'success', duration),
   error: (message: string, duration = 3000) => showToast(message, 'error', duration),
-  info: (message: string, duration = 3000) => showToast(message, 'info', duration)
+  info: (message: string, duration = 3000) => showToast(message, 'info', duration),
 };
 
 // Export a proper React component for the provider

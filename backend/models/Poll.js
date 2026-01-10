@@ -51,7 +51,8 @@ class Poll {
   }
 
   static async getVotes(pollId) {
-    const [rows] = await pool.execute(`
+    const [rows] = await pool.execute(
+      `
       SELECT po.id as option_id, po.text, COUNT(pv.user_id) as vote_count,
              GROUP_CONCAT(u.name) as voters
       FROM poll_options po
@@ -59,7 +60,9 @@ class Poll {
       LEFT JOIN users u ON pv.user_id = u.id
       WHERE po.poll_id = ?
       GROUP BY po.id, po.text
-    `, [pollId]);
+    `,
+      [pollId]
+    );
     return rows;
   }
 

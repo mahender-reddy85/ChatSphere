@@ -4,610 +4,700 @@ import Avatar from './Avatar';
 import PollDisplay from './PollDisplay';
 import ImageModal from './ImageModal';
 import EmojiPicker from './EmojiPicker';
-import { IconFile, IconMapPin, IconTrash, IconCheck, IconDoubleCheck, IconSmile, IconCopy, IconPin, IconReply, IconEdit, IconX } from './Icons';
+import {
+  IconFile,
+  IconMapPin,
+  IconTrash,
+  IconCheck,
+  IconDoubleCheck,
+  IconSmile,
+  IconCopy,
+  IconPin,
+  IconReply,
+  IconEdit,
+  IconX,
+} from './Icons';
 import { toast } from '../hooks/toastService';
 
 interface MessageBubbleProps {
-    message: Message;
-    currentUser: User;
-    isConsecutive: boolean;
-    onVote: (messageId: string, optionId: string) => void;
-    onReaction: (messageId: string, emoji: string) => void;
-    onDelete: (messageId: string, type?: 'for_me' | 'for_everyone' | 'permanent') => void;
-    onSetEditingMessage: (message: Message) => void;
-    onTogglePin: (messageId: string) => void;
-    onReply: (message: Message) => void;
-    repliedToMessage?: Message;
-    isHighlighted?: boolean;
-    roomType?: string;
+  message: Message;
+  currentUser: User;
+  isConsecutive: boolean;
+  onVote: (messageId: string, optionId: string) => void;
+  onReaction: (messageId: string, emoji: string) => void;
+  onDelete: (messageId: string, type?: 'for_me' | 'for_everyone' | 'permanent') => void;
+  onSetEditingMessage: (message: Message) => void;
+  onTogglePin: (messageId: string) => void;
+  onReply: (message: Message) => void;
+  repliedToMessage?: Message;
+  isHighlighted?: boolean;
+  roomType?: string;
 }
 
 const formatTimestamp = (timestamp: number) => {
-    return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }).format(timestamp);
-}
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true,
+  }).format(timestamp);
+};
 
-const FileAttachment = ({ file, onImageClick }: { file: NonNullable<Message['file']>, onImageClick: (url: string, name?: string) => void }) => {
-    if (file.type.startsWith('image/')) {
-        return <img src={file.url} alt={file.name} className="max-w-xs max-h-64 rounded-lg mt-2 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => onImageClick(file.url, file.name)} />;
-    }
-    if (file.type.startsWith('video/')) {
-        return <video src={file.url} controls className="max-w-xs rounded-lg mt-2" />;
-    }
-    if (file.type.startsWith('audio/')) {
-        return <audio src={file.url} controls className="w-full mt-2" />;
-    }
+const FileAttachment = ({
+  file,
+  onImageClick,
+}: {
+  file: NonNullable<Message['file']>;
+  onImageClick: (url: string, name?: string) => void;
+}) => {
+  if (file.type.startsWith('image/')) {
     return (
-        <a href={file.url} download={file.name} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-gray-200 dark:bg-gray-800 p-2 rounded-lg mt-2 hover:bg-gray-300 dark:hover:bg-gray-700">
-            <IconFile className="w-6 h-6 flex-shrink-0" />
-            <span className="truncate text-sm font-medium">{file.name}</span>
-        </a>
+      <img
+        src={file.url}
+        alt={file.name}
+        className="max-w-xs max-h-64 rounded-lg mt-2 cursor-pointer hover:opacity-90 transition-opacity"
+        onClick={() => onImageClick(file.url, file.name)}
+      />
     );
-}
+  }
+  if (file.type.startsWith('video/')) {
+    return <video src={file.url} controls className="max-w-xs rounded-lg mt-2" />;
+  }
+  if (file.type.startsWith('audio/')) {
+    return <audio src={file.url} controls className="w-full mt-2" />;
+  }
+  return (
+    <a
+      href={file.url}
+      download={file.name}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 bg-gray-200 dark:bg-gray-800 p-2 rounded-lg mt-2 hover:bg-gray-300 dark:hover:bg-gray-700"
+    >
+      <IconFile className="w-6 h-6 flex-shrink-0" />
+      <span className="truncate text-sm font-medium">{file.name}</span>
+    </a>
+  );
+};
 
-const AudioAttachment = ({ audio, isCurrentUserMessage }: { audio: NonNullable<Message['audio']>, isCurrentUserMessage: boolean }) => {
-    return (
-        <div className="w-64">
-            <audio controls src={audio.url} className={`w-full ${isCurrentUserMessage ? 'filter-audio-white' : ''}`}></audio>
-             <style>{`
+const AudioAttachment = ({
+  audio,
+  isCurrentUserMessage,
+}: {
+  audio: NonNullable<Message['audio']>;
+  isCurrentUserMessage: boolean;
+}) => {
+  return (
+    <div className="w-64">
+      <audio
+        controls
+        src={audio.url}
+        className={`w-full ${isCurrentUserMessage ? 'filter-audio-white' : ''}`}
+      ></audio>
+      <style>{`
                 .filter-audio-white {
                     filter: invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1000%) contrast(100%);
                 }
             `}</style>
-        </div>
-    );
+    </div>
+  );
 };
 
 const LocationAttachment = ({ location }: { location: MessageLocation }) => {
-    const mapUrl = `https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}#map=16/${location.latitude}/${location.longitude}`;
-    const staticMapImageUrl = `https://maps.wikimedia.org/osm-intl/16/${location.latitude}/${location.longitude}.png?lang=en`;
+  const mapUrl = `https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}#map=16/${location.latitude}/${location.longitude}`;
+  const staticMapImageUrl = `https://maps.wikimedia.org/osm-intl/16/${location.latitude}/${location.longitude}.png?lang=en`;
 
-    return (
-        <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="block w-64 h-40 rounded-lg overflow-hidden relative text-white no-underline border border-black/20">
-            <img src={staticMapImageUrl} alt="Map view of a location" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-2">
-                <p className="font-semibold text-sm">Location Shared</p>
-                <p className="text-xs">{location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p>
-            </div>
-        </a>
-    );
+  return (
+    <a
+      href={mapUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block w-64 h-40 rounded-lg overflow-hidden relative text-white no-underline border border-black/20"
+    >
+      <img
+        src={staticMapImageUrl}
+        alt="Map view of a location"
+        className="w-full h-full object-cover"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-2">
+        <p className="font-semibold text-sm">Location Shared</p>
+        <p className="text-xs">
+          {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+        </p>
+      </div>
+    </a>
+  );
 };
 
+const MessageBubble: React.FC<MessageBubbleProps> = ({
+  message,
+  currentUser,
+  isConsecutive,
+  onVote,
+  onReaction,
+  onDelete,
+  onSetEditingMessage,
+  onTogglePin,
+  onReply,
+  repliedToMessage,
+  isHighlighted,
+  roomType,
+}) => {
+  const isCurrentUserMessage = message.author?.id === currentUser.id;
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isConsecutive, onVote, onReaction, onDelete, onSetEditingMessage, onTogglePin, onReply, repliedToMessage, isHighlighted, roomType }) => {
-    const isCurrentUserMessage = message.author?.id === currentUser.id;
-
-    // If message is deleted for everyone, show deleted message
-    if (message.isDeleted && message.deletedForEveryone) {
-        const isDeletedByMe = message.deletedBy === currentUser.id;
-        return (
-            <div className={`flex items-start gap-3 group transition-colors duration-1000 ${isCurrentUserMessage ? 'flex-row-reverse' : ''} ${isHighlighted ? 'bg-primary-100/50 dark:bg-primary-900/40 rounded-lg' : ''}`}>
-                {!isCurrentUserMessage && message.author && (
-                    <div className={`flex-shrink-0 self-end ${isConsecutive ? 'opacity-0' : ''}`}>
-                        <Avatar user={message.author} size="md" />
-                    </div>
-                )}
-                <div className={`flex flex-col max-w-full ${isCurrentUserMessage ? 'items-end' : 'items-start'}`}>
-                    {!isConsecutive && message.author && (
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{message.author.name}</span>
-                        </div>
-                    )}
-                    <div className="max-w-md lg:max-w-lg rounded-2xl bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-4 py-2.5 italic flex items-center">
-                        <button onClick={() => onDelete(message.id, 'permanent')} className="mr-2 p-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600">
-                            <IconTrash className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                        </button>
-                        <span>{isDeletedByMe ? 'You deleted this message' : 'This message was deleted'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatTimestamp(message.timestamp)}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // System message
-    if (message.type === 'system') {
-        return (
-            <div className="flex justify-center my-2">
-                <div className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1 rounded-full text-sm">
-                    {message.text}
-                </div>
-            </div>
-        );
-    }
-
-    // State for image modal
-    const [imageModalOpen, setImageModalOpen] = useState(false);
-    const [selectedImageUrl, setSelectedImageUrl] = useState('');
-    const [selectedImageName, setSelectedImageName] = useState('');
-    
-    // State for emoji picker
-    const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-    
-    // State for context menu
-    const [showContextMenu, setShowContextMenu] = useState(false);
-    const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
-    
-    // State for delete functionality
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [deleteForEveryone, setDeleteForEveryone] = useState(false);
-    const [isDeleteMenuOpen, setIsDeleteMenuOpen] = useState(false);
-    
-    // State for copy feedback
-    const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
-
-    const menuRef = useRef<HTMLDivElement>(null);
-    const emojiRef = useRef<HTMLDivElement>(null);
-    const deleteRef = useRef<HTMLDivElement>(null);
-    const messageContentRef = useRef<HTMLDivElement>(null);
-    const longPressTimer = useRef<number | null>(null);
-    const isLongPressing = useRef(false);
-
-    // Handle click outside for all menus
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (emojiRef.current && !emojiRef.current.contains(event.target as Node)) {
-                setIsEmojiPickerOpen(false);
-            }
-            if (deleteRef.current && !deleteRef.current.contains(event.target as Node) && showDeleteConfirm) {
-                setShowDeleteConfirm(false);
-            }
-            if (showContextMenu && menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setShowContextMenu(false);
-            }
-        };
-
-        // Prevent context menu on the document
-        const handleContextMenu = (e: MouseEvent) => {
-            const target = e.target as HTMLElement;
-            const messageContent = target.closest('.message-content');
-            const isInsideMessageBubble = target.closest(`#message-${message.id}`);
-
-            if (messageContent && isInsideMessageBubble) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                // Calculate position to ensure menu stays within viewport
-                const x = Math.min(e.clientX, window.innerWidth - 200);
-                const y = Math.min(e.clientY, window.innerHeight - 300);
-
-                setContextMenuPosition({ x, y });
-                setShowContextMenu(true);
-                setIsEmojiPickerOpen(false);
-            } else if (showContextMenu) {
-                setShowContextMenu(false);
-            }
-        };
-
-        // Handle long press on mobile
-        const handleTouchStart = (e: TouchEvent) => {
-            if ((e.target as HTMLElement).closest('.message-content')) {
-                isLongPressing.current = true;
-                const touch = e.touches[0];
-
-                longPressTimer.current = window.setTimeout(() => {
-                    if (isLongPressing.current) {
-                        setContextMenuPosition({ 
-                            x: touch.clientX, 
-                            y: touch.clientY 
-                        });
-                        setShowContextMenu(true);
-                        setIsEmojiPickerOpen(false);
-                    }
-                }, 500); // 500ms for long press
-            }
-        };
-
-        const handleTouchEnd = () => {
-            isLongPressing.current = false;
-            if (longPressTimer.current) {
-                clearTimeout(longPressTimer.current);
-            }
-        };
-
-        const handleTouchMove = () => {
-            isLongPressing.current = false;
-            if (longPressTimer.current) {
-                clearTimeout(longPressTimer.current);
-            }
-        };
-
-        // Prevent text selection when long pressing
-        const handleSelectStart = (e: Event) => {
-            if (isLongPressing.current) {
-                e.preventDefault();
-                return false;
-            }
-            return true;
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        document.addEventListener('contextmenu', handleContextMenu);
-        document.addEventListener('touchstart', handleTouchStart, { passive: false });
-        document.addEventListener('touchend', handleTouchEnd, { passive: true });
-        document.addEventListener('touchmove', handleTouchMove, { passive: true });
-        document.addEventListener('selectstart', handleSelectStart);
-
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-            document.removeEventListener('contextmenu', handleContextMenu);
-            document.removeEventListener('touchstart', handleTouchStart);
-            document.removeEventListener('touchend', handleTouchEnd);
-            document.removeEventListener('touchmove', handleTouchMove);
-            document.removeEventListener('selectstart', handleSelectStart);
-            if (longPressTimer.current) {
-                clearTimeout(longPressTimer.current);
-            }
-        };
-    }, [showContextMenu]);
-
-    const handleCopy = async () => {
-        try {
-            let textToCopy = message.text || '';
-            if (message.file?.url) {
-                textToCopy = message.file.url;
-            } else if (message.audio?.url) {
-                textToCopy = message.audio.url;
-            } else if (message.location) {
-                textToCopy = `https://www.openstreetmap.org/?mlat=${message.location.latitude}&mlon=${message.location.longitude}`;
-            }
-
-            if (textToCopy) {
-                await navigator.clipboard.writeText(textToCopy);
-                setCopyStatus('copied');
-                setTimeout(() => setCopyStatus('idle'), 2000);
-            }
-        } catch (err) {
-            console.error('Failed to copy text: ', err);
-        }
-        setShowContextMenu(false);
-    };
-
-    const handleDelete = (forEveryone: boolean) => {
-        setDeleteForEveryone(forEveryone);
-        setShowDeleteConfirm(true);
-        setShowContextMenu(false);
-        setIsDeleteMenuOpen(false);
-    };
-
-    const confirmDelete = () => {
-        const deleteType = deleteForEveryone ? 'for_everyone' : 'for_me';
-        onDelete(message.id, deleteType);
-        setShowDeleteConfirm(false);
-        
-        // Show toast notification
-        toast.success(deleteType === 'for_everyone' 
-            ? 'Message deleted for everyone' 
-            : 'Message deleted for you'
-        );
-    };
-
-    const cancelDelete = () => {
-        setShowDeleteConfirm(false);
-    };
-
-    const handleVote = (optionId: string) => {
-        onVote(message.id, optionId);
-    };
-
-    const handleReaction = (emoji: string) => {
-        console.log('Reaction selected:', emoji);
-        try {
-            // Check if the current user has already reacted with this emoji
-            const userHasReacted = message.reactions?.some(
-                r => r.emoji === emoji && r.users.includes(currentUser.id)
-            );
-
-            if (userHasReacted) {
-                // If user already reacted, remove their reaction
-                onReaction(message.id, emoji);
-            } else {
-                // Otherwise, add their reaction
-                onReaction(message.id, emoji);
-            }
-            setIsEmojiPickerOpen(false);
-        } catch (error) {
-            console.error('Error handling reaction:', error);
-        }
-    }
-
-    const handleImageClick = (url: string, name?: string) => {
-        setSelectedImageUrl(url);
-        setSelectedImageName(name || '');
-        setImageModalOpen(true);
-    };
-
-    const containerClasses = `flex items-start gap-2 sm:gap-3 group transition-colors duration-1000 ${isCurrentUserMessage ? 'flex-row-reverse' : ''} ${isHighlighted ? 'bg-primary-100/50 dark:bg-primary-900/40 rounded-lg' : ''}`;
-    const bubbleClasses = `max-w-[280px] sm:max-w-md lg:max-w-lg rounded-2xl ${
-        isCurrentUserMessage
-        ? 'bg-primary-600 text-white rounded-br-lg'
-        : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-lg'
-    } ${message.text || message.poll ? 'px-3 py-2 sm:px-4 sm:py-2.5' : 'p-1.5'} text-sm sm:text-base`;
-    const reactionContainer = `flex flex-wrap items-center gap-1 mt-1 ${isCurrentUserMessage ? 'justify-end' : 'justify-start'} max-w-[280px] sm:max-w-md lg:max-w-lg`;
-
+  // If message is deleted for everyone, show deleted message
+  if (message.isDeleted && message.deletedForEveryone) {
+    const isDeletedByMe = message.deletedBy === currentUser.id;
     return (
-        <div id={`message-${message.id}`} className={containerClasses}>
-            {(roomType !== 'self' && roomType !== 'ai') && message.author && (
-                <div className={`flex-shrink-0 self-end ${isConsecutive ? 'opacity-0' : ''}`}>
-                    <Avatar user={isCurrentUserMessage ? currentUser : message.author} size="md" />
+      <div
+        className={`flex items-start gap-3 group transition-colors duration-1000 ${isCurrentUserMessage ? 'flex-row-reverse' : ''} ${isHighlighted ? 'bg-primary-100/50 dark:bg-primary-900/40 rounded-lg' : ''}`}
+      >
+        {!isCurrentUserMessage && message.author && (
+          <div className={`flex-shrink-0 self-end ${isConsecutive ? 'opacity-0' : ''}`}>
+            <Avatar user={message.author} size="md" />
+          </div>
+        )}
+        <div
+          className={`flex flex-col max-w-full ${isCurrentUserMessage ? 'items-end' : 'items-start'}`}
+        >
+          {!isConsecutive && message.author && (
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                {message.author.name}
+              </span>
+            </div>
+          )}
+          <div className="max-w-md lg:max-w-lg rounded-2xl bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-4 py-2.5 italic flex items-center">
+            <button
+              onClick={() => onDelete(message.id, 'permanent')}
+              className="mr-2 p-1 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600"
+            >
+              <IconTrash className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            </button>
+            <span>{isDeletedByMe ? 'You deleted this message' : 'This message was deleted'}</span>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {formatTimestamp(message.timestamp)}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // System message
+  if (message.type === 'system') {
+    return (
+      <div className="flex justify-center my-2">
+        <div className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1 rounded-full text-sm">
+          {message.text}
+        </div>
+      </div>
+    );
+  }
+
+  // State for image modal
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState('');
+  const [selectedImageName, setSelectedImageName] = useState('');
+
+  // State for emoji picker
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+
+  // State for context menu
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+
+  // State for delete functionality
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteForEveryone, setDeleteForEveryone] = useState(false);
+  const [isDeleteMenuOpen, setIsDeleteMenuOpen] = useState(false);
+
+  // State for copy feedback
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
+
+  const menuRef = useRef<HTMLDivElement>(null);
+  const emojiRef = useRef<HTMLDivElement>(null);
+  const deleteRef = useRef<HTMLDivElement>(null);
+  const messageContentRef = useRef<HTMLDivElement>(null);
+  const longPressTimer = useRef<number | null>(null);
+  const isLongPressing = useRef(false);
+
+  // Handle click outside for all menus
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiRef.current && !emojiRef.current.contains(event.target as Node)) {
+        setIsEmojiPickerOpen(false);
+      }
+      if (
+        deleteRef.current &&
+        !deleteRef.current.contains(event.target as Node) &&
+        showDeleteConfirm
+      ) {
+        setShowDeleteConfirm(false);
+      }
+      if (showContextMenu && menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowContextMenu(false);
+      }
+    };
+
+    // Prevent context menu on the document
+    const handleContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const messageContent = target.closest('.message-content');
+      const isInsideMessageBubble = target.closest(`#message-${message.id}`);
+
+      if (messageContent && isInsideMessageBubble) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Calculate position to ensure menu stays within viewport
+        const x = Math.min(e.clientX, window.innerWidth - 200);
+        const y = Math.min(e.clientY, window.innerHeight - 300);
+
+        setContextMenuPosition({ x, y });
+        setShowContextMenu(true);
+        setIsEmojiPickerOpen(false);
+      } else if (showContextMenu) {
+        setShowContextMenu(false);
+      }
+    };
+
+    // Handle long press on mobile
+    const handleTouchStart = (e: TouchEvent) => {
+      if ((e.target as HTMLElement).closest('.message-content')) {
+        isLongPressing.current = true;
+        const touch = e.touches[0];
+
+        longPressTimer.current = window.setTimeout(() => {
+          if (isLongPressing.current) {
+            setContextMenuPosition({
+              x: touch.clientX,
+              y: touch.clientY,
+            });
+            setShowContextMenu(true);
+            setIsEmojiPickerOpen(false);
+          }
+        }, 500); // 500ms for long press
+      }
+    };
+
+    const handleTouchEnd = () => {
+      isLongPressing.current = false;
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+    };
+
+    const handleTouchMove = () => {
+      isLongPressing.current = false;
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+    };
+
+    // Prevent text selection when long pressing
+    const handleSelectStart = (e: Event) => {
+      if (isLongPressing.current) {
+        e.preventDefault();
+        return false;
+      }
+      return true;
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+    document.addEventListener('selectstart', handleSelectStart);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('selectstart', handleSelectStart);
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+    };
+  }, [showContextMenu]);
+
+  const handleCopy = async () => {
+    try {
+      let textToCopy = message.text || '';
+      if (message.file?.url) {
+        textToCopy = message.file.url;
+      } else if (message.audio?.url) {
+        textToCopy = message.audio.url;
+      } else if (message.location) {
+        textToCopy = `https://www.openstreetmap.org/?mlat=${message.location.latitude}&mlon=${message.location.longitude}`;
+      }
+
+      if (textToCopy) {
+        await navigator.clipboard.writeText(textToCopy);
+        setCopyStatus('copied');
+        setTimeout(() => setCopyStatus('idle'), 2000);
+      }
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+    setShowContextMenu(false);
+  };
+
+  const handleDelete = (forEveryone: boolean) => {
+    setDeleteForEveryone(forEveryone);
+    setShowDeleteConfirm(true);
+    setShowContextMenu(false);
+    setIsDeleteMenuOpen(false);
+  };
+
+  const confirmDelete = () => {
+    const deleteType = deleteForEveryone ? 'for_everyone' : 'for_me';
+    onDelete(message.id, deleteType);
+    setShowDeleteConfirm(false);
+
+    // Show toast notification
+    toast.success(
+      deleteType === 'for_everyone' ? 'Message deleted for everyone' : 'Message deleted for you'
+    );
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  const handleVote = (optionId: string) => {
+    onVote(message.id, optionId);
+  };
+
+  const handleReaction = (emoji: string) => {
+    console.log('Reaction selected:', emoji);
+    try {
+      // Check if the current user has already reacted with this emoji
+      const userHasReacted = message.reactions?.some(
+        (r) => r.emoji === emoji && r.users.includes(currentUser.id)
+      );
+
+      if (userHasReacted) {
+        // If user already reacted, remove their reaction
+        onReaction(message.id, emoji);
+      } else {
+        // Otherwise, add their reaction
+        onReaction(message.id, emoji);
+      }
+      setIsEmojiPickerOpen(false);
+    } catch (error) {
+      console.error('Error handling reaction:', error);
+    }
+  };
+
+  const handleImageClick = (url: string, name?: string) => {
+    setSelectedImageUrl(url);
+    setSelectedImageName(name || '');
+    setImageModalOpen(true);
+  };
+
+  const containerClasses = `flex items-start gap-2 sm:gap-3 group transition-colors duration-1000 ${isCurrentUserMessage ? 'flex-row-reverse' : ''} ${isHighlighted ? 'bg-primary-100/50 dark:bg-primary-900/40 rounded-lg' : ''}`;
+  const bubbleClasses = `max-w-[280px] sm:max-w-md lg:max-w-lg rounded-2xl ${
+    isCurrentUserMessage
+      ? 'bg-primary-600 text-white rounded-br-lg'
+      : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-lg'
+  } ${message.text || message.poll ? 'px-3 py-2 sm:px-4 sm:py-2.5' : 'p-1.5'} text-sm sm:text-base`;
+  const reactionContainer = `flex flex-wrap items-center gap-1 mt-1 ${isCurrentUserMessage ? 'justify-end' : 'justify-start'} max-w-[280px] sm:max-w-md lg:max-w-lg`;
+
+  return (
+    <div id={`message-${message.id}`} className={containerClasses}>
+      {roomType !== 'self' && roomType !== 'ai' && message.author && (
+        <div className={`flex-shrink-0 self-end ${isConsecutive ? 'opacity-0' : ''}`}>
+          <Avatar user={isCurrentUserMessage ? currentUser : message.author} size="md" />
+        </div>
+      )}
+
+      <div
+        className={`flex flex-col max-w-full ${isCurrentUserMessage ? 'items-end' : 'items-start'}`}
+      >
+        {!isConsecutive && (
+          <div className="flex items-center gap-2 mb-1 px-1">
+            <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+              {isCurrentUserMessage ? formatTimestamp(message.timestamp) : message.author?.name}
+            </span>
+          </div>
+        )}
+
+        <div
+          className={`${bubbleClasses} message-content`}
+          ref={messageContentRef}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setContextMenuPosition({ x: e.clientX, y: e.clientY });
+            setShowContextMenu(true);
+          }}
+        >
+          {message.replyTo && repliedToMessage && (
+            <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-600 rounded border-l-4 border-blue-500">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Replying to {repliedToMessage.author?.name}
+              </p>
+              <p className="text-sm text-gray-800 dark:text-gray-200 truncate">
+                {repliedToMessage.text}
+              </p>
+            </div>
+          )}
+          {message.location && <LocationAttachment location={message.location} />}
+          {message.audio ? (
+            <AudioAttachment audio={message.audio} isCurrentUserMessage={isCurrentUserMessage} />
+          ) : message.file ? (
+            <FileAttachment file={message.file} onImageClick={handleImageClick} />
+          ) : null}
+
+          {message.text && <p className="whitespace-pre-wrap break-words">{message.text}</p>}
+
+          {message.poll && (
+            <PollDisplay
+              poll={message.poll}
+              currentUser={currentUser}
+              onVote={handleVote}
+              isCurrentUserMessage={isCurrentUserMessage}
+            />
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 mt-1 px-1">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {message.isEdited ? 'Edited ' : ''}
+            {isCurrentUserMessage && message.status === 'seen' ? 'Seen' : ''}
+          </span>
+          {isCurrentUserMessage && message.status && (
+            <div className="flex items-center gap-1 ml-2">
+              {message.status === 'sent' && <IconCheck className="w-3 h-3 text-gray-400" />}
+              {message.status === 'delivered' && (
+                <IconDoubleCheck className="w-3 h-3 text-gray-400" />
+              )}
+              {message.status === 'seen' && <IconDoubleCheck className="w-3 h-3 text-blue-500" />}
+            </div>
+          )}
+        </div>
+
+        {message.reactions && message.reactions.length > 0 && (
+          <div className={`${reactionContainer} overflow-x-auto`}>
+            {message.reactions.map((reaction) => (
+              <div
+                key={reaction.emoji}
+                className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded-full text-xs touch-manipulation flex-shrink-0"
+              >
+                <span>{reaction.emoji}</span>
+                <span className="font-semibold text-gray-700 dark:text-gray-200">
+                  {reaction.users.length}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Context Menu - Shows on right-click or long-press */}
+      {showContextMenu && (
+        <div
+          className="fixed z-[1000] bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 py-1 w-48"
+          style={{
+            left: `${contextMenuPosition.x}px`,
+            top: `${contextMenuPosition.y}px`,
+            transform: 'translate(0, 0)',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+          }}
+          ref={menuRef}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+        >
+          <button
+            onClick={handleCopy}
+            className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+          >
+            <IconCopy className="w-4 h-4" /> {copyStatus === 'copied' ? 'Copied!' : 'Copy Text'}
+          </button>
+
+          <button
+            onClick={() => {
+              onTogglePin(message.id);
+              setShowContextMenu(false);
+            }}
+            className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+          >
+            <IconPin className="w-4 h-4" /> {message.isPinned ? 'Unpin' : 'Pin'} Message
+          </button>
+
+          <button
+            onClick={() => {
+              onReply(message);
+              setShowContextMenu(false);
+            }}
+            className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+          >
+            <IconReply className="w-4 h-4" /> Reply
+          </button>
+
+          <button
+            onClick={() => {
+              setIsEmojiPickerOpen(true);
+              setShowContextMenu(false);
+            }}
+            className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+          >
+            <IconSmile className="w-4 h-4" /> Add Reaction
+          </button>
+
+          {isCurrentUserMessage && Date.now() - message.timestamp <= 900000 && (
+            <button
+              onClick={() => {
+                onSetEditingMessage(message);
+                setShowContextMenu(false);
+              }}
+              className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+            >
+              <IconEdit className="w-4 h-4" /> Edit
+            </button>
+          )}
+
+          {isCurrentUserMessage && (
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsDeleteMenuOpen(!isDeleteMenuOpen);
+                }}
+                className="w-full text-left flex items-center justify-between gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <IconTrash className="w-4 h-4" />
+                  <span>Delete</span>
                 </div>
-            )}
+                <span>›</span>
+              </button>
 
-            <div className={`flex flex-col max-w-full ${isCurrentUserMessage ? 'items-end' : 'items-start'}`}>
-                {!isConsecutive && (
-                    <div className="flex items-center gap-2 mb-1 px-1">
-                        <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                            {isCurrentUserMessage ? formatTimestamp(message.timestamp) : message.author?.name}
-                        </span>
-                    </div>
-                )}
+              {isDeleteMenuOpen && (
+                <div className="absolute left-full top-0 ml-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-50 w-48">
+                  <button
+                    onClick={() => handleDelete(false)}
+                    className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+                  >
+                    Delete for me
+                  </button>
+                  {message.author.id === currentUser.id && (
+                    <button
+                      onClick={() => handleDelete(true)}
+                      className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
+                    >
+                      Delete for everyone
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
-                <div 
-                    className={`${bubbleClasses} message-content`}
-                    ref={messageContentRef}
-                    onContextMenu={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setContextMenuPosition({ x: e.clientX, y: e.clientY });
-                        setShowContextMenu(true);
-                    }}
+      {imageModalOpen && (
+        <ImageModal
+          isOpen={imageModalOpen}
+          imageUrl={selectedImageUrl}
+          imageName={selectedImageName}
+          onClose={() => setImageModalOpen(false)}
+        />
+      )}
+
+      {/* Emoji Picker */}
+      {isEmojiPickerOpen && (
+        <div
+          ref={emojiRef}
+          className="fixed z-50"
+          style={{
+            left: `${Math.min(contextMenuPosition.x, window.innerWidth - 300)}px`,
+            top: `${Math.min(contextMenuPosition.y, window.innerHeight - 400)}px`,
+          }}
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2">
+            <EmojiPicker
+              onSelect={(emoji) => {
+                console.log('Emoji selected from picker:', emoji);
+                handleReaction(emoji);
+              }}
+              onClose={() => {
+                console.log('Emoji picker closed');
+                setIsEmojiPickerOpen(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden transform transition-all"
+            ref={deleteRef}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {deleteForEveryone ? 'Delete for everyone' : 'Delete for you'}
+                </h3>
+                <button
+                  onClick={cancelDelete}
+                  className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                  aria-label="Close"
                 >
-                    {message.replyTo && repliedToMessage && (
-                        <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-600 rounded border-l-4 border-blue-500">
-                            <p className="text-xs text-gray-600 dark:text-gray-400">Replying to {repliedToMessage.author?.name}</p>
-                            <p className="text-sm text-gray-800 dark:text-gray-200 truncate">{repliedToMessage.text}</p>
-                        </div>
-                    )}
-                    {message.location && <LocationAttachment location={message.location} />}
-                    {message.audio ? (
-                       <AudioAttachment audio={message.audio} isCurrentUserMessage={isCurrentUserMessage} />
-                    ) : message.file ? (
-                       <FileAttachment file={message.file} onImageClick={handleImageClick} />
-                    ) : null}
+                  <IconX className="w-5 h-5" />
+                </button>
+              </div>
 
-                    {message.text && <p className="whitespace-pre-wrap break-words">{message.text}</p>}
+              <div className="mb-6">
+                <p className="text-gray-600 dark:text-gray-300">
+                  {deleteForEveryone
+                    ? 'This message will be deleted for all participants. This action cannot be undone.'
+                    : 'This message will be removed from your chat history. Other participants will still be able to see it.'}
+                </p>
+              </div>
 
-                    {message.poll && (
-                       <PollDisplay
-                            poll={message.poll}
-                            currentUser={currentUser}
-                            onVote={handleVote}
-                            isCurrentUserMessage={isCurrentUserMessage}
-                        />
-                    )}
-                </div>
-
-                <div className="flex items-center gap-2 mt-1 px-1">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {message.isEdited ? 'Edited ' : ''}
-                        {isCurrentUserMessage && message.status === 'seen' ? 'Seen' : ''}
-                    </span>
-                    {isCurrentUserMessage && message.status && (
-                        <div className="flex items-center gap-1 ml-2">
-                            {message.status === 'sent' && <IconCheck className="w-3 h-3 text-gray-400" />}
-                            {message.status === 'delivered' && <IconDoubleCheck className="w-3 h-3 text-gray-400" />}
-                            {message.status === 'seen' && <IconDoubleCheck className="w-3 h-3 text-blue-500" />}
-                        </div>
-                    )}
-                </div>
-
-                {message.reactions && message.reactions.length > 0 && (
-                    <div className={`${reactionContainer} overflow-x-auto`}>
-                        {message.reactions.map(reaction => (
-                            <div key={reaction.emoji} className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded-full text-xs touch-manipulation flex-shrink-0">
-                                <span>{reaction.emoji}</span>
-                                <span className="font-semibold text-gray-700 dark:text-gray-200">
-                                    {reaction.users.length}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                )}
+              <div className="flex flex-col space-y-3 sm:flex-row sm:justify-end sm:space-y-0 sm:space-x-3">
+                <button
+                  type="button"
+                  onClick={cancelDelete}
+                  className="inline-flex justify-center rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDelete}
+                  className="inline-flex justify-center rounded-lg border border-transparent px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800 transition-colors"
+                >
+                  {deleteForEveryone ? 'Delete for everyone' : 'Delete for me'}
+                </button>
+              </div>
             </div>
 
-            {/* Context Menu - Shows on right-click or long-press */}
-            {showContextMenu && (
-                <div 
-                    className="fixed z-[1000] bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 py-1 w-48"
-                    style={{
-                        left: `${contextMenuPosition.x}px`,
-                        top: `${contextMenuPosition.y}px`,
-                        transform: 'translate(0, 0)',
-                        maxHeight: '80vh',
-                        overflowY: 'auto',
-                    }}
-                    ref={menuRef}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                    }}
-                >
-                    <button 
-                        onClick={handleCopy}
-                        className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
-                    >
-                        <IconCopy className="w-4 h-4" /> {copyStatus === 'copied' ? 'Copied!' : 'Copy Text'}
-                    </button>
-                    
-                    <button 
-                        onClick={() => {
-                            onTogglePin(message.id);
-                            setShowContextMenu(false);
-                        }} 
-                        className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
-                    >
-                        <IconPin className="w-4 h-4" /> {message.isPinned ? 'Unpin' : 'Pin'} Message
-                    </button>
-                    
-                    <button 
-                        onClick={() => {
-                            onReply(message);
-                            setShowContextMenu(false);
-                        }} 
-                        className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
-                    >
-                        <IconReply className="w-4 h-4" /> Reply
-                    </button>
-                    
-                    <button 
-                        onClick={() => {
-                            setIsEmojiPickerOpen(true);
-                            setShowContextMenu(false);
-                        }} 
-                        className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
-                    >
-                        <IconSmile className="w-4 h-4" /> Add Reaction
-                    </button>
-                    
-                    {isCurrentUserMessage && Date.now() - message.timestamp <= 900000 && (
-                        <button 
-                            onClick={() => {
-                                onSetEditingMessage(message);
-                                setShowContextMenu(false);
-                            }} 
-                            className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
-                        >
-                            <IconEdit className="w-4 h-4" /> Edit
-                        </button>
-                    )}
-                    
-                    {isCurrentUserMessage && (
-                        <div className="relative">
-                            <button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsDeleteMenuOpen(!isDeleteMenuOpen);
-                                }} 
-                                className="w-full text-left flex items-center justify-between gap-2 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <IconTrash className="w-4 h-4" />
-                                    <span>Delete</span>
-                                </div>
-                                <span>›</span>
-                            </button>
-                            
-                            {isDeleteMenuOpen && (
-                                <div className="absolute left-full top-0 ml-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-600 p-2 z-50 w-48">
-                                    <button 
-                                        onClick={() => handleDelete(false)} 
-                                        className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
-                                    >
-                                        Delete for me
-                                    </button>
-                                    {message.author.id === currentUser.id && (
-                                        <button 
-                                            onClick={() => handleDelete(true)} 
-                                            className="w-full text-left flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 dark:text-red-400 text-sm"
-                                        >
-                                            Delete for everyone
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
+            {deleteForEveryone && (
+              <div className="bg-gray-50 dark:bg-gray-700/50 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  You can only delete messages for everyone for up to 1 hour after sending.
+                </p>
+              </div>
             )}
-            
-            {imageModalOpen && (
-                <ImageModal
-                    isOpen={imageModalOpen}
-                    imageUrl={selectedImageUrl}
-                    imageName={selectedImageName}
-                    onClose={() => setImageModalOpen(false)}
-                />
-            )}
-            
-            {/* Emoji Picker */}
-            {isEmojiPickerOpen && (
-                <div 
-                    ref={emojiRef}
-                    className="fixed z-50"
-                    style={{
-                        left: `${Math.min(contextMenuPosition.x, window.innerWidth - 300)}px`,
-                        top: `${Math.min(contextMenuPosition.y, window.innerHeight - 400)}px`,
-                    }}
-                >
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2">
-                        <EmojiPicker
-                            onSelect={(emoji) => {
-                                console.log('Emoji selected from picker:', emoji);
-                                handleReaction(emoji);
-                            }}
-                            onClose={() => {
-                                console.log('Emoji picker closed');
-                                setIsEmojiPickerOpen(false);
-                            }}
-                        />
-                    </div>
-                </div>
-            )}
-            
-            {/* Delete Confirmation Modal */}
-            {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div 
-                        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden transform transition-all"
-                        ref={deleteRef}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                                    {deleteForEveryone ? 'Delete for everyone' : 'Delete for you'}
-                                </h3>
-                                <button
-                                    onClick={cancelDelete}
-                                    className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-                                    aria-label="Close"
-                                >
-                                    <IconX className="w-5 h-5" />
-                                </button>
-                            </div>
-                            
-                            <div className="mb-6">
-                                <p className="text-gray-600 dark:text-gray-300">
-                                    {deleteForEveryone 
-                                        ? 'This message will be deleted for all participants. This action cannot be undone.'
-                                        : 'This message will be removed from your chat history. Other participants will still be able to see it.'
-                                    }
-                                </p>
-                            </div>
-                            
-                            <div className="flex flex-col space-y-3 sm:flex-row sm:justify-end sm:space-y-0 sm:space-x-3">
-                                <button
-                                    type="button"
-                                    onClick={cancelDelete}
-                                    className="inline-flex justify-center rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={confirmDelete}
-                                    className="inline-flex justify-center rounded-lg border border-transparent px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800 transition-colors"
-                                >
-                                    {deleteForEveryone ? 'Delete for everyone' : 'Delete for me'}
-                                </button>
-                            </div>
-                        </div>
-                        
-                        {deleteForEveryone && (
-                            <div className="bg-gray-50 dark:bg-gray-700/50 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    You can only delete messages for everyone for up to 1 hour after sending.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
+          </div>
         </div>
-    );
+      )}
+    </div>
+  );
 };
 
 export default MessageBubble;

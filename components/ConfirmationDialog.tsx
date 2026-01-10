@@ -37,9 +37,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {title}
-            </h3>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h3>
             <button
               onClick={onCancel}
               className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
@@ -48,13 +46,11 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
               <IconX className="w-5 h-5" />
             </button>
           </div>
-          
+
           <div className="mb-6">
-            <p className="text-gray-600 dark:text-gray-300">
-              {message}
-            </p>
+            <p className="text-gray-600 dark:text-gray-300">{message}</p>
           </div>
-          
+
           <div className="flex flex-col space-y-3 sm:flex-row sm:justify-end sm:space-y-0 sm:space-x-3">
             <button
               type="button"

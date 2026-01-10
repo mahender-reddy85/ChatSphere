@@ -1,12 +1,12 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import http from "http";
-import { Server } from "socket.io";
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import http from 'http';
+import { Server } from 'socket.io';
 
-import userRoutes from "./routes/users.js";
-import messageRoutes from "./routes/messages.js";
-import roomRoutes from "./routes/rooms.js";
+import userRoutes from './routes/users.js';
+import messageRoutes from './routes/messages.js';
+import roomRoutes from './routes/rooms.js';
 
 dotenv.config();
 
@@ -21,12 +21,9 @@ const connectedUsers = new Map();
 ========================= */
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:5173",
-      "https://chat-sphere-tan.vercel.app"
-    ],
-    methods: ["GET", "POST"]
-  }
+    origin: ['http://localhost:5173', 'https://chat-sphere-tan.vercel.app'],
+    methods: ['GET', 'POST'],
+  },
 });
 
 /* =========================
@@ -38,15 +35,15 @@ app.use(express.json());
 /* =========================
    REST ROUTES
 ========================= */
-app.use("/api/users", userRoutes);
-app.use("/api/messages", messageRoutes);
-app.use("/api/rooms", roomRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/rooms', roomRoutes);
 
 /* =========================
    HEALTH CHECK
 ========================= */
-app.get("/", (req, res) => {
-  res.send("✅ ChatSphere Backend Running");
+app.get('/', (req, res) => {
+  res.send('✅ ChatSphere Backend Running');
 });
 
 // Helper function to get all online users
@@ -57,11 +54,11 @@ const getOnlineUsers = () => {
 /* =========================
    SOCKET EVENTS
 ========================= */
-io.on("connection", (socket) => {
-  console.log("🟢 User connected:", socket.id);
+io.on('connection', (socket) => {
+  console.log('🟢 User connected:', socket.id);
 
   // Handle user authentication and track online status
-  socket.on("authenticate", ({ userId }) => {
+  socket.on('authenticate', ({ userId }) => {
     if (userId) {
       connectedUsers.set(userId, socket.id);
       // Notify all clients about the updated online users list
@@ -71,7 +68,7 @@ io.on("connection", (socket) => {
   });
 
   // Handle user going online
-  socket.on("user_online", ({ userId }) => {
+  socket.on('user_online', ({ userId }) => {
     if (userId) {
       connectedUsers.set(userId, socket.id);
       io.emit('user_online', { userId });
@@ -80,7 +77,7 @@ io.on("connection", (socket) => {
   });
 
   // Handle user going offline
-  socket.on("user_offline", ({ userId }) => {
+  socket.on('user_offline', ({ userId }) => {
     if (userId) {
       connectedUsers.delete(userId);
       io.emit('user_offline', { userId });
@@ -89,11 +86,12 @@ io.on("connection", (socket) => {
   });
 
   // Handle room joining
-  socket.on("join_room", (data) => {
-    const { roomId, userName } = typeof data === 'string' ? { roomId: data, userName: 'Anonymous' } : data;
+  socket.on('join_room', (data) => {
+    const { roomId, userName } =
+      typeof data === 'string' ? { roomId: data, userName: 'Anonymous' } : data;
     socket.join(roomId);
     console.log(`User ${userName || socket.id} joined room ${roomId}`);
-    
+
     // Broadcast to room that user has joined
     if (userName) {
       io.to(roomId).emit('receive_system_message', {
@@ -102,25 +100,25 @@ io.on("connection", (socket) => {
           author: { id: 'system', name: 'System' },
           text: `${userName} has joined the room`,
           timestamp: Date.now(),
-          isSystem: true
-        }
+          isSystem: true,
+        },
       });
     }
   });
 
   // Handle sending messages
-  socket.on("send_message", (message) => {
+  socket.on('send_message', (message) => {
     if (message.roomId) {
       // Add delivered status to the message
       const messageWithStatus = {
         ...message,
         status: 'delivered',
-        timestamp: message.timestamp || Date.now()
+        timestamp: message.timestamp || Date.now(),
       };
-      
+
       // Broadcast to the room
-      io.to(message.roomId).emit("receive_message", { message: messageWithStatus });
-      
+      io.to(message.roomId).emit('receive_message', { message: messageWithStatus });
+
       // Notify sender that message was delivered
       if (message.author && message.author.id) {
         socket.emit('message_delivered', { messageId: message.id });
@@ -133,28 +131,28 @@ io.on("connection", (socket) => {
     console.log(`User ${userId} is ${isTyping ? 'typing' : 'not typing'} in room ${roomId}`);
     if (roomId && userId) {
       // Broadcast to everyone in the room except the sender
-      socket.to(roomId).emit('user_typing', { 
-        userId, 
-        roomId, 
+      socket.to(roomId).emit('user_typing', {
+        userId,
+        roomId,
         isTyping,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       // Also send to the sender (for debugging and consistency)
       socket.emit('user_typing', {
         userId,
         roomId,
         isTyping,
         timestamp: Date.now(),
-        isSelf: true
+        isSelf: true,
       });
     }
   });
 
   // Handle disconnection
-  socket.on("disconnect", () => {
-    console.log("🔴 User disconnected:", socket.id);
-    
+  socket.on('disconnect', () => {
+    console.log('🔴 User disconnected:', socket.id);
+
     // Find and remove the disconnected user
     let disconnectedUserId = null;
     for (const [userId, socketId] of connectedUsers.entries()) {
@@ -164,7 +162,7 @@ io.on("connection", (socket) => {
         break;
       }
     }
-    
+
     // Notify all clients if a user went offline
     if (disconnectedUserId) {
       io.emit('user_offline', { userId: disconnectedUserId });

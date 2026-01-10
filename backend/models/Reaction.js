@@ -18,18 +18,22 @@ class Reaction {
   }
 
   static async getByMessageId(messageId) {
-    const [rows] = await pool.execute(`
+    const [rows] = await pool.execute(
+      `
       SELECT r.emoji, r.user_id, u.name as user_name
       FROM reactions r
       JOIN users u ON r.user_id = u.id
       WHERE r.message_id = ?
       ORDER BY r.emoji
-    `, [messageId]);
+    `,
+      [messageId]
+    );
     return rows;
   }
 
   static async getGroupedByMessageId(messageId) {
-    const [rows] = await pool.execute(`
+    const [rows] = await pool.execute(
+      `
       SELECT emoji, COUNT(*) as count, GROUP_CONCAT(user_name) as users
       FROM (
         SELECT r.emoji, u.name as user_name
@@ -39,7 +43,9 @@ class Reaction {
       ) as reaction_data
       GROUP BY emoji
       ORDER BY count DESC
-    `, [messageId]);
+    `,
+      [messageId]
+    );
     return rows;
   }
 }

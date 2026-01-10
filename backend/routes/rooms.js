@@ -19,7 +19,10 @@ router.post('/', async (req, res) => {
   const { name, type, privacy, password, createdBy } = req.body;
   try {
     const id = `room-${Date.now()}`;
-    await pool.query('INSERT INTO rooms (id, name, type, privacy, password, created_by) VALUES (?, ?, ?, ?, ?, ?)', [id, name, type, privacy, password, createdBy]);
+    await pool.query(
+      'INSERT INTO rooms (id, name, type, privacy, password, created_by) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, name, type, privacy, password, createdBy]
+    );
     res.status(201).json({ id, name, type, privacy, createdBy });
   } catch (err) {
     console.error(err);

@@ -11,8 +11,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts,.tsx,.js,.jsx",
-    "lint:fix": "eslint src --ext .ts,.tsx,.js,.jsx --fix",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx --ignore-pattern 'dist/**' --ignore-pattern 'node_modules/**' --ignore-pattern '.vite/**'",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --ignore-pattern 'dist/**' --ignore-pattern 'node_modules/**' --ignore-pattern '.vite/**' --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\""
   },
   "dependencies": {
@@ -36,7 +36,7 @@
     "@typescript-eslint/parser": "^8.52.0",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.21",
-    "eslint": "^9.39.2",
+    "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-prettier": "^5.5.4",

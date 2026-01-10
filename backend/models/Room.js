@@ -21,19 +21,22 @@ class Room {
   }
 
   static async getRoomsForUser(userId) {
-    const [rows] = await pool.execute(`
+    const [rows] = await pool.execute(
+      `
       SELECT r.* FROM rooms r
       JOIN room_users ru ON r.id = ru.room_id
       WHERE ru.user_id = ?
-    `, [userId]);
+    `,
+      [userId]
+    );
     return rows;
   }
 
   static async addUser(roomId, userId) {
-    const [result] = await pool.execute(
-      'INSERT INTO room_users (room_id, user_id) VALUES (?, ?)',
-      [roomId, userId]
-    );
+    const [result] = await pool.execute('INSERT INTO room_users (room_id, user_id) VALUES (?, ?)', [
+      roomId,
+      userId,
+    ]);
     return result.insertId;
   }
 
@@ -46,11 +49,14 @@ class Room {
   }
 
   static async getUsers(roomId) {
-    const [rows] = await pool.execute(`
+    const [rows] = await pool.execute(
+      `
       SELECT u.* FROM users u
       JOIN room_users ru ON u.id = ru.user_id
       WHERE ru.room_id = ?
-    `, [roomId]);
+    `,
+      [roomId]
+    );
     return rows;
   }
 

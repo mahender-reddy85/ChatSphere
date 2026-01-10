@@ -46,7 +46,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
         <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-lg dark:bg-gray-800">
           <div className="flex flex-col items-center">
             <div className="p-3 mb-4 bg-primary-100 rounded-full dark:bg-primary-900/50">
-               <IconAI className="w-10 h-10 text-primary-600 dark:text-primary-400" />
+              <IconAI className="w-10 h-10 text-primary-600 dark:text-primary-400" />
             </div>
             <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white">
               Welcome to ChatSphere

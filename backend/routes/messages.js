@@ -7,7 +7,10 @@ const router = express.Router();
 router.get('/:roomId', async (req, res) => {
   const { roomId } = req.params;
   try {
-    const [rows] = await pool.query('SELECT * FROM messages WHERE room_id = ? ORDER BY timestamp ASC', [roomId]);
+    const [rows] = await pool.query(
+      'SELECT * FROM messages WHERE room_id = ? ORDER BY timestamp ASC',
+      [roomId]
+    );
     res.json(rows);
   } catch (err) {
     console.error(err);
@@ -21,7 +24,10 @@ router.post('/', async (req, res) => {
   try {
     const timestamp = Date.now();
     const id = `msg-${timestamp}`;
-    await pool.query('INSERT INTO messages (id, room_id, author_id, text, type, timestamp) VALUES (?, ?, ?, ?, ?, ?)', [id, roomId, authorId, text, type, timestamp]);
+    await pool.query(
+      'INSERT INTO messages (id, room_id, author_id, text, type, timestamp) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, roomId, authorId, text, type, timestamp]
+    );
     res.status(201).json({ id, roomId, authorId, text, type, timestamp });
   } catch (err) {
     console.error(err);

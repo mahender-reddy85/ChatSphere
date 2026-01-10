@@ -40,11 +40,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
     if (isImage(file.type)) {
       return (
         <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
-          <img
-            src={previewUrl}
-            alt={fileName}
-            className="w-full h-full object-cover"
-          />
+          <img src={previewUrl} alt={fileName} className="w-full h-full object-cover" />
           {isUploading && (
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
               <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -57,11 +53,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
     if (isVideo(file.type)) {
       return (
         <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
-          <video
-            src={previewUrl}
-            controls
-            className="w-full h-full object-cover"
-          />
+          <video src={previewUrl} controls className="w-full h-full object-cover" />
           {isUploading && (
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
               <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -75,19 +67,13 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       return (
         <div className="p-4 bg-gray-100 rounded-lg">
           <div className="flex items-center space-x-4">
-            <div className="text-3xl">
-              {getFileIcon(file.type)}
-            </div>
+            <div className="text-3xl">{getFileIcon(file.type)}</div>
             <div className="flex-1">
               <div className="font-medium">{fileName}</div>
               <div className="text-sm text-gray-500">
                 {fileSize ? formatFileSize(fileSize) : 'Calculating...'}
               </div>
-              <audio
-                src={previewUrl}
-                controls
-                className="w-full mt-2"
-              />
+              <audio src={previewUrl} controls className="w-full mt-2" />
             </div>
           </div>
           {isUploading && (
@@ -106,9 +92,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
     return (
       <div className="p-4 bg-gray-100 rounded-lg">
         <div className="flex items-center space-x-4">
-          <div className="text-3xl">
-            {getFileIcon(file.type)}
-          </div>
+          <div className="text-3xl">{getFileIcon(file.type)}</div>
           <div className="flex-1">
             <div className="font-medium truncate">{fileName}</div>
             <div className="text-sm text-gray-500">

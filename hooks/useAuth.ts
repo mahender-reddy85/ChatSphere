@@ -22,7 +22,7 @@ export const useAuth = () => {
         }
       }
     } catch (error) {
-      console.error("Failed to parse auth token", error);
+      console.error('Failed to parse auth token', error);
       localStorage.removeItem(FAKE_JWT_KEY);
     } finally {
       setLoading(false);
@@ -50,9 +50,9 @@ export const useAuth = () => {
     localStorage.removeItem(FAKE_JWT_KEY);
     setUser(null);
   }, []);
-  
+
   const updateUser = useCallback((newDetails: Partial<Omit<User, 'id'>>) => {
-    setUser(currentUser => {
+    setUser((currentUser) => {
       if (!currentUser) return null;
       const updatedUser = { ...currentUser, ...newDetails };
 
@@ -60,12 +60,16 @@ export const useAuth = () => {
         const token = localStorage.getItem(FAKE_JWT_KEY);
         if (token) {
           const payload = JSON.parse(atob(token.split('.')[1]));
-          const newPayload = { ...payload, name: updatedUser.name, profilePicture: updatedUser.profilePicture };
+          const newPayload = {
+            ...payload,
+            name: updatedUser.name,
+            profilePicture: updatedUser.profilePicture,
+          };
           const newToken = `header.${btoa(JSON.stringify(newPayload))}.signature`;
           localStorage.setItem(FAKE_JWT_KEY, newToken);
         }
       } catch (e) {
-        console.error("Failed to update token", e);
+        console.error('Failed to update token', e);
       }
 
       return updatedUser;

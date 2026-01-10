@@ -23,11 +23,11 @@ class User {
   static async update(id, updates) {
     const fields = Object.keys(updates);
     const values = Object.values(updates);
-    const setClause = fields.map(field => `${field} = ?`).join(', ');
-    const [result] = await pool.execute(
-      `UPDATE users SET ${setClause} WHERE id = ?`,
-      [...values, id]
-    );
+    const setClause = fields.map((field) => `${field} = ?`).join(', ');
+    const [result] = await pool.execute(`UPDATE users SET ${setClause} WHERE id = ?`, [
+      ...values,
+      id,
+    ]);
     return result.affectedRows > 0;
   }
 

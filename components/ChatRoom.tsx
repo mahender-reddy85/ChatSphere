@@ -11,7 +11,6 @@ import { MOCK_USERS } from '../constants';
 import type { Settings } from '../hooks/useSettings';
 import SearchResultsModal from './SearchResultsModal';
 
-
 interface ChatRoomProps {
   user: User;
   updateUser: (newDetails: Partial<Omit<User, 'id'>>) => void;
@@ -22,46 +21,78 @@ interface ChatRoomProps {
   onOpenLogin?: () => void;
 }
 
-const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLogin, ...settingProps }) => {
-  const { rooms, activeRoom, setActiveRoom, sendMessage, sendPoll, handleVote, handleReaction, isSending, createRoom, joinRoom, activeTypingUsers, unreadCounts, deleteMessage, togglePinMessage, searchMessages, clearSearch, searchResults, isSearching, deleteRoom } = useChat(user);
+const ChatRoom: React.FC<ChatRoomProps> = ({
+  user,
+  updateUser,
+  logout,
+  onOpenLogin,
+  ...settingProps
+}) => {
+  const {
+    rooms,
+    activeRoom,
+    setActiveRoom,
+    sendMessage,
+    sendPoll,
+    handleVote,
+    handleReaction,
+    isSending,
+    createRoom,
+    joinRoom,
+    activeTypingUsers,
+    unreadCounts,
+    deleteMessage,
+    togglePinMessage,
+    searchMessages,
+    clearSearch,
+    searchResults,
+    isSearching,
+    deleteRoom,
+  } = useChat(user);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [jumpToMessageId, setJumpToMessageId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Fix: Always get the latest room details from the `rooms` array to prevent stale state.
-  const currentActiveRoom = activeRoom ? rooms.find(r => r.id === activeRoom.id) : null;
+  const currentActiveRoom = activeRoom ? rooms.find((r) => r.id === activeRoom.id) : null;
 
-  const activeRoomUsers = currentActiveRoom ? currentActiveRoom.users.map(userId => MOCK_USERS[userId] || (userId === user.id ? user : undefined)).filter((u): u is User => !!u) : [];
+  const activeRoomUsers = currentActiveRoom
+    ? currentActiveRoom.users
+        .map((userId) => MOCK_USERS[userId] || (userId === user.id ? user : undefined))
+        .filter((u): u is User => !!u)
+    : [];
 
   const handleSearch = (query: string, scope: 'current' | 'all') => {
-      setSearchQuery(query);
-      searchMessages(query, scope);
+    setSearchQuery(query);
+    searchMessages(query, scope);
   };
 
   const handleJumpToMessage = (roomId: string, messageId: string) => {
-    const targetRoom = rooms.find(r => r.id === roomId);
+    const targetRoom = rooms.find((r) => r.id === roomId);
     if (targetRoom) {
-        if (activeRoom?.id !== roomId) {
-            setActiveRoom(targetRoom);
-        }
-        setJumpToMessageId(messageId);
-        clearSearch();
-        setSearchQuery('');
+      if (activeRoom?.id !== roomId) {
+        setActiveRoom(targetRoom);
+      }
+      setJumpToMessageId(messageId);
+      clearSearch();
+      setSearchQuery('');
     }
   };
 
   const handleClearJump = () => {
-      setJumpToMessageId(null);
+    setJumpToMessageId(null);
   };
-
-
 
   return (
     <div className={`flex flex-col md:flex-row h-screen bg-gray-50 dark:bg-gray-900`}>
       {/* Left Sidebar */}
-      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-80 flex-shrink-0 flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 md:h-screen md:overflow-hidden transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
-        <h1 className="text-2xl font-bold mb-4 px-2 text-gray-800 dark:text-gray-100">ChatSphere</h1>
+      <aside
+        className={`fixed md:static inset-y-0 left-0 z-50 w-80 flex-shrink-0 flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 md:h-screen md:overflow-hidden transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
+      >
+        <h1 className="text-2xl font-bold mb-4 px-2 text-gray-800 dark:text-gray-100">
+          ChatSphere
+        </h1>
         <RoomList
           rooms={rooms}
           activeRoom={activeRoom}
@@ -74,17 +105,20 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
           currentUser={user}
         />
         <div className="mt-auto">
-            <UserSettingsTrigger
-              currentUser={user}
-              onOpenSettings={() => setIsSettingsModalOpen(true)}
-              onOpenLogin={onOpenLogin}
-            />
+          <UserSettingsTrigger
+            currentUser={user}
+            onOpenSettings={() => setIsSettingsModalOpen(true)}
+            onOpenLogin={onOpenLogin}
+          />
         </div>
       </aside>
 
       {/* Mobile Overlay */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden" onClick={() => setIsSidebarOpen(false)}></div>
+        <div
+          className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
       )}
 
       {/* Main Chat Area */}
@@ -106,7 +140,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
             onOpenSettings={() => setIsSettingsModalOpen(true)}
             jumpToMessageId={jumpToMessageId}
             onClearJump={handleClearJump}
-
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             users={activeRoomUsers}
           />
@@ -116,8 +149,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
           </div>
         )}
       </main>
-
-
 
       {/* Settings Modal */}
       <UserSettingsModal
@@ -137,8 +168,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ user, updateUser, logout, onOpenLog
         query={searchQuery}
         onJumpToMessage={handleJumpToMessage}
       />
-
-
     </div>
   );
 };

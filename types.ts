@@ -14,32 +14,32 @@ export interface Reaction {
 }
 
 export interface PollOption {
-    id: string;
-    text: string;
-    votes: string[]; // array of user IDs
+  id: string;
+  text: string;
+  votes: string[]; // array of user IDs
 }
 
 export interface Poll {
-    id: string;
-    question: string;
-    options: PollOption[];
-    location?: string;
+  id: string;
+  question: string;
+  options: PollOption[];
+  location?: string;
 }
 
 export interface MessageFile {
-    url: string;
-    name: string;
-    type: string;
+  url: string;
+  name: string;
+  type: string;
 }
 
 export interface MessageAudio {
-    url: string;
-    duration: number;
+  url: string;
+  duration: number;
 }
 
 export interface MessageLocation {
-    latitude: number;
-    longitude: number;
+  latitude: number;
+  longitude: number;
 }
 
 export interface Message {
@@ -82,7 +82,7 @@ export interface Room {
 }
 
 export interface SearchResult {
-    message: Message;
-    roomId: string;
-    roomName: string;
+  message: Message;
+  roomId: string;
+  roomName: string;
 }
