@@ -13,7 +13,7 @@ dotenv.config();
 const app = express();
 const server = createServer(app);
 
-// Track connected users and their socket data
+// Track connected users and their data
 const connectedUsers = new Map(); // userId -> { socketId, username, joinedRooms }
 
 // Track all active rooms and their participants
@@ -127,57 +127,65 @@ io.on('connection', (socket) => {
   );
 
   console.log(`Active connections: ${connectionStats.activeConnections}`);
-  
-  // Set up heartbeat for connection monitoring
-  let isAlive = true;
-  const heartbeatInterval = setInterval(() => {
-    if (!isAlive) {
-      console.log(`No heartbeat from ${socket.id}, disconnecting...`);
-      return socket.disconnect(true);
-    }
-    isAlive = false;
-    socket.emit('ping');
-  }, 30000); // 30 seconds
-
-  socket.on('pong', () => {
-    isAlive = true;
-  });
 
   // Clean up on disconnect
   socket.on('disconnect', (reason) => {
     console.log(`🔴 User disconnected (${socket.id}): ${reason}`);
-    
-    // Clean up rooms
-    if (socket.data.joinedRooms) {
-      socket.data.joinedRooms.forEach(roomId => {
-        socket.leave(roomId);
-        console.log(`User left room ${roomId} on disconnect`);
-      });
-    }
-    
-    clearInterval(heartbeatInterval);
+
     connectionStats.activeConnections--;
     connectionStats.lastDisconnect = new Date();
+
+    // leave rooms safely
+    if (socket.data.joinedRooms) {
+      for (const roomId of socket.data.joinedRooms) {
+        socket.leave(roomId);
+        console.log(`User left room ${roomId} on disconnect`);
+      }
+    }
+
+    // cleanup user map
+    for (const [userId, userData] of connectedUsers.entries()) {
+      if (userData.socketId === socket.id) {
+        connectedUsers.delete(userId);
+        io.emit('user_offline', { userId });
+        break;
+      }
+    }
+    
     console.log(`Active connections: ${connectionStats.activeConnections}`);
   });
 
   // Handle user authentication and track online status
-  socket.on('authenticate', ({ userId }) => {
-    if (userId) {
-      connectedUsers.set(userId, socket.id);
-      // Notify all clients about the updated online users list
-      io.emit('online_users', { users: getOnlineUsers() });
-      console.log(`User ${userId} authenticated with socket ${socket.id}`);
-    }
+  socket.on('authenticate', ({ userId, username }) => {
+    if (!userId) return;
+
+    const existing = connectedUsers.get(userId);
+
+    connectedUsers.set(userId, {
+      socketId: socket.id,
+      username: username || existing?.username || 'Anonymous',
+      joinedRooms: existing?.joinedRooms || new Set(),
+    });
+
+    // Notify all clients about the updated online users list
+    io.emit('online_users', { users: getOnlineUsers() });
+    console.log(`User ${userId} authenticated with socket ${socket.id}`);
   });
 
   // Handle user going online
-  socket.on('user_online', ({ userId }) => {
-    if (userId) {
-      connectedUsers.set(userId, socket.id);
-      io.emit('user_online', { userId });
-      console.log(`User ${userId} is now online`);
-    }
+  socket.on('user_online', ({ userId, username }) => {
+    if (!userId) return;
+
+    const existing = connectedUsers.get(userId);
+
+    connectedUsers.set(userId, {
+      socketId: socket.id,
+      username: username || existing?.username || 'Anonymous',
+      joinedRooms: existing?.joinedRooms || new Set(),
+    });
+
+    io.emit('user_online', { userId });
+    console.log(`User ${userId} is now online`);
   });
 
   // Handle user going offline
@@ -211,12 +219,18 @@ io.on('connection', (socket) => {
       // Get or create user data if userId is provided
       let userData = null;
       if (userId) {
-        userData = connectedUsers.get(userId) || { 
-          socketId: socket.id, 
-          username: userName || 'Anonymous',
-          joinedRooms: new Set() 
-        };
-        connectedUsers.set(userId, userData);
+        userData = connectedUsers.get(userId);
+        if (!userData) {
+          userData = { 
+            socketId: socket.id, 
+            username: userName || 'Anonymous',
+            joinedRooms: new Set() 
+          };
+          connectedUsers.set(userId, userData);
+        } else {
+          // Update socket ID if reconnecting
+          userData.socketId = socket.id;
+        }
       }
 
       // Check if already in room
