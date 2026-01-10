@@ -360,114 +360,15 @@ export const useChat = (currentUser: User) => {
     // Emit join_room event to backend
     if (socketRef.current) {
       socketRef.current.emit('join_room', { roomId, userName: currentUser.name });
-    }
-
-    return 'joined';
   };
 
-  const sendMessage = useCallback(async (payload: { text: string; audio?: { blob: Blob; duration: number }; file?: File, location?: MessageLocation }, editingMessageId?: string, replyTo?: string) => {
-    if (!activeRoom) return;
+  // Handle file uploads
+  if (payload.file) {
+    const formData = new FormData();
+    formData.append('file', payload.file);
+    formData.append('roomId', activeRoom.id);
+    formData.append('messageId', newMessage.id);
 
-    if (editingMessageId) {
-        // Edit existing message (audio/file/location not supported for edits)
-        if (!payload.text.trim()) return;
-        const newText = payload.text.trim();
-        setRooms(prevRooms => prevRooms.map(r => 
-            r.id === activeRoom.id
-            ? { ...r, messages: r.messages.map(m => m.id === editingMessageId ? { ...m, text: newText, isEdited: true, file: undefined, audio: undefined, location: undefined } : m) }
-            : r
-        ));
-
-        // Emit edit to backend for synchronization
-        if (socketRef.current) {
-          socketRef.current.emit('edit_message', { roomId: activeRoom.id, messageId: editingMessageId, newText });
-        }
-        return;
-    }
-    
-    if (!payload.text.trim() && !payload.audio && !payload.file && !payload.location) return;
-
-    setIsSending(true);
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      author: currentUser,
-      timestamp: Date.now(),
-      text: payload.text.trim(),
-      reactions: [],
-      status: 'sent',
-      roomId: activeRoom.id,
-      ...(replyTo && { replyTo }),
-      ...(payload.audio && {
-          audio: {
-              url: URL.createObjectURL(payload.audio.blob),
-              duration: payload.audio.duration,
-          }
-      }),
-      ...(payload.file && {
-          file: {
-              url: URL.createObjectURL(payload.file),
-              name: payload.file.name,
-              type: payload.file.type,
-          }
-      }),
-      ...(payload.location && { location: payload.location })
-    };
-
-    // Send to backend via socket
-    if (socketRef.current) {
-      socketRef.current.emit('send_message', { roomId: activeRoom.id, message: newMessage });
-    }
-
-    if (activeRoom.type === 'ai') {
-        const history = [...activeRoom.messages, newMessage];
-        const aiResponseText = await getAIBotResponse(history);
-        const aiMessage: Message = {
-          id: `msg-${Date.now() + 1}`,
-          author: aiBot,
-          timestamp: Date.now(),
-          text: aiResponseText,
-          reactions: [],
-          roomId: activeRoom.id,
-        };
-        setRooms(prev => prev.map(r => r.id === activeRoom.id ? { ...r, messages: [...r.messages, aiMessage] } : r));
-    }
-    
-    setIsSending(false);
-  }, [activeRoom, currentUser]);
-
-  const deleteMessage = useCallback((messageId: string, scope: 'for_me' | 'for_everyone' = 'for_me') => {
-    if (!activeRoom) return;
-    if (scope === 'for_everyone') {
-      // Delete for everyone - mark as deleted for everyone
-      setRooms(prevRooms => prevRooms.map(r =>
-        ({ ...r, messages: r.messages.map(m =>
-          m.id === messageId
-            ? { ...m, isDeleted: true, deletedBy: currentUser.id, deletedForEveryone: true }
-            : m
-        ) })
-      ));
-    } else {
-      // Delete for me - only remove from current room
-      setRooms(prevRooms => prevRooms.map(r =>
-        r.id === activeRoom.id
-        ? { ...r, messages: r.messages.filter(m => m.id !== messageId) }
-        : r
-      ));
-    }
-  }, [activeRoom, currentUser.id]);
-
-  const togglePinMessage = useCallback((messageId: string) => {
-      if (!activeRoom) return;
-      setRooms(prevRooms => prevRooms.map(r =>
-          r.id === activeRoom.id
-          ? { ...r, messages: r.messages.map(m => m.id === messageId ? { ...m, isPinned: !m.isPinned } : m) }
-          : r
-      ));
-  }, [activeRoom]);
-
-  const sendPoll = useCallback((pollData: { question: string, options: string[], location?: string }) => {
-    if (!activeRoom) return;
-    const newPoll: Poll = {
       id: `poll-${Date.now()}`,
       question: pollData.question,
       options: pollData.options.map((opt, i) => ({ id: `opt-${Date.now()}-${i}`, text: opt, votes: [] })),
@@ -603,20 +504,39 @@ export const useChat = (currentUser: User) => {
   }, []);
 
   const deleteRoom = useCallback((roomId: string) => {
-    // Don't allow deleting self or AI chats
-    const roomToDelete = rooms.find(r => r.id === roomId);
-    if (!roomToDelete || roomToDelete.type === 'self' || roomToDelete.type === 'ai') return;
-
-    setRooms(prev => prev.filter(r => r.id !== roomId));
-
-    // If the deleted room was active, switch to self chat
-    if (activeRoom?.id === roomId) {
-      const selfRoom = rooms.find(r => r.type === 'self');
-      if (selfRoom) {
-        setActiveRoom(selfRoom);
+    try {
+      // Don't allow deleting self or AI chats
+      const roomToDelete = rooms.find(r => r.id === roomId);
+      if (!roomToDelete || roomToDelete.type === 'self' || roomToDelete.type === 'ai') {
+        console.warn('Cannot delete self or AI chats');
+        return false;
       }
+
+      // Update rooms state
+      setRooms(prev => {
+        const updatedRooms = prev.filter(r => r.id !== roomId);
+        return updatedRooms;
+      });
+
+      // If the deleted room was active, switch to self chat
+      if (activeRoom?.id === roomId) {
+        const selfRoom = rooms.find(r => r.type === 'self');
+        if (selfRoom) {
+          setActiveRoom(selfRoom);
+        }
+      }
+
+      // Emit delete event to server if needed
+      if (socketRef.current) {
+        socketRef.current.emit('delete_room', { roomId });
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting room:', error);
+      return false;
     }
-  }, [rooms, activeRoom]);
+  }, [rooms, activeRoom, setActiveRoom, socketRef]);
 
   // Get active typing users for a room
   const getActiveTypingUsers = useCallback((roomId: string): User[] => {

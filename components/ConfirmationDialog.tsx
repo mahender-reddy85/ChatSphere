@@ -10,6 +10,7 @@ interface ConfirmationDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
   variant?: 'danger' | 'warning' | 'info';
+  disabled?: boolean;
 }
 
 const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
@@ -21,6 +22,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   onConfirm,
   onCancel,
   variant = 'danger',
+  disabled = false,
 }) => {
   if (!isOpen) return null;
 
@@ -64,7 +66,8 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
             <button
               type="button"
               onClick={onConfirm}
-              className={`px-4 py-2.5 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${variantClasses[variant]}`}
+              disabled={disabled}
+              className={`px-4 py-2.5 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${variantClasses[variant]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {confirmText}
             </button>

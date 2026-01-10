@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import type { Room, User } from '../types';
-import { IconAI, IconUsers, IconPlusCircle, IconLogin, IconUser, IconLock, IconGlobe, IconTrash } from './Icons';
+import { IconAI, IconUsers, IconPlusCircle, IconLogin, IconUser, IconLock, IconGlobe, IconTrash, IconCheck, IconX } from './Icons';
 import JoinRoomModal from './JoinRoomModal';
 import CreateRoomModal from './CreateRoomModal';
 import ConfirmationDialog from './ConfirmationDialog';
 import SearchBar from './SearchBar';
 import Avatar from './Avatar';
+import { toast } from '../hooks/toastService';
 
 interface RoomListProps {
   rooms: Room[];
@@ -33,6 +34,7 @@ const RoomList: React.FC<RoomListProps> = ({ rooms, activeRoom, setActiveRoom, c
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<{id: string, name: string} | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
     
   return (
     <div className="flex-grow flex flex-col min-h-0">
@@ -120,15 +122,26 @@ const RoomList: React.FC<RoomListProps> = ({ rooms, activeRoom, setActiveRoom, c
         isOpen={!!roomToDelete}
         title={`Delete "${roomToDelete?.name}"?`}
         message={`Are you sure you want to delete the room "${roomToDelete?.name}"? This action cannot be undone.`}
-        confirmText="Delete Room"
+        confirmText={isDeleting ? 'Deleting...' : 'Delete Room'}
         variant="danger"
-        onConfirm={() => {
-          if (roomToDelete) {
+        onConfirm={async () => {
+          if (!roomToDelete) return;
+          
+          setIsDeleting(true);
+          try {
+            // Call deleteRoom and assume success if no error is thrown
             deleteRoom(roomToDelete.id);
+            toast.success(`Room "${roomToDelete.name}" has been deleted`);
+          } catch (error) {
+            console.error('Error deleting room:', error);
+            toast.error('Failed to delete room. Please try again.');
+          } finally {
             setRoomToDelete(null);
+            setIsDeleting(false);
           }
         }}
-        onCancel={() => setRoomToDelete(null)}
+        onCancel={() => !isDeleting && setRoomToDelete(null)}
+        disabled={isDeleting}
       />
     </div>
   );
