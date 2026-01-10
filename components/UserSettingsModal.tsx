@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from '../types';
 import { IconLogout, IconMoon, IconShare, IconSun, IconX } from './Icons';
 import type { Settings } from '../hooks/useSettings';
+import { toast } from '../hooks/useToast';
 
 // Fix: Add a props interface for type safety.
 interface UserSettingsModalProps {
@@ -33,12 +34,12 @@ const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, onClose, 
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        alert('Please select a valid image file.');
+        toast.error('Please select a valid image file.');
         return;
       }
       // Validate file size (5MB limit)
       if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB.');
+        toast.error('File size must be less than 5MB.');
         return;
       }
       setProfilePictureFile(file);

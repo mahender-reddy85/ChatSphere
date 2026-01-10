@@ -4,6 +4,7 @@ import Avatar from './Avatar';
 import { IconShare } from './Icons';
 import { useChat } from '../hooks/useChat';
 import type { User as CurrentUser } from '../types';
+import { toast } from '../hooks/useToast';
 
 interface UserListProps {
   users: User[];
@@ -16,7 +17,7 @@ const UserList: React.FC<UserListProps> = ({ users, title, roomId, currentUser }
   const { isUserOnline } = useChat(currentUser);
   const handleInvite = useCallback(() => {
     navigator.clipboard.writeText(roomId);
-    alert(`Invite code "${roomId}" copied to clipboard!`);
+    toast.success(`Invite code "${roomId}" copied to clipboard!`);
   }, [roomId]);
 
   return (

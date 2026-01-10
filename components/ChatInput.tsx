@@ -222,6 +222,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, onCreatePoll, isSe
         setIsRecording(true);
       } catch (err) {
         console.error("Error accessing microphone:", err);
+        toast.error("Could not access microphone. Please check permissions.");
       }
     }
   };

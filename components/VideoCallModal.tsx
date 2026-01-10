@@ -3,6 +3,7 @@ import type { Room, User } from '../types';
 import { MOCK_USERS } from '../constants';
 import Avatar from './Avatar';
 import { IconMic, IconMicOff, IconVideo, IconVideoOff, IconPhoneOff, IconScreenShare } from './Icons';
+import { toast } from '../hooks/useToast';
 
 interface VideoCallModalProps {
     room: Room;
@@ -49,8 +50,8 @@ const VideoCallModal: React.FC<VideoCallModalProps> = ({ room, currentUser, onLe
                     localVideoRef.current.srcObject = stream;
                 }
             } catch (err) {
-                console.error("Error accessing media devices.", err);
-                alert("Could not access camera and microphone. Please check permissions.");
+                console.error("Error accessing media devices:", err);
+                toast.error("Could not access camera and microphone. Please check permissions.");
                 onLeaveCall();
             }
         };
