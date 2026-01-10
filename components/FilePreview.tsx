@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { formatFileSize, isImage, isVideo, isAudio, getFileIcon } from '../utils/fileUtils';
 
 interface FilePreviewProps {
@@ -16,10 +16,8 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
 }) => {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const isUrl = 'url' in file;
-  const fileType = isUrl ? file.type : file.type.split('/')[0];
   const fileName = isUrl ? file.name : file.name;
   const fileSize = isUrl ? file.size : file.size;
-  const fileUrl = isUrl ? file.url : '';
 
   useEffect(() => {
     // Create preview for local files

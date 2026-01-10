@@ -32,27 +32,18 @@ type ExtendedRoom = Omit<Room, 'messages'> & {
 };
 
 import { MOCK_USERS } from '../constants';
-import { getAIBotResponse } from '../services/geminiService';
 import { uploadFile } from '../services/fileService';
 import io, { Socket } from 'socket.io-client';
 
 const aiBot = MOCK_USERS['ai-bot'];
 
 export const useChat = (currentUser: User) => {
-  // Helper function to convert Message to ExtendedMessage
-  const toExtendedMessage = (msg: Message): ExtendedMessage => ({
-    ...msg,
-    status: 'sent',
-    reactions: msg.reactions || [],
-    type: msg.type || 'text',
-    roomId: msg.roomId || '',
-    isOnline: false,
-  });
+
 
   const [rooms, setRooms] = useState<ExtendedRoom[]>([]);
   const [activeRoom, setActiveRoom] = useState<ExtendedRoom | null>(null);
-  const [isSending, setIsSending] = useState(false);
-  const [activeTypingUsers, setActiveTypingUsers] = useState<User[]>([]);
+  const [isSending, _setIsSending] = useState(false);
+  const [activeTypingUsers, _setActiveTypingUsers] = useState<User[]>([]);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
