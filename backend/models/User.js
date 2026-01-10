@@ -1,47 +1,46 @@
-const pool = require('../db');
+const store = require('../inMemoryStore');
 
 class User {
   static async create(userData) {
-    const { id, name, email, password, profilePicture } = userData;
-    const [result] = await pool.execute(
-      'INSERT INTO users (id, name, email, password, profile_picture) VALUES (?, ?, ?, ?, ?)',
-      [id, name, email, password, profilePicture]
-    );
-    return result.insertId;
+    return await store.createUser(userData);
   }
 
   static async findById(id) {
-    const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', [id]);
-    return rows[0];
+    return await store.findUserById(id);
   }
 
   static async findByEmail(email) {
-    const [rows] = await pool.execute('SELECT * FROM users WHERE email = ?', [email]);
-    return rows[0];
+    // Find user by email in the in-memory store
+    for (const [id, user] of store.users) {
+      if (user.email === email) {
+        return user;
+      }
+    }
+    return null;
   }
 
   static async update(id, updates) {
-    const fields = Object.keys(updates);
-    const values = Object.values(updates);
-    const setClause = fields.map((field) => `${field} = ?`).join(', ');
-    const [result] = await pool.execute(`UPDATE users SET ${setClause} WHERE id = ?`, [
-      ...values,
-      id,
-    ]);
-    return result.affectedRows > 0;
+    const user = await store.findUserById(id);
+    if (!user) return false;
+    
+    // Update user properties
+    Object.assign(user, updates);
+    store.users.set(id, user);
+    return true;
   }
 
   static async updateOnlineStatus(id, isOnline) {
-    const [result] = await pool.execute(
-      'UPDATE users SET is_online = ?, last_seen = CURRENT_TIMESTAMP WHERE id = ?',
-      [isOnline, id]
-    );
-    return result.affectedRows > 0;
+    const user = await store.findUserById(id);
+    if (!user) return false;
+    
+    user.is_online = isOnline;
+    user.last_seen = new Date();
+    store.users.set(id, user);
+    return true;
   }
 
   static async getAll() {
-    const [rows] = await pool.execute('SELECT * FROM users');
-    return rows;
+    return Array.from(store.users.values());
   }
 }
 
