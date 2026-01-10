@@ -351,7 +351,10 @@ export const useChat = (currentUser: User) => {
     }
   }, [rooms, currentUser.id]);
 
-  const updateReactions = useCallback((message: ExtendedMessage, existingReaction: Reaction | undefined, newReactions: Reaction[]) => {
+  // Handle updating message reactions
+  const updateReactions = useCallback((message: ExtendedMessage, emoji: string, newReactions: Reaction[]) => {
+    const existingReaction = newReactions.find(r => r.emoji === emoji);
+    
     if (existingReaction) {
       const userIndex = existingReaction.users.indexOf(currentUser.id);
       
@@ -364,14 +367,14 @@ export const useChat = (currentUser: User) => {
           // Remove reaction if no users left
           return {
             ...message,
-            reactions: newReactions.filter(r => r.emoji !== existingReaction.emoji)
+            reactions: newReactions.filter(r => r.emoji !== emoji)
           };
         } else {
           // Update reaction with remaining users
           return {
             ...message,
             reactions: newReactions.map(r => 
-              r.emoji === existingReaction.emoji 
+              r.emoji === emoji 
                 ? { ...r, users: updatedUsers }
                 : r
             )
@@ -382,7 +385,7 @@ export const useChat = (currentUser: User) => {
         return {
           ...message,
           reactions: newReactions.map(r => 
-            r.emoji === existingReaction?.emoji
+            r.emoji === emoji
               ? { ...r, users: [...r.users, currentUser.id] }
               : r
           )
@@ -394,12 +397,13 @@ export const useChat = (currentUser: User) => {
         ...message,
         reactions: [
           ...newReactions,
-          { emoji: emoji, users: [currentUser.id] }
+          { emoji, users: [currentUser.id] }
         ]
       };
     }
   }, [currentUser.id]);
 
+  // Handle voting in polls
   const handleVote = useCallback((messageId: string, optionId: string) => {
     if (!activeRoom) return;
     
@@ -429,7 +433,7 @@ export const useChat = (currentUser: User) => {
               options: newOptions,
               totalVotes: newOptions.reduce((sum, opt) => sum + opt.votes.length, 0)
             }
-          } as ExtendedMessage; // Cast to ExtendedMessage to satisfy type checker
+          } as ExtendedMessage;
         });
         
         return { ...room, messages: updatedMessages };
@@ -447,6 +451,186 @@ export const useChat = (currentUser: User) => {
     }
   }, [activeRoom, currentUser.id, socketRef]);
 
+  // Send a new message
+  const sendMessage = useCallback((content: string, roomId: string, type: 'text' | 'system' | 'poll' = 'text') => {
+    if (!socketRef.current || !content.trim()) return;
+
+    const message: ExtendedMessage = {
+      id: `msg-${Date.now()}`,
+      author: currentUser,
+      text: content,
+      timestamp: Date.now(),
+      status: 'sending',
+      reactions: [],
+      type,
+      roomId,
+      isPinned: false,
+      isEdited: false
+    };
+
+    // Update local state optimistically
+    setRooms(prevRooms => 
+      prevRooms.map(room => 
+        room.id === roomId
+          ? { ...room, messages: [...room.messages, message] }
+          : room
+      )
+    );
+
+    // Emit to server
+    socketRef.current.emit('send_message', { message });
+  }, [currentUser]);
+
+  // Delete a message
+  const deleteMessage = useCallback((messageId: string) => {
+    if (!activeRoom) return;
+    
+    setRooms(prevRooms => 
+      prevRooms.map(room => 
+        room.id === activeRoom.id
+          ? { 
+              ...room, 
+              messages: room.messages.filter(m => m.id !== messageId) 
+            }
+          : room
+      )
+    );
+    
+    // Emit to server
+    if (socketRef.current) {
+      socketRef.current.emit('delete_message', {
+        roomId: activeRoom.id,
+        messageId,
+      });
+    }
+  }, [activeRoom]);
+
+  // Toggle pin status of a message
+  const togglePinMessage = useCallback((messageId: string, pin: boolean) => {
+    if (!activeRoom) return;
+    
+    setRooms(prevRooms => 
+      prevRooms.map(room => 
+        room.id === activeRoom.id
+          ? {
+              ...room,
+              messages: room.messages.map(m => 
+                m.id === messageId 
+                  ? { ...m, isPinned: pin }
+                  : pin && m.isPinned 
+                    ? { ...m, isPinned: false } // Unpin other messages if needed
+                    : m
+              )
+            }
+          : room
+      )
+    );
+    
+    // Emit to server
+    if (socketRef.current) {
+      socketRef.current.emit(pin ? 'pin_message' : 'unpin_message', {
+        roomId: activeRoom.id,
+        messageId,
+      });
+    }
+  }, [activeRoom]);
+
+  // Search for messages
+  const searchMessages = useCallback((query: string, scope: 'all' | 'current' = 'all') => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+    
+    const lowerCaseQuery = query.toLowerCase();
+    const results: SearchResult[] = [];
+    
+    const roomsToSearch = scope === 'current' && activeRoom ? [activeRoom] : rooms;
+
+    for (const room of roomsToSearch) {
+      for (const message of room.messages) {
+        if (message.text && message.text.toLowerCase().includes(lowerCaseQuery)) {
+          results.push({
+            message,
+            roomId: room.id,
+            roomName: room.name,
+          });
+        }
+      }
+    }
+
+    setSearchResults(results.sort((a, b) => b.message.timestamp - a.message.timestamp));
+    setIsSearching(true);
+  }, [rooms, activeRoom]);
+
+  // Clear search results
+  const clearSearch = useCallback(() => {
+    setSearchResults([]);
+    setIsSearching(false);
+  }, []);
+
+  // Delete a room
+  const deleteRoom = useCallback((roomId: string) => {
+    try {
+      // Don't allow deleting self or AI chats
+      const roomToDelete = rooms.find(r => r.id === roomId);
+      if (!roomToDelete || roomToDelete.type === 'self' || roomToDelete.type === 'ai') {
+        console.warn('Cannot delete self or AI chats');
+        return false;
+      }
+
+      // Update rooms state
+      setRooms(prev => {
+        const updatedRooms = prev.filter(r => r.id !== roomId);
+        return updatedRooms;
+      });
+
+      // If the deleted room was active, switch to self chat
+      if (activeRoom?.id === roomId) {
+        const selfRoom = rooms.find(r => r.type === 'self');
+        if (selfRoom) {
+          setActiveRoom(selfRoom);
+        }
+      }
+
+      // Emit delete event to server if needed
+      if (socketRef.current) {
+        socketRef.current.emit('delete_room', { roomId });
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting room:', error);
+      return false;
+    }
+  }, [rooms, activeRoom, setActiveRoom, socketRef]);
+
+  // Check if a user is online
+  const isUserOnline = useCallback((userId: string): boolean => {
+    return onlineUsers.has(userId);
+  }, [onlineUsers]);
+
+  // Get active typing users for a room
+  const getActiveTypingUsers = useCallback((roomId: string): User[] => {
+    if (!roomId) return [];
+    
+    const userIds = Array.from(typingUsers[roomId] || []);
+    return userIds
+      .map(userId => {
+        // Skip the current user
+        if (userId === currentUser.id) return null;
+        
+        // Find the user in any of the rooms
+        for (const room of rooms) {
+          const user = room.users.find(u => u === userId);
+          if (user) return MOCK_USERS[user] || { id: user, name: 'Unknown User' };
+        }
+        return null;
+      })
+      .filter(Boolean) as User[];
+  }, [typingUsers, currentUser.id, rooms]);
+
   return {
     rooms,
     activeRoom,
@@ -463,10 +647,3 @@ export const useChat = (currentUser: User) => {
     deleteRoom,
     isUserOnline,
   };
-  searchMessages,
-  clearSearch,
-  searchResults,
-  isSearching,
-  deleteRoom,
-  isUserOnline,
-};
