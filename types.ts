@@ -59,7 +59,7 @@ export interface Message {
   deletedBy?: string; // user ID who deleted it
   deletedForEveryone?: boolean;
   replyTo?: string; // message ID being replied to
-  status?: 'sent' | 'delivered' | 'seen'; // message delivery status
+  status?: 'sent' | 'delivered' | 'seen' | 'sending'; // message delivery status
   roomId?: string;
 }
 

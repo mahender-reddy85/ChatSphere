@@ -470,7 +470,6 @@ export const useChat = (currentUser: User) => {
       roomId,
       isPinned: false,
       isEdited: false,
-      roomId,
     } as ExtendedMessage;
 
     if (payload.file) {
