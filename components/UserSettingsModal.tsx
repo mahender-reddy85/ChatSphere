@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { User } from '../types';
 import { IconLogout, IconMoon, IconShare, IconSun, IconX } from './Icons';
 import type { Settings } from '../hooks/useSettings';
-import { toast } from '../hooks/useToast';
+import { toast } from '../hooks/toastService';
 
 // Fix: Add a props interface for type safety.
 interface UserSettingsModalProps {

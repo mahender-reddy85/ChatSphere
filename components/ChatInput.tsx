@@ -7,7 +7,7 @@ import CameraCaptureModal from './CameraCaptureModal';
 import LocationModal from './LocationModal';
 import { IconSend, IconPaperclip, IconX, IconPoll, IconFile, IconCamera, IconMic, IconTrash, IconMapPin } from './Icons';
 import { useChat } from '../hooks/useChat';
-import { toast } from '../hooks/useToast';
+import { toast } from '../hooks/toastService';
 
 interface ChatInputProps {
   onSendMessage: (payload: { text: string; audio?: { blob: Blob; duration: number }; file?: File, location?: MessageLocation }, editingMessageId?: string) => void;

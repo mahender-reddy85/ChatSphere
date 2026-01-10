@@ -3,7 +3,7 @@ import ChatRoom from './components/ChatRoom';
 import AuthForm from './components/AuthForm';
 import { useAuth } from './hooks/useAuth';
 import { useSettings } from './hooks/useSettings';
-import { ToastProvider } from './hooks/useToast';
+import { ToastProvider } from './hooks/toastService';
 
 const App: React.FC = () => {
   // Fix: Destructure `login` from `useAuth` to pass it to the AuthForm.

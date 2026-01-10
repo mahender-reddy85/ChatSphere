@@ -3,7 +3,7 @@ import type { Room, User } from '../types';
 import { MOCK_USERS } from '../constants';
 import Avatar from './Avatar';
 import { IconMic, IconMicOff, IconVideo, IconVideoOff, IconPhoneOff, IconScreenShare } from './Icons';
-import { toast } from '../hooks/useToast';
+import { toast } from '../hooks/toastService';
 
 interface VideoCallModalProps {
     room: Room;
