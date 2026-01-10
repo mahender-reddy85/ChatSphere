@@ -606,6 +606,35 @@ export const useChat = (currentUser: User) => {
     return onlineUsers.has(userId);
   }, [onlineUsers]);
 
+  // Create a new room
+  const createRoom = useCallback((name: string, privacy: 'public' | 'private' = 'public'): string => {
+    // Generate a random 4-character alphanumeric ID
+    const randomId = Math.random().toString(36).substring(2, 6);
+    // Create URL-friendly room name by converting to lowercase and replacing spaces with hyphens
+    const formattedName = name.toLowerCase()
+      .replace(/\s+/g, '-')        // Replace spaces with hyphens
+      .replace(/[^a-z0-9-]/g, ''); // Remove any non-alphanumeric characters except hyphens
+    
+    const newRoom: ExtendedRoom = {
+      id: `${formattedName}-${randomId}`, // Format: room-name-abc1
+      name,
+      type: 'group', // Only 'group', 'self', or 'ai' are allowed
+      users: [currentUser.id],
+      messages: [],
+      privacy,
+      activeCall: undefined
+    };
+
+    setRooms(prevRooms => [...prevRooms, newRoom]);
+    setActiveRoom(newRoom);
+
+    if (socketRef.current) {
+      socketRef.current.emit('create_room', { room: newRoom });
+    }
+
+    return newRoom.id; // Return the generated room ID
+  }, [currentUser.id]);
+
   // Get active typing users for a room
   const getActiveTypingUsers = useCallback((roomId: string): User[] => {
     if (!roomId) return [];
@@ -644,27 +673,6 @@ export const useChat = (currentUser: User) => {
       )
     );
 
-    if (socketRef.current) {
-      socketRef.current.emit('join_room', { roomId, userId: currentUser.id });
-    }
-  }, [currentUser.id]);
-
-  // Create a new room
-  const createRoom = useCallback((name: string, isPrivate: boolean = false) => {
-    const newRoom: ExtendedRoom = {
-      id: `room-${Date.now()}`,
-      name,
-      type: 'group', // Only 'group', 'self', or 'ai' are allowed
-      users: [currentUser.id],
-      messages: [],
-      privacy: isPrivate ? 'private' : 'public' as const,
-      activeCall: undefined
-    };
-
-    setRooms(prevRooms => [...prevRooms, newRoom]);
-    setActiveRoom(newRoom);
-
-    if (socketRef.current) {
       socketRef.current.emit('create_room', { room: newRoom });
     }
 
