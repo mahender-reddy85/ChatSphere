@@ -661,29 +661,47 @@ export const useChat = (currentUser: User) => {
   }, [typingUsers, currentUser.id, rooms, onlineUsers]);
 
   // Join an existing room
-  const joinRoom = useCallback((roomId: string) => {
+  const joinRoom = useCallback((roomId: string, password?: string): 'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined' => {
+    // Check if room exists
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) {
+      return 'not_found';
+    }
+
+    // Check if already in the room
+    if (room.users.includes(currentUser.id)) {
+      return 'already_joined';
+    }
+
+    // Check if room is private and password is required but not provided
+    if (room.privacy === 'private' && !password) {
+      return 'needs_password';
+    }
+
+    // Here you would typically validate the password with the server
+    // For now, we'll assume the password is correct and join the room
+
+    // Update local state optimistically
     setRooms(prevRooms => 
-      prevRooms.map(room => 
-        room.id === roomId
-          ? { 
-              ...room, 
-              users: room.users.includes(currentUser.id) 
-                ? room.users 
-                : [...room.users, currentUser.id] 
-            }
-          : room
+      prevRooms.map(r => 
+        r.id === roomId
+          ? { ...r, users: [...r.users, currentUser.id] }
+          : r
       )
     );
 
+    // Emit join_room event to server
     if (socketRef.current) {
-      // Include the current user's name when joining the room
       socketRef.current.emit('join_room', { 
         roomId, 
         userId: currentUser.id,
-        userName: currentUser.name // Add the user's name
+        userName: currentUser.name,
+        password
       });
     }
-  }, [currentUser.id, currentUser.name, socketRef]);
+
+    return 'joined';
+  }, [currentUser.id, currentUser.name, rooms, socketRef]);
 
   // Send a poll message
   const sendPoll = useCallback((question: string, options: string[], roomId: string) => {
