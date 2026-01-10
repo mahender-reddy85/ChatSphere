@@ -113,6 +113,9 @@ const getOnlineUsers = () => {
    SOCKET EVENTS
 ========================= */
 io.on('connection', (socket) => {
+  // Initialize socket data for every new connection
+  socket.data.joinedRooms = new Set();
+  
   // Update connection stats
   connectionStats.totalConnections++;
   connectionStats.activeConnections++;
@@ -140,9 +143,18 @@ io.on('connection', (socket) => {
 
   // Clean up on disconnect
   socket.on('disconnect', () => {
+    // Leave all joined rooms
+    if (socket.data.joinedRooms) {
+      socket.data.joinedRooms.forEach(roomId => {
+        socket.leave(roomId);
+        console.log(`User left room ${roomId} on disconnect`);
+      });
+    }
+    
     clearInterval(heartbeatInterval);
     connectionStats.activeConnections--;
     connectionStats.lastDisconnect = new Date();
+    console.log(`🔴 Disconnected: ${socket.id} (${connectionStats.activeConnections} active)`);
   });
 
   // Handle user authentication and track online status
@@ -210,36 +222,26 @@ io.on('connection', (socket) => {
       userData.username = userName || userData.username || 'Anonymous';
       
       if (userId) {
-        connectedUsers.set(userId, userData);
-      }
-
-      // Update room participants
-      if (!activeRooms.has(roomId)) {
-        activeRooms.set(roomId, new Set());
-      }
-      activeRooms.get(roomId).add(userId || socket.id);
-
-      console.log(`✅ User ${userData.username} (${userId || socket.id}) joined room ${roomId}`);
 
       // Broadcast to room that user has joined (except sender)
-      if (userData.username) {
+      if (userName) {
         socket.to(roomId).emit('receive_system_message', {
           message: {
             id: `sys-${Date.now()}`,
             author: { id: 'system', name: 'System' },
-            text: `${userData.username} has joined the room`,
+            text: `${userName} has joined the room`,
             timestamp: Date.now(),
             isSystem: true,
           },
         });
       }
 
-      // Send success response
-      safeEmit(socket, 'join_room_response', { 
-        success: true, 
+      // Send success response to the client
+      socket.emit('room_joined', { 
         roomId, 
-        participants: Array.from(activeRooms.get(roomId)) 
-      }, callback);
+        success: true,
+        message: `Successfully joined room ${roomId}`
+      });
       
     } catch (error) {
       console.error('Error joining room:', error);
