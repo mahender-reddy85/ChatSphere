@@ -1,3 +1,5 @@
+import React from 'react';
+
 // Simple toast notification service using vanilla JavaScript
 
 type ToastType = 'success' | 'error' | 'info';
@@ -57,8 +59,9 @@ export const toast = {
   info: (message: string, duration = 3000) => showToast(message, 'info', duration)
 };
 
-// Export a no-op provider for compatibility
-export const ToastProvider = {
-  // This is a no-op object to maintain compatibility with existing code
-  // that might be using the ToastProvider component
-} as any;
+// Export a proper React component for the provider
+export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // This provider doesn't need to render anything special
+  // since we're using direct DOM manipulation for the toasts
+  return React.createElement(React.Fragment, null, children);
+};

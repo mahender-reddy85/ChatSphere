@@ -63,6 +63,13 @@ export interface Message {
   roomId?: string;
 }
 
+export interface ActiveCall {
+  id: string;
+  participants: string[]; // array of user IDs
+  startedAt: number;
+  isGroupCall: boolean;
+}
+
 export interface Room {
   id: string;
   name: string;
@@ -71,6 +78,7 @@ export interface Room {
   messages: Message[];
   privacy: 'public' | 'private';
   password?: string;
+  activeCall?: ActiveCall;
 }
 
 export interface SearchResult {
