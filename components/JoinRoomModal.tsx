@@ -7,7 +7,13 @@ interface JoinRoomModalProps {
   onJoin: (
     roomId: string,
     password?: string
-  ) => 'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined';
+  ) =>
+    | Promise<'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined'>
+    | 'joined'
+    | 'needs_password'
+    | 'invalid_password'
+    | 'not_found'
+    | 'already_joined';
 }
 
 const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose, onJoin }) => {
@@ -18,7 +24,7 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose, onJoin }
 
   if (!isOpen) return null;
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (!roomId.trim()) {
       setError('Please enter an invite code.');
       return;
@@ -26,7 +32,7 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose, onJoin }
     setError('');
 
     if (step === 'enter_id') {
-      const result = onJoin(roomId.trim());
+      const result = await onJoin(roomId.trim());
       switch (result) {
         case 'joined':
           handleClose();
@@ -42,7 +48,7 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose, onJoin }
           break;
       }
     } else if (step === 'enter_password') {
-      const result = onJoin(roomId.trim(), password);
+      const result = await onJoin(roomId.trim(), password);
       switch (result) {
         case 'joined':
           handleClose();

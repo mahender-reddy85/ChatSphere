@@ -25,7 +25,13 @@ interface RoomListProps {
   joinRoom: (
     roomId: string,
     password?: string
-  ) => 'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined';
+  ) =>
+    | Promise<'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined'>
+    | 'joined'
+    | 'needs_password'
+    | 'invalid_password'
+    | 'not_found'
+    | 'already_joined';
   deleteRoom: (roomId: string) => void;
   unreadCounts: Record<string, number>;
   onSearch: (query: string, scope: 'current' | 'all') => void;

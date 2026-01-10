@@ -798,29 +798,95 @@ export const useChat = (currentUser: User) => {
 
   // Join an existing room
   const joinRoom = useCallback(
-    (
+    async (
       roomId: string,
       password?: string
-    ): 'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined' => {
+    ): Promise<
+      'joined' | 'needs_password' | 'invalid_password' | 'not_found' | 'already_joined'
+    > => {
       // Trim and normalize the room ID
       const normalizedRoomId = roomId.trim();
 
-      // Check if room exists (case-insensitive)
+      // Check if room exists locally (case-insensitive)
       const room = rooms.find((r) => r.id.toLowerCase() === normalizedRoomId.toLowerCase());
+
+      // If not found locally, attempt to look up on the backend
       if (!room) {
-        console.log(
-          'Room not found. Available rooms:',
-          rooms.map((r) => r.id)
-        );
-        return 'not_found';
+        try {
+          const backendUrl =
+            import.meta.env.VITE_BACKEND_URL ||
+            (import.meta.env.PROD
+              ? 'https://chatsphere-7t8g.onrender.com'
+              : 'http://localhost:5000');
+          const resp = await fetch(`${backendUrl.replace(/\/$/, '')}/api/rooms`);
+          if (!resp.ok) {
+            console.warn('Could not fetch rooms from backend');
+            return 'not_found';
+          }
+          const serverRooms: Array<Record<string, any>> = await resp.json();
+          const found = serverRooms.find(
+            (r) => r.id && r.id.toLowerCase() === normalizedRoomId.toLowerCase()
+          );
+
+          if (!found) return 'not_found';
+
+          // If room is private and password not provided, prompt for password
+          if (found.privacy === 'private' && !password) return 'needs_password';
+
+          // If private and password provided, validate (server stores password as plain text in demo)
+          if (found.privacy === 'private' && password && found.password !== password)
+            return 'invalid_password';
+
+          // Build a local ExtendedRoom from server record
+          const newRoom: ExtendedRoom = {
+            id: found.id,
+            name: found.name || found.id,
+            type: found.type || 'group',
+            users: [currentUser.id],
+            messages: [],
+            privacy: found.privacy || 'public',
+            activeCall: undefined,
+          };
+
+          setRooms((prevRooms) => [...prevRooms, newRoom]);
+          setActiveRoom(newRoom);
+
+          // Persist membership on server
+          try {
+            await fetch(
+              `${backendUrl.replace(/\/$/, '')}/api/rooms/${encodeURIComponent(found.id)}/join`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUser.id }),
+              }
+            );
+          } catch (err) {
+            console.warn('Failed to persist room join on backend', err);
+          }
+
+          // Emit socket join
+          if (socketRef.current) {
+            socketRef.current.emit('join_room', {
+              roomId: found.id,
+              userId: currentUser.id,
+              userName: currentUser.name,
+              password,
+            });
+          }
+
+          return 'joined';
+        } catch (err) {
+          console.error('Error looking up room on backend:', err);
+          return 'not_found';
+        }
       }
 
-      // Check if already in the room
+      // Found locally; continue with previous checks
       if (room.users.includes(currentUser.id)) {
         return 'already_joined';
       }
 
-      // Check if room is private and password is required but not provided
       if (room.privacy === 'private' && !password) {
         return 'needs_password';
       }
