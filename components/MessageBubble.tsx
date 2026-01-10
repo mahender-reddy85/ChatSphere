@@ -5,6 +5,7 @@ import PollDisplay from './PollDisplay';
 import ImageModal from './ImageModal';
 import EmojiPicker from './EmojiPicker';
 import { IconFile, IconMapPin, IconTrash, IconCheck, IconDoubleCheck, IconSmile, IconCopy, IconPin, IconReply, IconEdit, IconX } from './Icons';
+import { toast } from '../hooks/toastService';
 
 interface MessageBubbleProps {
     message: Message;
@@ -273,8 +274,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
     };
 
     const confirmDelete = () => {
-        onDelete(message.id, deleteForEveryone ? 'for_everyone' : 'for_me');
+        const deleteType = deleteForEveryone ? 'for_everyone' : 'for_me';
+        onDelete(message.id, deleteType);
         setShowDeleteConfirm(false);
+        
+        // Show toast notification
+        toast.success(deleteType === 'for_everyone' 
+            ? 'Message deleted for everyone' 
+            : 'Message deleted for you'
+        );
     };
 
     const cancelDelete = () => {
@@ -539,36 +547,62 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUser, isC
                 </div>
             )}
             
-            {/* Delete Confirmation Popup */}
+            {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div 
-                        className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl"
+                        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden transform transition-all"
                         ref={deleteRef}
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                            {deleteForEveryone ? 'Delete for everyone' : 'Delete for me'}
-                        </h3>
-                        <p className="text-gray-600 dark:text-gray-300 mb-6">
-                            {deleteForEveryone 
-                                ? 'This will delete the message for all participants. This action cannot be undone.'
-                                : 'This will delete the message from your view. Other participants will still see it.'
-                            }
-                        </p>
-                        <div className="flex justify-end space-x-3">
-                            <button
-                                onClick={cancelDelete}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={confirmDelete}
-                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
-                            >
-                                Delete
-                            </button>
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                                    {deleteForEveryone ? 'Delete for everyone' : 'Delete for you'}
+                                </h3>
+                                <button
+                                    onClick={cancelDelete}
+                                    className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                                    aria-label="Close"
+                                >
+                                    <IconX className="w-5 h-5" />
+                                </button>
+                            </div>
+                            
+                            <div className="mb-6">
+                                <p className="text-gray-600 dark:text-gray-300">
+                                    {deleteForEveryone 
+                                        ? 'This message will be deleted for all participants. This action cannot be undone.'
+                                        : 'This message will be removed from your chat history. Other participants will still be able to see it.'
+                                    }
+                                </p>
+                            </div>
+                            
+                            <div className="flex flex-col space-y-3 sm:flex-row sm:justify-end sm:space-y-0 sm:space-x-3">
+                                <button
+                                    type="button"
+                                    onClick={cancelDelete}
+                                    className="inline-flex justify-center rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={confirmDelete}
+                                    className="inline-flex justify-center rounded-lg border border-transparent px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800 transition-colors"
+                                >
+                                    {deleteForEveryone ? 'Delete for everyone' : 'Delete for me'}
+                                </button>
+                            </div>
                         </div>
+                        
+                        {deleteForEveryone && (
+                            <div className="bg-gray-50 dark:bg-gray-700/50 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    You can only delete messages for everyone for up to 1 hour after sending.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
