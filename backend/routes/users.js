@@ -45,8 +45,12 @@ router.post("/register", async (req, res) => {
       user: { id: user.id, username: user.username }
     });
   } catch (err) {
-    console.error("Registration error:", err);
-    res.status(500).json({ success: false, message: "Registration failed" });
+    console.error("REGISTER ERROR:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: err.message,
+      error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 });
 
