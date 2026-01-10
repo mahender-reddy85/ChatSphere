@@ -49,31 +49,6 @@ export const useChat = (currentUser: User) => {
   const socketRef = useRef<Socket | null>(null);
   const typingTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
 
-  // Helper function to get active typing users
-  const getActiveTypingUsers = useCallback((roomId: string): User[] => {
-    if (!roomId) return [];
-    
-    const userIds = Array.from(typingUsers[roomId] || []);
-    return userIds
-      .map(userId => {
-        // Skip the current user
-        if (userId === currentUser.id) return null;
-        
-        // Find the user in any of the rooms
-        for (const room of rooms) {
-          const user = room.users.find(u => u === userId);
-          if (user) return MOCK_USERS[user] || { id: user, name: 'Unknown User' };
-        }
-        return null;
-      })
-      .filter(Boolean) as User[];
-  }, [typingUsers, currentUser.id, rooms]);
-
-  // Helper function to check if a user is online
-  const isUserOnline = useCallback((userId: string): boolean => {
-    return onlineUsers.has(userId);
-  }, [onlineUsers]);
-
   // Initialize rooms on first render
   useEffect(() => {
     // Helper function to create a properly typed message
@@ -199,10 +174,17 @@ export const useChat = (currentUser: User) => {
 
     socket.on('receive_message', (data: { message: Message }) => {
       const { message } = data;
+      const extendedMessage: ExtendedMessage = {
+        ...message,
+        type: message.type || 'text',
+        roomId: message.roomId || '',
+        reactions: message.reactions || [],
+        status: 'delivered'
+      };
       setRooms(prev => prev.map(r =>
         r.id === message.roomId ? {
           ...r,
-          messages: r.messages.some(m => m.id === message.id) ? r.messages : [...r.messages, message]
+          messages: r.messages.some(m => m.id === message.id) ? r.messages : [...r.messages, extendedMessage]
         } : r
       ));
       // Update unread counts for other rooms
@@ -213,8 +195,15 @@ export const useChat = (currentUser: User) => {
 
     socket.on('receive_system_message', (data: { message: Message }) => {
       const { message } = data;
+      const extendedMessage: ExtendedMessage = {
+        ...message,
+        type: message.type || 'system',
+        roomId: message.roomId || '',
+        reactions: message.reactions || [],
+        status: 'delivered'
+      };
       setRooms(prev => prev.map(r =>
-        r.id === message.roomId ? { ...r, messages: [...r.messages, message] } : r
+        r.id === message.roomId ? { ...r, messages: [...r.messages, extendedMessage] } : r
       ));
     });
 
