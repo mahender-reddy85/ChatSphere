@@ -523,14 +523,19 @@ export const useChat = (currentUser: User) => {
 
   const handleReaction = useCallback((messageId: string, emoji: string) => {
     if (!activeRoom) return;
+    
     setRooms(prev => prev.map(r => {
         if (r.id !== activeRoom.id) return r;
+        
         const newMessages = r.messages.map(m => {
             if (m.id !== messageId) return m;
-            const existingReaction = m.reactions.find(re => re.emoji === emoji);
-            let newReactions;
+            
+            const existingReaction = m.reactions?.find(re => re.emoji === emoji);
+            let newReactions = [...(m.reactions || [])];
+            
             if (existingReaction) {
-                newReactions = m.reactions.map(re => {
+                // Toggle user's reaction
+                newReactions = newReactions.map(re => {
                     if (re.emoji === emoji) {
                         return re.users.includes(currentUser.id) 
                             ? { ...re, users: re.users.filter(uId => uId !== currentUser.id) }
@@ -539,7 +544,11 @@ export const useChat = (currentUser: User) => {
                     return re;
                 }).filter(re => re.users.length > 0);
             } else {
-                newReactions = [...m.reactions, { emoji, users: [currentUser.id] }];
+                // Add new reaction
+                newReactions = [
+                    ...newReactions,
+                    { emoji, users: [currentUser.id] }
+                ];
             }
             return { ...m, reactions: newReactions };
         });
