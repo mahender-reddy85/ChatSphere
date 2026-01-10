@@ -675,11 +675,10 @@ export const useChat = (currentUser: User) => {
       )
     );
 
-      socketRef.current.emit('create_room', { room: newRoom });
+    if (socketRef.current) {
+      socketRef.current.emit('join_room', { roomId, userId: currentUser.id });
     }
-
-    return newRoom;
-  }, [currentUser.id]);
+  }, [currentUser.id, socketRef]);
 
   // Send a poll message
   const sendPoll = useCallback((question: string, options: string[], roomId: string) => {
