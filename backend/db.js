@@ -1,17 +1,18 @@
+import 'dotenv/config';
 import pg from 'pg';
+
 const { Pool } = pg;
 
-// Create a new pool using the connection string from environment variables
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false // Required for Neon's SSL
-  }
+  ssl: { rejectUnauthorized: false },
 });
 
-// Test the database connection
+// Test connection function
 export async function testConnection() {
   try {
+    const r = await pool.query('SELECT NOW()');
+    console.log('✅ PostgreSQL connected:', r.rows[0]);
     const client = await pool.connect();
     console.log('✅ Connected to PostgreSQL database');
     client.release();
