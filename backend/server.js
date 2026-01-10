@@ -13,8 +13,24 @@ dotenv.config();
 const app = express();
 const server = createServer(app);
 
-// Track connected users and their socket IDs
-const connectedUsers = new Map();
+// Track connected users and their socket data
+const connectedUsers = new Map(); // userId -> { socketId, username, joinedRooms }
+
+// Track all active rooms and their participants
+const activeRooms = new Map(); // roomId -> Set of userIds
+
+// Helper function to safely emit events with error handling
+const safeEmit = (socket, event, data, callback) => {
+  try {
+    if (typeof callback === 'function') {
+      socket.emit(event, data, callback);
+    } else {
+      socket.emit(event, data);
+    }
+  } catch (error) {
+    console.error(`Error emitting ${event}:`, error);
+  }
+};
 
 // Test database connection on startup
 testConnection().then(isConnected => {
@@ -30,9 +46,40 @@ testConnection().then(isConnected => {
 const io = new Server(server, {
   cors: {
     origin: ['http://localhost:5173', 'https://chat-sphere-tan.vercel.app'],
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true
   },
+  pingTimeout: 60000, // Increase timeout to 60 seconds
+  pingInterval: 25000, // Send ping every 25 seconds
+  maxHttpBufferSize: 1e8, // 100MB max message size
+  connectionStateRecovery: {
+    // Enable reconnection with state recovery
+    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+    skipMiddlewares: true
+  }
 });
+
+// Track connection stats
+const connectionStats = {
+  totalConnections: 0,
+  activeConnections: 0,
+  peakConnections: 0,
+  rooms: 0,
+  users: 0,
+  lastDisconnect: null,
+  startTime: new Date()
+};
+
+// Log connection stats periodically
+setInterval(() => {
+  const now = new Date();
+  console.log('\n📊 Connection Stats:');
+  console.log(`🕒 Uptime: ${Math.floor((now - connectionStats.startTime) / 1000)}s`);
+  console.log(`👥 Active Users: ${connectionStats.activeConnections}`);
+  console.log(`🏠 Active Rooms: ${connectionStats.rooms}`);
+  console.log(`📈 Peak Connections: ${connectionStats.peakConnections}`);
+  console.log('--------------------------\n');
+}, 300000); // Log every 5 minutes
 
 // Make io accessible to routes
 app.set('io', io);
@@ -66,7 +113,37 @@ const getOnlineUsers = () => {
    SOCKET EVENTS
 ========================= */
 io.on('connection', (socket) => {
-  console.log('🟢 User connected:', socket.id);
+  // Update connection stats
+  connectionStats.totalConnections++;
+  connectionStats.activeConnections++;
+  connectionStats.peakConnections = Math.max(
+    connectionStats.peakConnections, 
+    connectionStats.activeConnections
+  );
+
+  console.log(`🟢 New connection: ${socket.id} (${connectionStats.activeConnections} active)`);
+  
+  // Set up heartbeat for connection monitoring
+  let isAlive = true;
+  const heartbeatInterval = setInterval(() => {
+    if (!isAlive) {
+      console.log(`No heartbeat from ${socket.id}, disconnecting...`);
+      return socket.disconnect(true);
+    }
+    isAlive = false;
+    socket.emit('ping');
+  }, 30000); // 30 seconds
+
+  socket.on('pong', () => {
+    isAlive = true;
+  });
+
+  // Clean up on disconnect
+  socket.on('disconnect', () => {
+    clearInterval(heartbeatInterval);
+    connectionStats.activeConnections--;
+    connectionStats.lastDisconnect = new Date();
+  });
 
   // Handle user authentication and track online status
   socket.on('authenticate', ({ userId }) => {
@@ -96,24 +173,80 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle room joining
-  socket.on('join_room', (data) => {
-    const { roomId, userName } =
-      typeof data === 'string' ? { roomId: data, userName: 'Anonymous' } : data;
-    socket.join(roomId);
-    console.log(`User ${userName || socket.id} joined room ${roomId}`);
+    // Handle room joining with validation and duplicate prevention
+  socket.on('join_room', (data, callback) => {
+    try {
+      // Validate input
+      if (!data) {
+        throw new Error('Join data is required');
+      }
+      
+      const { roomId, userName, userId } = typeof data === 'string' 
+        ? { roomId: data, userName: 'Anonymous', userId: null }
+        : { ...data, userId: data.userId || null };
 
-    // Broadcast to room that user has joined
-    if (userName) {
-      io.to(roomId).emit('receive_system_message', {
-        message: {
-          id: `sys-${Date.now()}`,
-          author: { id: 'system', name: 'System' },
-          text: `${userName} has joined the room`,
-          timestamp: Date.now(),
-          isSystem: true,
-        },
-      });
+      if (!roomId) {
+        throw new Error('roomId is required');
+      }
+
+      // Get or create user data
+      const userData = connectedUsers.get(userId) || { socketId: socket.id, joinedRooms: new Set() };
+      
+      // Check if already in room
+      if (userData.joinedRooms.has(roomId)) {
+        console.log(`User ${userId || socket.id} already in room ${roomId}`);
+        safeEmit(socket, 'join_room_response', { 
+          success: true, 
+          roomId, 
+          message: 'Already in room',
+          isDuplicate: true 
+        }, callback);
+        return;
+      }
+
+      // Join room and update tracking
+      socket.join(roomId);
+      userData.joinedRooms.add(roomId);
+      userData.username = userName || userData.username || 'Anonymous';
+      
+      if (userId) {
+        connectedUsers.set(userId, userData);
+      }
+
+      // Update room participants
+      if (!activeRooms.has(roomId)) {
+        activeRooms.set(roomId, new Set());
+      }
+      activeRooms.get(roomId).add(userId || socket.id);
+
+      console.log(`✅ User ${userData.username} (${userId || socket.id}) joined room ${roomId}`);
+
+      // Broadcast to room that user has joined (except sender)
+      if (userData.username) {
+        socket.to(roomId).emit('receive_system_message', {
+          message: {
+            id: `sys-${Date.now()}`,
+            author: { id: 'system', name: 'System' },
+            text: `${userData.username} has joined the room`,
+            timestamp: Date.now(),
+            isSystem: true,
+          },
+        });
+      }
+
+      // Send success response
+      safeEmit(socket, 'join_room_response', { 
+        success: true, 
+        roomId, 
+        participants: Array.from(activeRooms.get(roomId)) 
+      }, callback);
+      
+    } catch (error) {
+      console.error('Error joining room:', error);
+      safeEmit(socket, 'error', { 
+        event: 'join_room', 
+        error: error.message 
+      }, callback);
     }
   });
 
@@ -160,24 +293,60 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log('🔴 User disconnected:', socket.id);
+  // Handle disconnection with cleanup
+  socket.on('disconnect', (reason) => {
+    console.log(`🔴 User disconnected (${socket.id}):`, reason || 'Unknown reason');
 
-    // Find and remove the disconnected user
-    let disconnectedUserId = null;
-    for (const [userId, socketId] of connectedUsers.entries()) {
-      if (socketId === socket.id) {
-        disconnectedUserId = userId;
+    // Find and clean up the disconnected user
+    let disconnectedUser = null;
+    
+    // Find the user by socket ID
+    for (const [userId, userData] of connectedUsers.entries()) {
+      if (userData.socketId === socket.id) {
+        disconnectedUser = { userId, ...userData };
+        
+        // Leave all joined rooms
+        if (disconnectedUser.joinedRooms) {
+          disconnectedUser.joinedRooms.forEach(roomId => {
+            // Remove from room tracking
+            if (activeRooms.has(roomId)) {
+              activeRooms.get(roomId).delete(userId);
+              
+              // Clean up empty rooms
+              if (activeRooms.get(roomId).size === 0) {
+                activeRooms.delete(roomId);
+              } else {
+                // Notify room that user left
+                io.to(roomId).emit('receive_system_message', {
+                  message: {
+                    id: `sys-${Date.now()}`,
+                    author: { id: 'system', name: 'System' },
+                    text: `${disconnectedUser.username || 'A user'} has left the room`,
+                    timestamp: Date.now(),
+                    isSystem: true,
+                  },
+                });
+              }
+            }
+            
+            // Leave the socket room
+            socket.leave(roomId);
+          });
+        }
+        
+        // Remove from connected users
         connectedUsers.delete(userId);
+        console.log(`Cleaned up user ${userId} (${disconnectedUser.username || 'unknown'})`);
+        
+        // Notify all clients that user went offline
+        io.emit('user_offline', { 
+          userId,
+          username: disconnectedUser.username,
+          timestamp: Date.now()
+        });
+        
         break;
       }
-    }
-
-    // Notify all clients if a user went offline
-    if (disconnectedUserId) {
-      io.emit('user_offline', { userId: disconnectedUserId });
-      console.log(`User ${disconnectedUserId} went offline`);
     }
   });
 });
