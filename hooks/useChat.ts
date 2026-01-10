@@ -676,9 +676,14 @@ export const useChat = (currentUser: User) => {
     );
 
     if (socketRef.current) {
-      socketRef.current.emit('join_room', { roomId, userId: currentUser.id });
+      // Include the current user's name when joining the room
+      socketRef.current.emit('join_room', { 
+        roomId, 
+        userId: currentUser.id,
+        userName: currentUser.name // Add the user's name
+      });
     }
-  }, [currentUser.id, socketRef]);
+  }, [currentUser.id, currentUser.name, socketRef]);
 
   // Send a poll message
   const sendPoll = useCallback((question: string, options: string[], roomId: string) => {
