@@ -1,67 +1,59 @@
 # ChatSphere - Real-time Chat Application with AI Integration
 
-ChatSphere is a modern real-time chat application built with React, Vite, TypeScript, and Tailwind CSS. It supports user authentication, chat rooms, polls, video calls, and AI-powered responses via Google Gemini.
+ChatSphere is a real-time chat application built with React, TypeScript, Node.js, Express, and Socket.IO.
 
-## Run Locally
+## Features
 
-**Prerequisites:** Node.js (v18+)
+- Real-time messaging
+- User authentication
+- Private and group chats
+- Message reactions
+- Typing indicators
+- Online/offline status
+- Responsive design
 
-1. Clone the repository and navigate to the project directory.
-2. Install dependencies:
+## Prerequisites
+
+- Node.js (v18 or later)
+- npm (v9 or later) or yarn
+- PostgreSQL (for the backend)
+
+## Getting Started
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/chatsphere.git
+   cd chatsphere
    ```
+
+2. Install dependencies:
+   ```bash
    npm install
    ```
-3. Copy `.env.example` to `.env.local` and add your Gemini API key:
-   ```
-   VITE_GEMINI_API_KEY=your_gemini_api_key_here
-   ```
-   Get your API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-4. Run the development server:
-   ```
-   npm run dev
-   ```
-   The app will be available at http://localhost:3000.
 
-## Deployment
+3. Set up the environment variables:
+   - Copy `.env.example` to `.env` in both frontend and backend directories
+   - Update the environment variables with your configuration
 
-### Vercel
+4. Start the development servers:
+   ```bash
+   # Start both frontend and backend
+   npm start
+   
+   # Or start them separately
+   npm run start:frontend
+   npm run start:backend
+   ```
 
-1. Push your code to a GitHub repository.
-2. Connect the repository to Vercel via the dashboard.
-3. In Vercel project settings > Environment Variables, add:
-   - `VITE_GEMINI_API_KEY`: Your Gemini API key.
-4. Deploy – Vercel will build and deploy automatically on pushes to main.
-5. The app will be served from the root (base '/'), so no additional config needed.
+5. Open http://localhost:3000 to view the app in the browser.
 
-If AI features are disabled or CSS issues occur, ensure the API key is set correctly and redeploy.
+## Available Scripts
 
-### GitHub Pages
-
-1. Install the `gh-pages` package (if not already):
-   ```
-   npm install --save-dev gh-pages
-   ```
-2. Add the following to `package.json` scripts:
-   ```
-   "predeploy": "npm run build",
-   "deploy": "gh-pages -d dist"
-   ```
-3. Set the base path for GitHub Pages by creating `.env` with:
-   ```
-   VITE_BASE_URL=/ChatSphere/
-   ```
-   (Replace 'ChatSphere' with your repo name if different.)
-4. Build and deploy:
-   ```
-   npm run deploy
-   ```
-   This will create a `gh-pages` branch and push the `dist/` folder.
-5. Enable GitHub Pages in repo settings > Pages > Source: Deploy from a branch > gh-pages.
-
-The app will be available at https://yourusername.github.io/ChatSphere/.
-
-For AI features, set `VITE_GEMINI_API_KEY` in a GitHub Actions secret or note that it's disabled on GH Pages (env vars not directly supported; use Vercel for full features).
-
+- `npm start` - Start both frontend and backend in development mode
+- `npm run build` - Build both frontend and backend for production
+- `npm test` - Run tests for both frontend and backend
+- `npm run lint` - Lint both frontend and backend code
+- `npm run format` - Format code using Prettier
 ## Environment Variables
 
 See `.env.example` for configuration. Key variables:
