@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IconX, IconGoogle, IconFacebook } from './Icons';
+import { IconX } from './Icons';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -32,15 +32,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
     }
   };
 
-  const handleGoogleLogin = () => {
-    // Placeholder for Google login
-    console.log('Google login clicked');
-  };
-
-  const handleFacebookLogin = () => {
-    // Placeholder for Facebook login
-    console.log('Facebook login clicked');
-  };
 
   return (
     <div
@@ -120,34 +111,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
               Login
             </button>
           </form>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                Or continue with
-              </span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <button
-              onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
-            >
-              <IconGoogle className="w-4 h-4" />
-              Continue with Google
-            </button>
-            <button
-              onClick={handleFacebookLogin}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-            >
-              <IconFacebook className="w-4 h-4" />
-              Continue with Facebook
-            </button>
-          </div>
         </div>
       </div>
     </div>
