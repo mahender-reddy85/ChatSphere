@@ -4,6 +4,7 @@ import AuthForm from './components/AuthForm';
 import { useAuth } from './hooks/useAuth';
 import { useSettings } from './hooks/useSettings';
 import { ToastProvider } from './hooks/toastService';
+import { authApi } from './frontend/src/lib/api';
 
 const App: React.FC = () => {
   const { user, loading, login, updateUser, logout } = useAuth();
@@ -34,12 +35,15 @@ const App: React.FC = () => {
 
   const handleRegister = async (username: string, password: string) => {
     try {
-      // Here you would typically call a registration API
-      // For now, we'll just log the registration attempt
-      console.log('Registering user:', username);
-      return true;
+      const response = await authApi.register({ username, password });
+      if (response.success) {
+        // Automatically log in the user after successful registration
+        return await handleLogin(username, password);
+      }
+      return false;
     } catch (error) {
       console.error('Registration failed:', error);
+      setLoginError(error.message || 'Registration failed. Please try again.');
       throw error;
     }
   };
