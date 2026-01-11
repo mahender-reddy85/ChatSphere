@@ -6,23 +6,42 @@ import { useSettings } from './hooks/useSettings';
 import { ToastProvider } from './hooks/toastService';
 
 const App: React.FC = () => {
-  // Fix: Destructure `login` from `useAuth` to pass it to the AuthForm.
-  // This ensures a single source of truth for the authentication state.
   const { user, loading, login, updateUser, logout } = useAuth();
   const { settings, toggleDarkMode, toggleEnterToSend } = useSettings();
 
   const [showLoginPage, setShowLoginPage] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const handleOpenLogin = () => {
     setShowLoginPage(true);
+    setLoginError(null);
   };
 
-  const handleLogin = (username: string) => {
-    const success = login(username);
-    if (success) {
-      setShowLoginPage(false);
+  const handleLogin = async (username: string, password: string) => {
+    try {
+      const success = await login(username, password);
+      if (success) {
+        setShowLoginPage(false);
+        setLoginError(null);
+        return true;
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
+      setLoginError(error.message || 'Login failed. Please try again.');
     }
-    return success;
+    return false;
+  };
+
+  const handleRegister = async (username: string, password: string) => {
+    try {
+      // Here you would typically call a registration API
+      // For now, we'll just log the registration attempt
+      console.log('Registering user:', username);
+      return true;
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
+    }
   };
 
   if (loading) {
@@ -52,7 +71,11 @@ const App: React.FC = () => {
             {...settingProps}
           />
         ) : (
-          <AuthForm onLogin={handleLogin} />
+          <AuthForm 
+            onLogin={handleLogin} 
+            onRegister={handleRegister} 
+            error={loginError} 
+          />
         )}
       </div>
     </ToastProvider>
