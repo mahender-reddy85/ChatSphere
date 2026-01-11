@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { testConnection } from './db.js';
@@ -8,10 +10,23 @@ import userRoutes from './routes/users.js';
 import messageRoutes from './routes/messages.js';
 import roomRoutes from './routes/rooms.js';
 
+// Load environment variables
 dotenv.config();
+
+// Define allowed origins
+const allowedOrigins = [
+  "https://chat-sphere-tan.vercel.app",
+  "http://localhost:5173" // for local development
+].filter(Boolean);
 
 const app = express();
 const server = createServer(app);
+
+// Enable CORS for Express routes
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 
 // Track connected users and their data
 const connectedUsers = new Map(); // userId -> { socketId, username, joinedRooms }
@@ -45,12 +60,8 @@ testConnection().then(isConnected => {
 ========================= */
 const io = new Server(server, {
   cors: {
-    origin: [
-      'http://localhost:5173',
-      'https://chatsphere-7t8g.onrender.com',
-      'https://chat-sphere-tan.vercel.app'
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
     credentials: true
   },
   pingTimeout: 60000, // Increase timeout to 60 seconds
@@ -88,17 +99,6 @@ setInterval(() => {
 // Make io accessible to routes
 app.set('io', io);
 
-/* =========================
-   MIDDLEWARE
-========================= */
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://chatsphere-7t8g.onrender.com',
-    'https://chat-sphere-tan.vercel.app'
-  ],
-  credentials: true
-}));
 app.use(express.json());
 
 /* =========================
@@ -128,48 +128,18 @@ const getOnlineUsers = () => {
 ========================= */
 io.on('connection', (socket) => {
   console.log(`🟢 New connection: ${socket.id}`);
-  
-  // ✅ ALWAYS initialize here for every socket
   socket.data.joinedRooms = new Set();
-  
+
   // Update connection stats
   connectionStats.totalConnections++;
   connectionStats.activeConnections++;
   connectionStats.peakConnections = Math.max(
-    connectionStats.peakConnections, 
+    connectionStats.peakConnections,
     connectionStats.activeConnections
   );
 
   console.log(`Active connections: ${connectionStats.activeConnections}`);
 
-  // Clean up on disconnect
-  socket.on('disconnect', (reason) => {
-    console.log(`🔴 User disconnected (${socket.id}): ${reason}`);
-
-    connectionStats.activeConnections--;
-    connectionStats.lastDisconnect = new Date();
-
-    // leave rooms safely
-    if (socket.data.joinedRooms) {
-      for (const roomId of socket.data.joinedRooms) {
-        socket.leave(roomId);
-        console.log(`User left room ${roomId} on disconnect`);
-      }
-    }
-
-    // cleanup user map
-    for (const [userId, userData] of connectedUsers.entries()) {
-      if (userData.socketId === socket.id) {
-        connectedUsers.delete(userId);
-        io.emit('user_offline', { userId });
-        break;
-      }
-    }
-    
-    console.log(`Active connections: ${connectionStats.activeConnections}`);
-  });
-
-  // Handle user authentication and track online status
   socket.on('authenticate', ({ userId, username }) => {
     if (!userId) return;
 
@@ -346,6 +316,8 @@ io.on('connection', (socket) => {
 
   // Handle disconnection with cleanup
   socket.on('disconnect', (reason) => {
+    connectionStats.activeConnections--;
+    connectionStats.lastDisconnect = new Date();
     console.log(`🔴 User disconnected (${socket.id}):`, reason || 'Unknown reason');
 
     // Find and clean up the disconnected user
