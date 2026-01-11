@@ -4,7 +4,7 @@ import AuthForm from './components/AuthForm';
 import { useAuth } from './hooks/useAuth';
 import { useSettings } from './hooks/useSettings';
 import { ToastProvider } from './hooks/toastService';
-import { authApi } from './frontend/src/lib/api';
+import { authApi, type UserData } from './lib/api';
 
 const App: React.FC = () => {
   const { user, loading, login, updateUser, logout } = useAuth();
@@ -18,7 +18,7 @@ const App: React.FC = () => {
     setLoginError(null);
   };
 
-  const handleLogin = async (username: string, password: string) => {
+  const handleLogin = async (username: string, password: string): Promise<boolean> => {
     try {
       const success = await login(username, password);
       if (success) {
@@ -26,24 +26,32 @@ const App: React.FC = () => {
         setLoginError(null);
         return true;
       }
-    } catch (error) {
+      return false;
+    } catch (error: unknown) {
       console.error('Login failed:', error);
-      setLoginError(error.message || 'Login failed. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
+      setLoginError(errorMessage);
+      return false;
     }
-    return false;
   };
 
-  const handleRegister = async (username: string, password: string) => {
+  const handleRegister = async (username: string, password: string): Promise<boolean> => {
     try {
-      const response = await authApi.register({ username, password });
-      if (response.success) {
-        // Automatically log in the user after successful registration
+      const userData: UserData = { 
+        username, 
+        password,
+        email: `${username}@example.com` // You might want to collect email separately
+      };
+      
+      const response = await authApi.register(userData);
+      if (response.data?.token) {
         return await handleLogin(username, password);
       }
       return false;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Registration failed:', error);
-      setLoginError(error.message || 'Registration failed. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed. Please try again.';
+      setLoginError(errorMessage);
       throw error;
     }
   };
