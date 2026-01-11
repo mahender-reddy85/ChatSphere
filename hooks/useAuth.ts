@@ -9,45 +9,69 @@ export const useAuth = () => {
 
   useEffect(() => {
     try {
-      const token = localStorage.getItem(FAKE_JWT_KEY);
-      if (token) {
-        const userData = JSON.parse(atob(token.split('.')[1]));
-        if (userData && userData.id) {
+      const userData = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+      
+      if (token && userData) {
+        const parsedUser = JSON.parse(userData);
+        if (parsedUser && parsedUser.id) {
           setUser({
-            id: userData.id,
-            name: userData.name,
-            profilePicture: userData.profilePicture,
+            id: parsedUser.id,
+            username: parsedUser.username,
+            name: parsedUser.name || parsedUser.username,
+            profilePicture: parsedUser.profilePicture,
             isOnline: true,
           });
         }
       }
     } catch (error) {
-      console.error('Failed to parse auth token', error);
-      localStorage.removeItem(FAKE_JWT_KEY);
+      console.error('Failed to parse user data', error);
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const login = useCallback((username: string): boolean => {
-    const normalizedUsername = username.trim();
-    if (normalizedUsername) {
-      const userId = `user-${Date.now()}`;
+  const login = useCallback(async (username: string, password: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Login failed');
+      }
+
+      const { token, user: userData } = await response.json();
+      localStorage.setItem('token', token);
+      
       const newUser: User = {
-        id: userId,
-        name: normalizedUsername,
+        id: userData.id,
+        username: userData.username,
+        name: userData.name || userData.username,
         isOnline: true,
+        profilePicture: userData.profilePicture,
       };
-      const fakeToken = `header.${btoa(JSON.stringify(newUser))}.signature`;
-      localStorage.setItem(FAKE_JWT_KEY, fakeToken);
+      
+      // Store user data in a way that's accessible to our app
+      localStorage.setItem('user', JSON.stringify(newUser));
       setUser(newUser);
       return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error; // Re-throw to handle in the UI
     }
-    return false;
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(FAKE_JWT_KEY);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
   }, []);
 
