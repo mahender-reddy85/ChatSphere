@@ -1,22 +1,27 @@
 import React, { useState } from 'react';
 import { IconX } from './Icons';
 
+interface User {
+  id: number;
+  username: string;
+}
+
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: (username: string, password: string) => boolean;
-  onRegister?: (username: string, password: string) => boolean;
+  onLogin?: (token: string, user: User) => void;
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, onRegister }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (username.trim().length < 3) {
       setError('Username must be at least 3 characters long.');
@@ -26,20 +31,66 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, onReg
       setError('Password must be at least 6 characters long.');
       return;
     }
+
+    setIsLoading(true);
     setError('');
-    
-    if (isRegistering && onRegister) {
-      if (onRegister(username, password)) {
-        onClose();
-      } else {
-        setError('Registration failed. Username might be taken.');
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Registration failed');
       }
-    } else {
-      if (onLogin(username, password)) {
-        onClose();
-      } else {
-        setError('Invalid credentials.');
+
+      // Save token and user data
+      localStorage.setItem('token', data.token);
+      if (onLogin) {
+        onLogin(data.token, data.user);
       }
+      onClose();
+      window.location.href = '/';
+    } catch (err) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      // Save token and user data
+      localStorage.setItem('token', data.token);
+      if (onLogin) {
+        onLogin(data.token, data.user);
+      }
+      onClose();
+      window.location.href = '/';
+    } catch (err) {
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -81,11 +132,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, onReg
           </button>
         </div>
         <div className="p-6 space-y-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
             <div>
               <label
                 htmlFor="login-username"
-                className="text-sm font-medium text-gray-600 dark:text-gray-400"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
                 Username
               </label>
@@ -94,15 +145,16 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, onReg
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full mt-1 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 placeholder="Enter username"
                 required
+                disabled={isLoading}
               />
             </div>
             <div>
               <label
                 htmlFor="login-password"
-                className="text-sm font-medium text-gray-600 dark:text-gray-400"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
                 Password
               </label>
@@ -111,18 +163,34 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, onReg
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full mt-1 px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 placeholder="Enter password"
                 required
+                disabled={isLoading}
               />
             </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
-            <div className="flex flex-col space-y-2">
+            
+            {error && (
+              <div className="p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 rounded-md">
+                {error}
+              </div>
+            )}
+            
+            <div className="pt-2 space-y-3">
               <button
                 type="submit"
-                className="w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+                disabled={isLoading}
+                className={`w-full py-2 px-4 rounded-md text-white font-medium transition-colors ${
+                  isLoading
+                    ? 'bg-blue-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
-                {isRegistering ? 'Register' : 'Login'}
+                {isLoading
+                  ? 'Processing...'
+                  : isRegistering
+                  ? 'Create Account'
+                  : 'Sign In'}
               </button>
               
               <button
@@ -131,16 +199,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, onReg
                   setIsRegistering(!isRegistering);
                   setError('');
                 }}
-                className="w-full px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-transparent border border-indigo-600 dark:border-indigo-400 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                disabled={isLoading}
+                className="w-full py-2 px-4 text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md font-medium transition-colors"
               >
-                {isRegistering ? 'Back to Login' : 'Create an Account'}
+                {isRegistering
+                  ? 'Already have an account? Sign In'
+                  : 'Need an account? Create Account'}
               </button>
-              
-              {onRegister === undefined && isRegistering && (
-                <p className="text-xs text-gray-500 text-center mt-2">
-                  Registration functionality is not available in this demo.
-                </p>
-              )}
             </div>
           </form>
         </div>
