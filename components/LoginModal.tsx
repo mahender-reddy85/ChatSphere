@@ -5,9 +5,11 @@ interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLogin: (username: string, password: string) => boolean;
+  onRegister?: (username: string, password: string) => boolean;
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin, onRegister }) => {
+  const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -25,10 +27,19 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
       return;
     }
     setError('');
-    if (onLogin(username, password)) {
-      onClose();
+    
+    if (isRegistering && onRegister) {
+      if (onRegister(username, password)) {
+        onClose();
+      } else {
+        setError('Registration failed. Username might be taken.');
+      }
     } else {
-      setError('Invalid credentials.');
+      if (onLogin(username, password)) {
+        onClose();
+      } else {
+        setError('Invalid credentials.');
+      }
     }
   };
 
@@ -59,7 +70,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
         tabIndex={-1}
       >
         <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
-          <h2 className="text-lg font-semibold dark:text-white">Login</h2>
+          <h2 className="text-lg font-semibold dark:text-white">
+            {isRegistering ? 'Create an Account' : 'Login'}
+          </h2>
           <button
             onClick={onClose}
             className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -104,12 +117,31 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
               />
             </div>
             {error && <p className="text-sm text-red-500">{error}</p>}
-            <button
-              type="submit"
-              className="w-full px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
-            >
-              Login
-            </button>
+            <div className="flex flex-col space-y-2">
+              <button
+                type="submit"
+                className="w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+              >
+                {isRegistering ? 'Register' : 'Login'}
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegistering(!isRegistering);
+                  setError('');
+                }}
+                className="w-full px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-transparent border border-indigo-600 dark:border-indigo-400 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+              >
+                {isRegistering ? 'Back to Login' : 'Create an Account'}
+              </button>
+              
+              {onRegister === undefined && isRegistering && (
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  Registration functionality is not available in this demo.
+                </p>
+              )}
+            </div>
           </form>
         </div>
       </div>
