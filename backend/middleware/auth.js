@@ -18,6 +18,7 @@ export const auth = (req, res, next) => {
   }
 };
 
+
 export const socketAuth = (socket, next) => {
   const token = socket.handshake.auth?.token;
   
