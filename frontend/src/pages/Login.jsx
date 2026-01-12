@@ -36,7 +36,8 @@ export default function Login() {
       });
 
       setAuth(token, user);
-      navigate('/');
+      // Redirect to setup username page first
+      navigate('/setup-username');
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.');
     } finally {

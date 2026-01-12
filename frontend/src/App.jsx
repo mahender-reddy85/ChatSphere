@@ -4,6 +4,7 @@ import { getToken, getUser, clearAuth } from './lib/auth';
 import { api } from './lib/api';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import SetupUsername from './pages/SetupUsername';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Main App component with authentication context
@@ -65,8 +66,12 @@ function App() {
           isAuthenticated ? <Navigate to="/" replace /> : <Register />
         } />
         
+        <Route path="/setup-username" element={
+          isAuthenticated ? <SetupUsername /> : <Navigate to="/login" replace />
+        } />
+        
         <Route path="/" element={
-          <ProtectedRoute>
+          <ProtectedRoute requireUsername={true}>
             <div className="min-h-screen bg-gray-100">
               {/* Navigation */}
               <nav className="bg-white shadow-sm">
