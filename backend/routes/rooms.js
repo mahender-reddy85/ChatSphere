@@ -18,6 +18,30 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   const { name, type = 'group', privacy = 'public', createdBy } = req.body;
   try {
+    // Detect schema: prefer (name, type, privacy, created_by) if present, otherwise fall back to legacy (code)
+    const colsRes = await query(
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'rooms'"
+    );
+    const cols = new Set(colsRes.rows.map((r) => r.column_name));
+
+    if (cols.has('name')) {
+      const result = await query(
+        'INSERT INTO rooms (name, type, privacy, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
+        [name, type, privacy, createdBy]
+      );
+      return res.status(201).json(result.rows[0]);
+    }
+
+    if (cols.has('code')) {
+      // Legacy schema: store our generated slug in `code` column
+      const result = await query(
+        'INSERT INTO rooms (code, created_at) VALUES ($1, CURRENT_TIMESTAMP) RETURNING *',
+        [name]
+      );
+      return res.status(201).json(result.rows[0]);
+    }
+
+    // Fallback: try default insert and let it error if it fails
     const result = await query(
       'INSERT INTO rooms (name, type, privacy, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
       [name, type, privacy, createdBy]
@@ -26,7 +50,7 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error('Error creating room (first attempt):', err);
 
-    // If the rooms table doesn't exist, create it and retry once
+    // If the rooms table doesn't exist, create the modern table and retry once
     const isUndefinedTable = err && (err.code === '42P01' || /relation\s+"rooms"\s+does\s+not\s+exist/i.test(err.message));
     if (isUndefinedTable) {
       try {
