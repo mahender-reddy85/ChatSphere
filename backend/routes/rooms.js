@@ -17,6 +17,19 @@ router.get('/', async (req, res) => {
 // Create a room (defensive: auto-create table if missing and retry once)
 router.post('/', async (req, res) => {
   const { name, type = 'group', privacy = 'public', createdBy } = req.body;
+
+  // Log the incoming request for debugging
+  console.log('POST /api/rooms request body:', req.body, 'from', req.ip, 'headers', {
+    origin: req.headers.origin,
+    referer: req.headers.referer,
+  });
+
+  // Basic validation
+  if (!name || String(name).trim() === '') {
+    console.warn('Invalid room create request - missing name');
+    return res.status(400).json({ message: 'Invalid room name' });
+  }
+
   try {
     // Detect schema: prefer (name, type, privacy, created_by) if present, otherwise fall back to legacy (code)
     const colsRes = await query(
@@ -25,6 +38,7 @@ router.post('/', async (req, res) => {
     const cols = new Set(colsRes.rows.map((r) => r.column_name));
 
     if (cols.has('name')) {
+      console.log('Rooms schema detected: modern (name)');
       const result = await query(
         'INSERT INTO rooms (name, type, privacy, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
         [name, type, privacy, createdBy]
@@ -33,6 +47,7 @@ router.post('/', async (req, res) => {
     }
 
     if (cols.has('code')) {
+      console.log('Rooms schema detected: legacy (code)');
       // Legacy schema: store our generated slug in `code` column
       const result = await query(
         'INSERT INTO rooms (code, created_at) VALUES ($1, CURRENT_TIMESTAMP) RETURNING *',
@@ -42,13 +57,14 @@ router.post('/', async (req, res) => {
     }
 
     // Fallback: try default insert and let it error if it fails
+    console.log('Rooms schema unknown - attempting default insert');
     const result = await query(
       'INSERT INTO rooms (name, type, privacy, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
       [name, type, privacy, createdBy]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error('Error creating room (first attempt):', err);
+    console.error('Error creating room (first attempt):', err && (err.stack || err));
 
     // If the rooms table doesn't exist, create the modern table and retry once
     const isUndefinedTable = err && (err.code === '42P01' || /relation\s+"rooms"\s+does\s+not\s+exist/i.test(err.message));
@@ -75,12 +91,12 @@ router.post('/', async (req, res) => {
         );
         return res.status(201).json(retry.rows[0]);
       } catch (retryErr) {
-        console.error('Error creating rooms table or retrying insert:', retryErr);
-        return res.status(500).json({ message: 'Server error' });
+        console.error('Error creating rooms table or retrying insert:', retryErr && (retryErr.stack || retryErr));
+        return res.status(500).json({ message: 'Server error', detail: process.env.NODE_ENV === 'development' ? retryErr.message : undefined });
       }
     }
 
-    res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ message: 'Server error', detail: process.env.NODE_ENV === 'development' ? err.message : undefined });
   }
 });
 
