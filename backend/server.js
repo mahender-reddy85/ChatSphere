@@ -7,6 +7,7 @@ import { testConnection } from './db.js';
 import userRoutes from './routes/users.js';
 import messageRoutes from './routes/messages.js';
 import roomRoutes from './routes/rooms.js';
+import debugRoutes from './routes/debug.js';
 
 // Load environment variables
 dotenv.config();
@@ -111,6 +112,7 @@ app.use('/api/auth', userRoutes);
 // Other API routes
 app.use('/api/messages', messageRoutes);
 app.use('/api/rooms', roomRoutes);
+app.use('/api/debug', debugRoutes);
 
 /* =========================
    HEALTH CHECK

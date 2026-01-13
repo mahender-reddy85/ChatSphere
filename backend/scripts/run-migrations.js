@@ -6,7 +6,7 @@ import { pool } from '../db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-async function runMigrations() {
+export async function runMigrations() {
   const client = await pool.connect();
 
   try {
@@ -32,6 +32,7 @@ async function runMigrations() {
     await client.query('COMMIT');
     console.log('\n🎉 All migrations completed successfully!');
     console.log('Database is ready to use! 🚀');
+    return { success: true };
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('\n❌ Migration failed with error:');
@@ -41,11 +42,19 @@ async function runMigrations() {
       'Current DATABASE_URL:',
       process.env.DATABASE_URL ? '***' + process.env.DATABASE_URL.slice(-20) : 'Not set!'
     );
-    process.exit(1);
+    throw error;
   } finally {
     client.release();
     await pool.end();
   }
 }
 
-runMigrations().catch(console.error);
+// If run directly from the CLI, execute migrations and exit with appropriate code
+if (process.argv[1] && process.argv[1].endsWith('run-migrations.js')) {
+  runMigrations()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
+}
