@@ -94,7 +94,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
     }
   };
 
-
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"
@@ -169,30 +168,24 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
                 disabled={isLoading}
               />
             </div>
-            
+
             {error && (
               <div className="p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 rounded-md">
                 {error}
               </div>
             )}
-            
+
             <div className="pt-2 space-y-3">
               <button
                 type="submit"
                 disabled={isLoading}
                 className={`w-full py-2 px-4 rounded-md text-white font-medium transition-colors ${
-                  isLoading
-                    ? 'bg-blue-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
+                  isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
-                {isLoading
-                  ? 'Processing...'
-                  : isRegistering
-                  ? 'Create Account'
-                  : 'Sign In'}
+                {isLoading ? 'Processing...' : isRegistering ? 'Create Account' : 'Sign In'}
               </button>
-              
+
               <button
                 type="button"
                 onClick={() => {

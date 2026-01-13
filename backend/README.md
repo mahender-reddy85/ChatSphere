@@ -12,6 +12,7 @@ This is the backend server for ChatSphere, built with Node.js, Express, Socket.I
 
 1. Clone the repository
 2. Install dependencies:
+
    ```bash
    npm install
    ```
@@ -21,6 +22,7 @@ This is the backend server for ChatSphere, built with Node.js, Express, Socket.I
    - Update the values in `.env` with your database credentials
 
 4. Run migrations to set up the database schema:
+
    ```bash
    npm run migrate
    ```

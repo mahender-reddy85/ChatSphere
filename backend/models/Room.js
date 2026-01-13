@@ -16,7 +16,7 @@ class Room {
   static async getRoomsForUser(userId) {
     // Find all rooms where the user is a member
     const userRooms = [];
-    for (const [roomId, room] of store.rooms) {
+    for (const [, room] of store.rooms) {
       if (room.members && room.members.has(userId)) {
         userRooms.push(room);
       }
@@ -27,11 +27,11 @@ class Room {
   static async addUser(roomId, userId) {
     const room = await store.findRoomById(roomId);
     if (!room) return false;
-    
+
     if (!room.members) {
       room.members = new Set();
     }
-    
+
     room.members.add(userId);
     store.rooms.set(roomId, room);
     return true;
@@ -40,7 +40,7 @@ class Room {
   static async removeUser(roomId, userId) {
     const room = await store.findRoomById(roomId);
     if (!room || !room.members) return false;
-    
+
     return room.members.delete(userId);
   }
 

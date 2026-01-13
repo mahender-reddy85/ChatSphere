@@ -149,13 +149,13 @@ export const useChat = (currentUser: User) => {
     }
 
     isConnecting.current = true;
-    
+
     const backendUrl =
       import.meta.env.VITE_BACKEND_URL ||
       (import.meta.env.PROD ? 'https://chatsphere-7t8g.onrender.com' : 'http://localhost:5000');
-      
+
     console.log('🔌 Connecting to Socket.IO server at:', backendUrl);
-    
+
     const socket = io(backendUrl, {
       transports: ['websocket'],
       auth: { userId: currentUser.id },
@@ -166,23 +166,23 @@ export const useChat = (currentUser: User) => {
       reconnectionDelayMax: 5000,
       timeout: 20000,
     });
-    
+
     socketRef.current = socket;
-    
+
     // Mark as no longer connecting
     const onConnect = () => {
       isConnecting.current = false;
       console.log('✅ Socket.IO connected');
     };
-    
+
     const onConnectError = (error: Error) => {
       console.error('❌ Socket.IO connection error:', error);
       isConnecting.current = false;
     };
-    
+
     socket.on('connect', onConnect);
     socket.on('connect_error', onConnectError);
-    
+
     // Cleanup
     return () => {
       socket.off('connect', onConnect);
@@ -195,24 +195,24 @@ export const useChat = (currentUser: User) => {
       // Only emit user_online if we're not already connected
       if (!socket.recovered) {
         console.log('📢 Notifying server that user is online');
-        socket.emit('user_online', { 
+        socket.emit('user_online', {
           userId: currentUser.id,
-          username: currentUser.name 
+          username: currentUser.name,
         });
       } else {
         console.log('🔄 Socket reconnected, skipping duplicate user_online');
       }
-      
+
       // Re-join any rooms we were in before reconnection
       if (joinedRooms.current.size > 0) {
         console.log(`🔄 Re-joining ${joinedRooms.current.size} rooms after reconnection`);
-        joinedRooms.current.forEach(roomId => {
+        joinedRooms.current.forEach((roomId) => {
           console.log(`🔄 Re-joining room: ${roomId}`);
-          socket.emit('join_room', { 
+          socket.emit('join_room', {
             roomId,
             userId: currentUser.id,
             userName: currentUser.name,
-            isReconnect: true
+            isReconnect: true,
           });
         });
       }
@@ -453,18 +453,18 @@ export const useChat = (currentUser: User) => {
       const socket = socketRef.current;
       if (socket) {
         console.log('🧹 Cleaning up socket connection');
-        
+
         // Notify server that user is going offline
         if (socket.connected) {
           socket.emit('user_offline', { userId: currentUser.id });
-          
+
           // Leave all joined rooms
-          joinedRooms.current.forEach(roomId => {
+          joinedRooms.current.forEach((roomId) => {
             socket.emit('leave_room', { roomId, userId: currentUser.id });
           });
           joinedRooms.current.clear();
         }
-        
+
         // Disconnect the socket
         socket.disconnect();
         socketRef.current = null;
@@ -475,32 +475,39 @@ export const useChat = (currentUser: User) => {
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket || !socket.connected || rooms.length === 0) return;
-    
+
     rooms.forEach((room) => {
       // Only join if we're a member and haven't joined this room yet
       if (room.users.includes(currentUser.id) && !joinedRooms.current.has(room.id)) {
         console.log(`🚀 Joining room: ${room.id}`);
-        
-        socket.emit('join_room', { 
-          roomId: room.id,
-          userId: currentUser.id,
-          userName: currentUser.name,
-          isInitialJoin: true
-        }, (response: { success: boolean; error?: string }) => {
-          if (response?.success) {
-            console.log(`✅ Successfully joined room: ${room.id}`);
-            joinedRooms.current.add(room.id);
-          } else {
-            console.error(`❌ Failed to join room ${room.id}:`, response?.error || 'Unknown error');
+
+        socket.emit(
+          'join_room',
+          {
+            roomId: room.id,
+            userId: currentUser.id,
+            userName: currentUser.name,
+            isInitialJoin: true,
+          },
+          (response: { success: boolean; error?: string }) => {
+            if (response?.success) {
+              console.log(`✅ Successfully joined room: ${room.id}`);
+              joinedRooms.current.add(room.id);
+            } else {
+              console.error(
+                `❌ Failed to join room ${room.id}:`,
+                response?.error || 'Unknown error'
+              );
+            }
           }
-        });
+        );
       }
     });
-    
+
     // Cleanup function to leave rooms when unmounting
     return () => {
       if (socket && socket.connected) {
-        joinedRooms.current.forEach(roomId => {
+        joinedRooms.current.forEach((roomId) => {
           console.log(`🚪 Leaving room on cleanup: ${roomId}`);
           socket.emit('leave_room', { roomId, userId: currentUser.id });
         });
@@ -958,7 +965,7 @@ export const useChat = (currentUser: User) => {
           const newRoom: ExtendedRoom = {
             id: found.id,
             name: found.name || found.id,
-            type: found.type || 'group',
+            type: (found.type as 'self' | 'ai' | 'group') || 'group',
             users: [currentUser.id],
             messages: [],
             privacy: found.privacy || 'public',

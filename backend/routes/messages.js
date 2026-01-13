@@ -25,7 +25,7 @@ router.get('/:roomId', async (req, res) => {
 // Send a message
 router.post('/', async (req, res) => {
   const { roomId, authorId, text, type = 'text' } = req.body;
-  
+
   try {
     // Insert the message into the database
     const result = await query(
@@ -34,7 +34,7 @@ router.post('/', async (req, res) => {
        RETURNING *`,
       [roomId, authorId, text, type]
     );
-    
+
     // Get the full message with author details
     const messageResult = await query(
       `SELECT m.*, u.name as author_name, u.profile_picture as author_avatar
@@ -43,13 +43,13 @@ router.post('/', async (req, res) => {
        WHERE m.id = $1`,
       [result.rows[0].id]
     );
-    
+
     const message = messageResult.rows[0];
-    
+
     // Emit the new message to all clients in the room
     const io = req.app.get('io');
     io.to(roomId).emit('receiveMessage', message);
-    
+
     res.status(201).json(message);
   } catch (err) {
     console.error('Error sending message:', err);
@@ -61,7 +61,7 @@ router.post('/', async (req, res) => {
 router.get('/:roomId/history', async (req, res) => {
   const { roomId } = req.params;
   const { before = Date.now(), limit = 50 } = req.query;
-  
+
   try {
     const result = await query(
       `SELECT m.*, u.name as author_name, u.profile_picture as author_avatar
@@ -72,7 +72,7 @@ router.get('/:roomId/history', async (req, res) => {
        LIMIT $3`,
       [roomId, before, limit]
     );
-    
+
     // Return messages in chronological order (oldest first)
     res.json(result.rows.reverse());
   } catch (err) {

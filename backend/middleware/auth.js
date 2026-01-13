@@ -13,14 +13,14 @@ export const auth = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded; // {id, username}
     next();
-  } catch (err) {
+  } catch {
     return res.status(401).json({ message: 'Invalid or expired token' });
   }
 };
 
 export const socketAuth = (socket, next) => {
   const token = socket.handshake.auth?.token;
-  
+
   if (!token) {
     return next(new Error('Authentication error: No token provided'));
   }
@@ -29,7 +29,7 @@ export const socketAuth = (socket, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.user = decoded;
     next();
-  } catch (err) {
+  } catch {
     return next(new Error('Authentication error: Invalid token'));
   }
 };

@@ -19,7 +19,7 @@ async function createUsersTable() {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
+
     // Create users table if it doesn't exist
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -31,9 +31,9 @@ async function createUsersTable() {
         is_online BOOLEAN DEFAULT false
       )
     `);
-    
+
     console.log('✅ Checking if users table exists...');
-    
+
     // Check if the table was created
     const result = await client.query(`
       SELECT EXISTS (
@@ -42,9 +42,9 @@ async function createUsersTable() {
         AND table_name = 'users'
       );
     `);
-    
+
     console.log('✅ Users table exists:', result.rows[0].exists);
-    
+
     await client.query('COMMIT');
     console.log('✅ Database schema is up to date');
   } catch (error) {

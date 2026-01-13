@@ -1,7 +1,5 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import path from 'path';
 
 // Load environment variables
 dotenv.config();
@@ -12,18 +10,18 @@ const { Pool } = pg;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Required for Neon's SSL
-  }
+    rejectUnauthorized: false, // Required for Neon's SSL
+  },
 });
 
 async function runMigrations() {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     console.log('🔄 Starting database migrations...');
-    
+
     // Create users table
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -38,7 +36,7 @@ async function runMigrations() {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    
+
     // Create rooms table
     await client.query(`
       CREATE TABLE IF NOT EXISTS rooms (
@@ -51,7 +49,7 @@ async function runMigrations() {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    
+
     // Create room_members table
     await client.query(`
       CREATE TABLE IF NOT EXISTS room_members (
@@ -61,7 +59,7 @@ async function runMigrations() {
         PRIMARY KEY (room_id, user_id)
       )
     `);
-    
+
     // Create messages table
     await client.query(`
       CREATE TABLE IF NOT EXISTS messages (
@@ -73,14 +71,18 @@ async function runMigrations() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    
+
     // Create indexes
     console.log('🔨 Creating indexes...');
     await client.query('CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_messages_author_id ON messages(author_id)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_room_members_room_id ON room_members(room_id)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_room_members_user_id ON room_members(user_id)');
-    
+    await client.query(
+      'CREATE INDEX IF NOT EXISTS idx_room_members_room_id ON room_members(room_id)'
+    );
+    await client.query(
+      'CREATE INDEX IF NOT EXISTS idx_room_members_user_id ON room_members(user_id)'
+    );
+
     await client.query('COMMIT');
     console.log('✅ Database schema created successfully');
   } catch (error) {

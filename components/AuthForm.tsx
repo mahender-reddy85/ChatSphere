@@ -32,12 +32,14 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
     setShowLoginPage(false);
   };
 
-  const handlePasswordLogin = (loginUsername: string, password: string) => {
-    // Placeholder for password login logic
-    console.log('Password login:', loginUsername, password);
-    // For now, just use the username to login
-    onLogin(loginUsername);
-    return true;
+  const handlePasswordLogin = (token: string, user: { id: number; username: string }) => {
+    // Save token and notify parent that login succeeded
+    try {
+      localStorage.setItem('token', token);
+    } catch (e) {
+      console.warn('Failed to persist token locally', e);
+    }
+    onLogin(user.username);
   };
 
   return (

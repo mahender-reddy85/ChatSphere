@@ -18,9 +18,9 @@ import Avatar from './Avatar';
 import { toast } from '../hooks/toastService';
 
 interface RoomListProps {
-  rooms: Room[];
-  activeRoom: Room | null;
-  setActiveRoom: (room: Room | null) => void;
+  rooms: any[]; // ExtendedRoom[] is used by caller
+  activeRoom: any | null;
+  setActiveRoom: (room: any) => void;
   createRoom: (name: string) => string;
   joinRoom: (
     roomId: string,

@@ -11,7 +11,7 @@ class User {
 
   static async findByEmail(email) {
     // Find user by email in the in-memory store
-    for (const [id, user] of store.users) {
+    for (const [, user] of store.users) {
       if (user.email === email) {
         return user;
       }
@@ -22,7 +22,7 @@ class User {
   static async update(id, updates) {
     const user = await store.findUserById(id);
     if (!user) return false;
-    
+
     // Update user properties
     Object.assign(user, updates);
     store.users.set(id, user);
@@ -32,7 +32,7 @@ class User {
   static async updateOnlineStatus(id, isOnline) {
     const user = await store.findUserById(id);
     if (!user) return false;
-    
+
     user.is_online = isOnline;
     user.last_seen = new Date();
     store.users.set(id, user);
