@@ -29,6 +29,8 @@ interface ExtendedMessage extends Omit<Message, 'status' | 'reactions' | 'type' 
 // Room type with extended message type
 type ExtendedRoom = Omit<Room, 'messages'> & {
   messages: ExtendedMessage[];
+  serverId?: string | number;
+  serverName?: string;
 };
 
 import { MOCK_USERS } from '../constants';
@@ -875,7 +877,37 @@ export const useChat = (currentUser: User) => {
         socketRef.current.emit('create_room', { room: newRoom });
       }
 
-      return newRoom.id; // Return the generated room ID
+      // Persist room to backend (best-effort, non-blocking). We send the generated slug as the server room name so other clients can join by that code.
+      (async () => {
+        try {
+          const backendUrl =
+            import.meta.env.VITE_BACKEND_URL ||
+            (import.meta.env.PROD ? 'https://chatsphere-7t8g.onrender.com' : 'http://localhost:5000');
+
+          const resp = await fetch(`${backendUrl.replace(/\/$/, '')}/api/rooms`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newRoom.id, type: newRoom.type, privacy, createdBy: currentUser.id }),
+          });
+
+          if (resp.ok) {
+            const created = await resp.json();
+            // If server saved the room, attach server id/name to the local room for future reconciliation
+            setRooms((prev) =>
+              prev.map((r) =>
+                r.id === newRoom.id
+                  ? { ...r, serverId: created.id ?? r.serverId, serverName: created.name ?? r.serverName }
+                  : r
+              )
+            );
+          }
+        } catch (e) {
+          // Best-effort only; do not surface errors to the user
+          console.warn('Failed to persist room on backend', e);
+        }
+      })();
+
+      return newRoom.id; // Return the generated room ID (code)
     },
     [currentUser.id]
   );
@@ -948,9 +980,15 @@ export const useChat = (currentUser: User) => {
           }
 
           const serverRooms: ServerRoom[] = await resp.json();
-          const found = serverRooms.find(
-            (r) => r.id && r.id.toLowerCase() === normalizedRoomId.toLowerCase()
-          );
+          const target = normalizedRoomId.toLowerCase();
+          const found = serverRooms.find((r) => {
+            // Normalize id (may be number) and compare slug/name fields too
+            const idStr = typeof r.id === 'string' ? r.id.toLowerCase() : String(r.id).toLowerCase();
+            if (idStr === target) return true;
+            if (r.name && r.name.toLowerCase() === target) return true;
+            if ((r as any).slug && String((r as any).slug).toLowerCase() === target) return true;
+            return false;
+          });
 
           if (!found) return 'not_found';
 
