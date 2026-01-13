@@ -44,6 +44,19 @@ router.post('/', async (req, res) => {
   }
 
   try {
+    // Defensive parsing for createdBy (accept numeric user IDs or legacy client IDs like "user-123")
+    let createdByInt = createdBy;
+    if (typeof createdByInt === 'string') {
+      if (createdByInt.startsWith('user-')) {
+        createdByInt = createdByInt.replace(/^user-/, '');
+      }
+      createdByInt = parseInt(createdByInt, 10);
+    }
+    if (!Number.isInteger(createdByInt)) {
+      createdByInt = null; // allow null if invalid
+    }
+    console.log('createRoom: createdBy parsed to:', createdByInt);
+
     // Detect schema: prefer (name, type, privacy, created_by) if present, otherwise fall back to legacy (code)
     // Debug: database info and ordered rooms columns (helps diagnose production schema differences)
     const dbInfo = await query(`SELECT current_database() as db, current_schema() as schema`);
@@ -63,7 +76,7 @@ router.post('/', async (req, res) => {
       console.log('Rooms schema detected: modern (name)');
       const result = await query(
         'INSERT INTO rooms (name, type, privacy, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
-        [name, type, privacy, createdBy]
+        [name, type, privacy, createdByInt]
       );
       return res.status(201).json(result.rows[0]);
     }
@@ -82,7 +95,7 @@ router.post('/', async (req, res) => {
     console.log('Rooms schema unknown - attempting default insert');
     const result = await query(
       'INSERT INTO rooms (name, type, privacy, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, type, privacy, createdBy]
+      [name, type, privacy, createdByInt]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -109,7 +122,7 @@ router.post('/', async (req, res) => {
         // retry insert
         const retry = await query(
           'INSERT INTO rooms (name, type, privacy, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
-          [name, type, privacy, createdBy]
+          [name, type, privacy, createdByInt]
         );
         return res.status(201).json(retry.rows[0]);
       } catch (retryErr) {
@@ -145,7 +158,7 @@ router.post('/', async (req, res) => {
 
         const alterRetry = await query(
           'INSERT INTO rooms (name, type, privacy, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
-          [name, type, privacy, createdBy]
+          [name, type, privacy, createdByInt]
         );
         return res.status(201).json(alterRetry.rows[0]);
       } catch (fixErr) {
