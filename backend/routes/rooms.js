@@ -45,9 +45,17 @@ router.post('/', async (req, res) => {
 
   try {
     // Detect schema: prefer (name, type, privacy, created_by) if present, otherwise fall back to legacy (code)
-    const colsRes = await query(
-      "SELECT column_name FROM information_schema.columns WHERE table_name = 'rooms'"
-    );
+    // Debug: database info and ordered rooms columns (helps diagnose production schema differences)
+    const dbInfo = await query(`SELECT current_database() as db, current_schema() as schema`);
+    console.log('DB INFO:', dbInfo.rows[0]);
+
+    const colsRes = await query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name='rooms'
+      ORDER BY ordinal_position
+    `);
+    console.log('ROOM COLS:', colsRes.rows.map((r) => r.column_name));
     const cols = new Set(colsRes.rows.map((r) => r.column_name));
     console.log('Detected rooms columns:', Array.from(cols));
 
