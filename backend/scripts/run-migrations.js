@@ -13,7 +13,7 @@ async function runMigrations() {
     await client.query('BEGIN');
 
     // Read and execute each migration file
-    const migrationFiles = ['../migrations/001_create_users_table.sql', '../migrations/002_create_rooms_table.sql'];
+    const migrationFiles = ['../migrations/001_create_users_table.sql', '../migrations/002_create_rooms_table.sql', '../migrations/rooms.sql'];
 
     for (const migrationFile of migrationFiles) {
       const filePath = path.join(__dirname, migrationFile);

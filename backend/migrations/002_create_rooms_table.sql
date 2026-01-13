@@ -28,8 +28,20 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes
-CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id);
-CREATE INDEX IF NOT EXISTS idx_messages_author_id ON messages(author_id);
-CREATE INDEX IF NOT EXISTS idx_room_members_room_id ON room_members(room_id);
-CREATE INDEX IF NOT EXISTS idx_room_members_user_id ON room_members(user_id);
+-- Indexes (create only if the column exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='room_id') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id)';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='author_id') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_messages_author_id ON messages(author_id)';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='room_members' AND column_name='room_id') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_room_members_room_id ON room_members(room_id)';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='room_members' AND column_name='user_id') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_room_members_user_id ON room_members(user_id)';
+  END IF;
+END
+$$;
