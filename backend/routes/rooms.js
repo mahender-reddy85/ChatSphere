@@ -44,33 +44,29 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    // Determine createdByInt defensively.
-    // Prefer authenticated user (req.user.id) if present; otherwise validate client-sent createdBy.
+    // Determine createdByInt securely.
+    // Prefer authenticated user (req.user.id). If no authenticated user, ignore any client-supplied createdBy to avoid spoofing.
     let createdByInt = null;
 
     if (req.user && Number.isInteger(req.user.id)) {
       createdByInt = req.user.id;
     } else {
-      createdByInt = createdBy;
-
-      if (typeof createdByInt === 'string') {
-        // If frontend sends legacy local id like "user-...", treat as invalid for DB FK
-        if (createdByInt.startsWith('user-')) {
-          createdByInt = null;
-        } else {
-          const parsed = parseInt(createdByInt, 10);
-          createdByInt = Number.isInteger(parsed) ? parsed : null;
-        }
-      } else if (typeof createdByInt === 'number') {
-        createdByInt = Number.isInteger(createdByInt) ? createdByInt : null;
-      } else {
-        createdByInt = null;
+      // Do not trust client-provided createdBy when unauthenticated
+      if (createdBy !== undefined && createdBy !== null) {
+        console.warn('Unauthenticated request attempted to set createdBy; ignoring client-supplied value:', createdBy);
       }
+      createdByInt = null;
     }
 
-    // Bound check for 32-bit signed int (safe for INTEGER column)
-    if (createdByInt !== null && (createdByInt > 2147483647 || createdByInt < 0)) {
-      createdByInt = null;
+    // Ensure createdByInt is a safe 32-bit integer; otherwise nullify
+    if (createdByInt !== null) {
+      const num = Number(createdByInt);
+      if (!Number.isInteger(num) || num > 2147483647 || num < 0) {
+        console.warn('createdBy out of safe range or invalid; nullifying', createdByInt);
+        createdByInt = null;
+      } else {
+        createdByInt = num;
+      }
     }
 
     console.log('createRoom: using createdByInt:', createdByInt, 'authenticatedUser:', req.user && req.user.id);
