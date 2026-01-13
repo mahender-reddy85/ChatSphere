@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Create a room
+// Create a room (defensive: auto-create table if missing and retry once)
 router.post('/', async (req, res) => {
   const { name, type = 'group', privacy = 'public', createdBy } = req.body;
   try {
@@ -24,7 +24,38 @@ router.post('/', async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error('Error creating room:', err);
+    console.error('Error creating room (first attempt):', err);
+
+    // If the rooms table doesn't exist, create it and retry once
+    const isUndefinedTable = err && (err.code === '42P01' || /relation\s+"rooms"\s+does\s+not\s+exist/i.test(err.message));
+    if (isUndefinedTable) {
+      try {
+        console.log('Rooms table missing. Creating rooms table...');
+        await query(`
+          CREATE TABLE IF NOT EXISTS rooms (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            type VARCHAR(50) NOT NULL DEFAULT 'group',
+            privacy VARCHAR(50) NOT NULL DEFAULT 'public',
+            password TEXT,
+            created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+
+        // retry insert
+        const retry = await query(
+          'INSERT INTO rooms (name, type, privacy, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
+          [name, type, privacy, createdBy]
+        );
+        return res.status(201).json(retry.rows[0]);
+      } catch (retryErr) {
+        console.error('Error creating rooms table or retrying insert:', retryErr);
+        return res.status(500).json({ message: 'Server error' });
+      }
+    }
+
     res.status(500).json({ message: 'Server error' });
   }
 });
