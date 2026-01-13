@@ -44,18 +44,36 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    // Defensive parsing for createdBy (accept numeric user IDs or legacy client IDs like "user-123")
-    let createdByInt = createdBy;
-    if (typeof createdByInt === 'string') {
-      if (createdByInt.startsWith('user-')) {
-        createdByInt = createdByInt.replace(/^user-/, '');
+    // Determine createdByInt defensively.
+    // Prefer authenticated user (req.user.id) if present; otherwise validate client-sent createdBy.
+    let createdByInt = null;
+
+    if (req.user && Number.isInteger(req.user.id)) {
+      createdByInt = req.user.id;
+    } else {
+      createdByInt = createdBy;
+
+      if (typeof createdByInt === 'string') {
+        // If frontend sends legacy local id like "user-...", treat as invalid for DB FK
+        if (createdByInt.startsWith('user-')) {
+          createdByInt = null;
+        } else {
+          const parsed = parseInt(createdByInt, 10);
+          createdByInt = Number.isInteger(parsed) ? parsed : null;
+        }
+      } else if (typeof createdByInt === 'number') {
+        createdByInt = Number.isInteger(createdByInt) ? createdByInt : null;
+      } else {
+        createdByInt = null;
       }
-      createdByInt = parseInt(createdByInt, 10);
     }
-    if (!Number.isInteger(createdByInt)) {
-      createdByInt = null; // allow null if invalid
+
+    // Bound check for 32-bit signed int (safe for INTEGER column)
+    if (createdByInt !== null && (createdByInt > 2147483647 || createdByInt < 0)) {
+      createdByInt = null;
     }
-    console.log('createRoom: createdBy parsed to:', createdByInt);
+
+    console.log('createRoom: using createdByInt:', createdByInt, 'authenticatedUser:', req.user && req.user.id);
 
     // Detect schema: prefer (name, type, privacy, created_by) if present, otherwise fall back to legacy (code)
     // Debug: database info and ordered rooms columns (helps diagnose production schema differences)
