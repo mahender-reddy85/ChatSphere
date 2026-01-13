@@ -14,6 +14,19 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Debug: return rooms table columns (temporary endpoint to inspect production schema)
+router.get('/debug/rooms-schema', async (req, res) => {
+  try {
+    const colsRes = await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'rooms'");
+    const columns = colsRes.rows.map((r) => r.column_name);
+    console.log('GET /api/debug/rooms-schema ->', columns);
+    res.json({ columns });
+  } catch (err) {
+    console.error('Error fetching rooms schema (debug endpoint):', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Create a room (defensive: auto-create table if missing and retry once)
 router.post('/', async (req, res) => {
   const { name, type = 'group', privacy = 'public', createdBy } = req.body;
@@ -36,6 +49,7 @@ router.post('/', async (req, res) => {
       "SELECT column_name FROM information_schema.columns WHERE table_name = 'rooms'"
     );
     const cols = new Set(colsRes.rows.map((r) => r.column_name));
+    console.log('Detected rooms columns:', Array.from(cols));
 
     if (cols.has('name')) {
       console.log('Rooms schema detected: modern (name)');
