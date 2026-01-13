@@ -880,10 +880,19 @@ export const useChat = (currentUser: User) => {
         try {
           const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://chatsphere-7t8g.onrender.com';
 
+          // Defensive: send numeric user id where possible, otherwise null
+          let createdByPayload: number | null = null;
+          if (typeof currentUser.id === 'number') {
+            createdByPayload = currentUser.id;
+          } else {
+            const parsed = parseInt(String(currentUser.id).replace(/^user-/, ''), 10);
+            createdByPayload = Number.isInteger(parsed) ? parsed : null;
+          }
+
           const resp = await fetch(`${backendUrl.replace(/\/$/, '')}/api/rooms`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: newRoom.id, type: newRoom.type, privacy, createdBy: currentUser.id }),
+            body: JSON.stringify({ name: newRoom.id, type: newRoom.type, privacy, createdBy: createdByPayload }),
           });
 
           if (resp.ok) {
