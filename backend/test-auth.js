@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 config();
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
+const BASE_URL = process.env.BASE_URL || 'https://chatsphere-7t8g.onrender.com';
 
 async function testAuth() {
   try {

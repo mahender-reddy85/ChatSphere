@@ -80,9 +80,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const currentUserId = currentUser?.id;
 
   useEffect(() => {
-    const backendUrl =
-      import.meta.env.VITE_BACKEND_URL ||
-      (import.meta.env.PROD ? 'https://chatsphere-7t8g.onrender.com' : 'http://localhost:5000');
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://chatsphere-7t8g.onrender.com';
     const socket = io(backendUrl, {
       transports: ['websocket'],
     });

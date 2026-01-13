@@ -152,9 +152,7 @@ export const useChat = (currentUser: User) => {
 
     isConnecting.current = true;
 
-    const backendUrl =
-      import.meta.env.VITE_BACKEND_URL ||
-      (import.meta.env.PROD ? 'https://chatsphere-7t8g.onrender.com' : 'http://localhost:5000');
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://chatsphere-7t8g.onrender.com';
 
     console.log('🔌 Connecting to Socket.IO server at:', backendUrl);
 
@@ -880,9 +878,7 @@ export const useChat = (currentUser: User) => {
       // Persist room to backend (best-effort, non-blocking). We send the generated slug as the server room name so other clients can join by that code.
       (async () => {
         try {
-          const backendUrl =
-            import.meta.env.VITE_BACKEND_URL ||
-            (import.meta.env.PROD ? 'https://chatsphere-7t8g.onrender.com' : 'http://localhost:5000');
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://chatsphere-7t8g.onrender.com';
 
           const resp = await fetch(`${backendUrl.replace(/\/$/, '')}/api/rooms`, {
             method: 'POST',
@@ -961,11 +957,7 @@ export const useChat = (currentUser: User) => {
       // If not found locally, attempt to look up on the backend
       if (!room) {
         try {
-          const backendUrl =
-            import.meta.env.VITE_BACKEND_URL ||
-            (import.meta.env.PROD
-              ? 'https://chatsphere-7t8g.onrender.com'
-              : 'http://localhost:5000');
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://chatsphere-7t8g.onrender.com';
           const resp = await fetch(`${backendUrl.replace(/\/$/, '')}/api/rooms`);
           if (!resp.ok) {
             console.warn('Could not fetch rooms from backend', resp.status, resp.statusText);
@@ -986,6 +978,7 @@ export const useChat = (currentUser: User) => {
             const idStr = typeof r.id === 'string' ? r.id.toLowerCase() : String(r.id).toLowerCase();
             if (idStr === target) return true;
             if (r.name && r.name.toLowerCase() === target) return true;
+            if ((r as any).code && String((r as any).code).toLowerCase() === target) return true;
             if ((r as any).slug && String((r as any).slug).toLowerCase() === target) return true;
             return false;
           });

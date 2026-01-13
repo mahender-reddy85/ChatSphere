@@ -74,14 +74,24 @@ async function runMigrations() {
 
     // Create indexes
     console.log('🔨 Creating indexes...');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_messages_author_id ON messages(author_id)');
-    await client.query(
-      'CREATE INDEX IF NOT EXISTS idx_room_members_room_id ON room_members(room_id)'
-    );
-    await client.query(
-      'CREATE INDEX IF NOT EXISTS idx_room_members_user_id ON room_members(user_id)'
-    );
+    // Create indexes only if the columns exist to support legacy schemas
+    await client.query(`DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='room_id') THEN
+          EXECUTE 'CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id)';
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='author_id') THEN
+          EXECUTE 'CREATE INDEX IF NOT EXISTS idx_messages_author_id ON messages(author_id)';
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='room_members' AND column_name='room_id') THEN
+          EXECUTE 'CREATE INDEX IF NOT EXISTS idx_room_members_room_id ON room_members(room_id)';
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='room_members' AND column_name='user_id') THEN
+          EXECUTE 'CREATE INDEX IF NOT EXISTS idx_room_members_user_id ON room_members(user_id)';
+        END IF;
+      END;
+      $$;`);
+
 
     await client.query('COMMIT');
     console.log('✅ Database schema created successfully');
