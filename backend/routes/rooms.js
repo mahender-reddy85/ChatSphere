@@ -1,5 +1,6 @@
 import express from 'express';
 import { query } from '../db.js';
+import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -28,7 +29,8 @@ router.get('/debug/rooms-schema', async (req, res) => {
 });
 
 // Create a room (defensive: auto-create table if missing and retry once)
-router.post('/', async (req, res) => {
+// Require authentication to prevent unauthenticated clients from spoofing createdBy
+router.post('/', auth, async (req, res) => {
   const { name, type = 'group', privacy = 'public', createdBy } = req.body;
 
   // Log the incoming request for debugging
