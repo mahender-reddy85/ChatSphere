@@ -11,9 +11,10 @@ import roomRoutes from './routes/rooms.js';
 // Load environment variables
 dotenv.config();
 
-// Define allowed origins
+// Define allowed origins (add deployed frontend origin so deployed clients can talk to this API)
 const allowedOrigins = [
   'https://chat-sphere-tan.vercel.app',
+  'https://chatsphere-7t8g.onrender.com',
   'http://localhost:5173', // for local development
 ].filter(Boolean);
 
