@@ -96,6 +96,42 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // Handle missing-column errors (e.g., "column \"name\" of relation \"rooms\" does not exist")
+    const isMissingColumn = err && (err.code === '42703' || /column\s+"[^"]+"\s+of\s+relation\s+"rooms"\s+does\s+not\s+exist/i.test(err.message));
+    if (isMissingColumn) {
+      console.warn('Detected missing column error when creating room. Attempting legacy/repair strategies...');
+      try {
+        const colsRes = await query(
+          "SELECT column_name FROM information_schema.columns WHERE table_name = 'rooms'"
+        );
+        const cols = new Set(colsRes.rows.map((r) => r.column_name));
+
+        if (cols.has('code')) {
+          console.log('Legacy "code" column found on rooms - inserting into code');
+          const legacy = await query(
+            'INSERT INTO rooms (code, created_at) VALUES ($1, CURRENT_TIMESTAMP) RETURNING *',
+            [name]
+          );
+          return res.status(201).json(legacy.rows[0]);
+        }
+
+        // If no legacy code column, try to add a nullable 'name' column and retry
+        if (!cols.has('name')) {
+          console.log('Adding nullable "name" column to rooms table to support modern schema');
+          await query("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS name VARCHAR(255)");
+        }
+
+        const alterRetry = await query(
+          'INSERT INTO rooms (name, type, privacy, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
+          [name, type, privacy, createdBy]
+        );
+        return res.status(201).json(alterRetry.rows[0]);
+      } catch (fixErr) {
+        console.error('Error handling missing-column case:', fixErr && (fixErr.stack || fixErr));
+        return res.status(500).json({ message: 'Server error', detail: process.env.NODE_ENV === 'development' ? fixErr.message : undefined });
+      }
+    }
+
     return res.status(500).json({ message: 'Server error', detail: process.env.NODE_ENV === 'development' ? err.message : undefined });
   }
 });
