@@ -72,10 +72,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const [replyingMessage, setReplyingMessage] = useState<Message | null>(null);
   const [showMembersModal, setShowMembersModal] = useState(false);
 
-  // Debug: Log typing users
-  useEffect(() => {
-    console.log('Current typing users:', typingUsers);
-  }, [typingUsers]);
 
   useEffect(() => {
     if (!jumpToMessageId) {

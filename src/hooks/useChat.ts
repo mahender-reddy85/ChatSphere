@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type {
   User,
   Room,
@@ -157,11 +157,11 @@ export const useChat = (currentUser: User) => {
     console.log('🔌 Connecting to Socket.IO server at:', backendUrl);
 
     const socket = io(backendUrl, {
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       auth: { userId: currentUser.id },
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 20000,
@@ -1175,7 +1175,10 @@ export const useChat = (currentUser: User) => {
     sendMessage,
     deleteMessage,
     togglePinMessage,
-    activeTypingUsers: activeRoom ? getActiveTypingUsers(activeRoom.id) : [],
+    activeTypingUsers: useMemo(
+      () => (activeRoom ? getActiveTypingUsers(activeRoom.id) : []),
+      [activeRoom, getActiveTypingUsers]
+    ),
     unreadCounts,
     searchMessages,
     clearSearch,
