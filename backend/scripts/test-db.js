@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { pool } from './db.js';
+import { pool } from '../db.js';
 
 async function test() {
   const r = await pool.query('SELECT NOW()');
