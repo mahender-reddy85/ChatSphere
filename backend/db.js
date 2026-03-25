@@ -15,18 +15,40 @@ export const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// Test connection function
+// Test connection and verify schema integrity
 export async function testConnection() {
+  const client = await pool.connect();
   try {
-    const r = await pool.query('SELECT NOW()');
-    console.log('✅ PostgreSQL connected:', r.rows[0]);
-    const client = await pool.connect();
-    console.log('✅ Connected to PostgreSQL database');
-    client.release();
+    const r = await client.query('SELECT NOW()');
+    console.log('✅ PostgreSQL connected');
+
+    // Schema Verification Step
+    const health = await client.query(`
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_name IN ('users', 'rooms') 
+      AND column_name = 'id'
+    `);
+    
+    if (health.rows.length === 0) {
+      console.warn('⚠️ Tables not found yet - awaiting migration');
+      return true;
+    }
+
+    const checks = health.rows.every(c => c.data_type === 'bigint');
+    if (!checks) {
+      console.error('❌ SCHEMA MISMATCH: Expected BIGINT for ID columns but found something else.');
+      console.error('Check results:', health.rows);
+      throw new Error("Schema alignment failed: IDs must be BIGINT");
+    }
+
+    console.log('🛡️ Schema verification complete (64-bit ID compliance confirmed)');
     return true;
   } catch (error) {
-    console.error('❌ Error connecting to PostgreSQL:', error);
+    console.error('❌ Database Initialization Error:', error.message);
     return false;
+  } finally {
+    client.release();
   }
 }
 
