@@ -9,7 +9,7 @@ const router = express.Router();
 
 // Define validation schemas
 const registerSchema = z.object({
-  username: z.string().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/, "Username can only contain alphanumeric characters and underscores"),
+  username: z.string().min(3).max(30),
   password: z.string().min(6).max(100),
 });
 

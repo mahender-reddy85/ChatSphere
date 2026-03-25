@@ -4,7 +4,7 @@ import LoginModal from './LoginModal';
 
 // Fix: Define props for the component to accept the login handler from its parent.
 interface AuthFormProps {
-  onLogin: (username: string) => boolean;
+  onLogin: (username: string) => Promise<boolean>;
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {

@@ -17,8 +17,8 @@ const App: React.FC = () => {
     setShowLoginPage(true);
   };
 
-  const handleLogin = (username: string) => {
-    const success = login(username);
+  const handleLogin = async (username: string) => {
+    const success = await login(username);
     if (success) {
       setShowLoginPage(false);
     }
