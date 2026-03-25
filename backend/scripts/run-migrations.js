@@ -45,16 +45,19 @@ export async function runMigrations() {
     throw error;
   } finally {
     client.release();
-    await pool.end();
   }
 }
 
 // If run directly from the CLI, execute migrations and exit with appropriate code
 if (process.argv[1] && process.argv[1].endsWith('run-migrations.js')) {
   runMigrations()
-    .then(() => process.exit(0))
-    .catch((err) => {
+    .then(async () => {
+      await pool.end();
+      process.exit(0);
+    })
+    .catch(async (err) => {
       console.error(err);
+      await pool.end();
       process.exit(1);
     });
 }

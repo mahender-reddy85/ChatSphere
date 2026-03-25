@@ -8,6 +8,8 @@ import userRoutes from './routes/users.js';
 import messageRoutes from './routes/messages.js';
 import roomRoutes from './routes/rooms.js';
 import debugRoutes from './routes/debug.js';
+import { runMigrations } from './scripts/run-migrations.js';
+
 
 // Load environment variables
 dotenv.config();
@@ -396,6 +398,12 @@ io.on('connection', (socket) => {
    START SERVER
 ========================= */
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  try {
+    await runMigrations();
+    console.log('✅ Startup migrations complete');
+  } catch (err) {
+    console.warn('⚠️ Startup migrations failed (DB might already be up to date or connecting too early):', err.message);
+  }
 });

@@ -891,7 +891,10 @@ export const useChat = (currentUser: User) => {
 
           const resp = await fetch(`${backendUrl.replace(/\/$/, '')}/api/rooms`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
             body: JSON.stringify({ name: newRoom.id, type: newRoom.type, privacy, createdBy: createdByPayload }),
           });
 
@@ -1021,7 +1024,10 @@ export const useChat = (currentUser: User) => {
               `${backendUrl.replace(/\/$/, '')}/api/rooms/${encodeURIComponent(found.id)}/join`,
               {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
                 body: JSON.stringify({ userId: currentUser.id }),
               }
             );
