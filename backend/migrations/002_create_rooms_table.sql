@@ -1,28 +1,28 @@
 -- Create rooms table
 CREATE TABLE IF NOT EXISTS rooms (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     type VARCHAR(50) NOT NULL DEFAULT 'group',
     privacy VARCHAR(50) NOT NULL DEFAULT 'public',
     password TEXT,
-    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create room_members table
 CREATE TABLE IF NOT EXISTS room_members (
-    room_id INTEGER REFERENCES rooms(id) ON DELETE CASCADE,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    room_id BIGINT REFERENCES rooms(id) ON DELETE CASCADE,
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
     joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (room_id, user_id)
 );
 
 -- Create messages table
 CREATE TABLE IF NOT EXISTS messages (
-    id SERIAL PRIMARY KEY,
-    room_id INTEGER REFERENCES rooms(id) ON DELETE CASCADE,
-    author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    id BIGSERIAL PRIMARY KEY,
+    room_id BIGINT REFERENCES rooms(id) ON DELETE CASCADE,
+    author_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
     text TEXT,
     type VARCHAR(50) DEFAULT 'text',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

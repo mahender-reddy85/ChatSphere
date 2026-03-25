@@ -1,6 +1,9 @@
 import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { testConnection } from './db.js';
@@ -31,6 +34,18 @@ app.use(
     credentials: true,
   })
 );
+
+// Security Headers
+app.use(helmet());
+
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', limiter);
 
 // Track connected users and their data
 const connectedUsers = new Map(); // userId -> { socketId, username, joinedRooms }
@@ -313,24 +328,73 @@ io.on('connection', (socket) => {
 
   // Handle typing indicators
   socket.on('typing', ({ roomId, userId, isTyping }) => {
-    console.log(`User ${userId} is ${isTyping ? 'typing' : 'not typing'} in room ${roomId}`);
     if (roomId && userId) {
-      // Broadcast to everyone in the room except the sender
       socket.to(roomId).emit('user_typing', {
         userId,
-        roomId,
+        roomId: roomId,
         isTyping,
         timestamp: Date.now(),
       });
+    }
+  });
 
-      // Also send to the sender (for debugging and consistency)
-      socket.emit('user_typing', {
-        userId,
-        roomId,
-        isTyping,
-        timestamp: Date.now(),
-        isSelf: true,
-      });
+  // Handle room creation
+  socket.on('create_room', ({ room }) => {
+    console.log(`🏠 New room created via Socket: ${room.id} (${room.name})`);
+    // Notify all clients about the new room (optional, depending on UX)
+    io.emit('room_created', { room });
+  });
+
+  // Handle room deletion
+  socket.on('delete_room', ({ roomId }) => {
+    console.log(`🗑️ Room deleted via Socket: ${roomId}`);
+    io.emit('room_deleted', { roomId });
+  });
+
+  // Handle editing messages
+  socket.on('edit_message', ({ roomId, messageId, text }) => {
+    console.log(`✏️ Message ${messageId} edited in ${roomId}`);
+    if (roomId) {
+      io.to(roomId).emit('message_edited', { messageId, newText: text, roomId: roomId });
+    }
+  });
+
+  // Handle deleting messages
+  socket.on('delete_message', ({ roomId, messageId }) => {
+    console.log(`❌ Message ${messageId} deleted in ${roomId}`);
+    if (roomId) {
+      io.to(roomId).emit('message_deleted', { messageId, roomId: roomId });
+    }
+  });
+
+  // Handle pinning messages
+  socket.on('pin_message', ({ roomId, messageId }) => {
+    console.log(`📌 Message ${messageId} pinned in ${roomId}`);
+    if (roomId) {
+      io.to(roomId).emit('message_pinned', { messageId, pinned: true, roomId: roomId });
+    }
+  });
+
+  socket.on('unpin_message', ({ roomId, messageId }) => {
+    console.log(`📍 Message ${messageId} unpinned in ${roomId}`);
+    if (roomId) {
+      io.to(roomId).emit('message_pinned', { messageId, pinned: false, roomId: roomId });
+    }
+  });
+
+  // Handle poll voting
+  socket.on('vote_poll', ({ roomId, messageId, optionId, userId }) => {
+    console.log(`🗳️ Vote in ${roomId} by ${userId} for ${optionId}`);
+    if (roomId) {
+      io.to(roomId).emit('poll_vote', { messageId, optionId, userId });
+    }
+  });
+
+  // Handle reactions
+  socket.on('react_to_message', ({ roomId, messageId, emoji, userId }) => {
+    console.log(`😊 Reaction in ${roomId} by ${userId}: ${emoji}`);
+    if (roomId) {
+      io.to(roomId).emit('message_reaction', { messageId, emoji, userId });
     }
   });
 

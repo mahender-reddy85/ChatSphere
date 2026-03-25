@@ -1,30 +1,49 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { z } from 'zod';
 import { pool } from '../db.js';
 import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Define validation schemas
+const registerSchema = z.object({
+  username: z.string().min(3).max(30).regex(/^[a-zA-Z0-9_]+$/, "Username can only contain alphanumeric characters and underscores"),
+  password: z.string().min(6).max(100),
+});
+
+const loginSchema = z.object({
+  username: z.string(),
+  password: z.string(),
+});
+
 // Register a new user
 router.post('/register', async (req, res) => {
   try {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ success: false, message: 'username and password required' });
+    // 1. Schema Validation via Zod
+    const validation = registerSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Validation failed', 
+        errors: validation.error.flatten().fieldErrors 
+      });
     }
 
-    // Check if user exists
-    const userExists = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const { username, password } = validation.data;
+
+    // 2. Check if user exists
+    const userExists = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
     if (userExists.rows.length > 0) {
-      return res.status(400).json({ success: false, message: 'Username already exists' });
+      return res.status(400).json({ success: false, message: 'Username already taken' });
     }
 
-    // Hash password
+    // 3. Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
+    // 4. Create user
     const result = await pool.query(
       'INSERT INTO users (username, name, password_hash) VALUES ($1, $1, $2) RETURNING id, username',
       [username, hashedPassword]
@@ -32,9 +51,9 @@ router.post('/register', async (req, res) => {
 
     const user = result.rows[0];
 
-    // Generate JWT
+    // 5. Generate JWT (Short-lived for security, e.g., 24h)
     const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
+      expiresIn: '24h',
     });
 
     res.status(201).json({
@@ -46,8 +65,7 @@ router.post('/register', async (req, res) => {
     console.error('REGISTER ERROR:', err);
     res.status(500).json({
       success: false,
-      message: err.message,
-      error: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+      message: 'Registration failed due to server error',
     });
   }
 });
@@ -55,11 +73,13 @@ router.post('/register', async (req, res) => {
 // Login user
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({ success: false, message: 'username and password required' });
+    // 1. Schema Validation
+    const validation = loginSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ success: false, message: 'Username and password required' });
     }
+
+    const { username, password } = validation.data;
 
     const result = await pool.query(
       'SELECT id, username, password_hash FROM users WHERE username = $1',
@@ -68,6 +88,7 @@ router.post('/login', async (req, res) => {
 
     const user = result.rows[0];
     if (!user) {
+      // Security: use generic error message
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
@@ -77,15 +98,8 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
+      expiresIn: '24h',
     });
-
-    // Update last_seen if the column exists
-    try {
-      await pool.query('UPDATE users SET last_seen = NOW() WHERE id = $1', [user.id]);
-    } catch {
-      console.log('Note: last_seen column not updated - it might not exist in the database yet');
-    }
 
     return res.json({
       success: true,
@@ -109,21 +123,7 @@ router.get('/me', auth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const user = result.rows[0];
-
-    // Try to get last_seen if the column exists
-    try {
-      const lastSeenResult = await pool.query('SELECT last_seen FROM users WHERE id = $1', [
-        req.user.id,
-      ]);
-      if (lastSeenResult.rows[0]?.last_seen) {
-        user.last_seen = lastSeenResult.rows[0].last_seen;
-      }
-    } catch {
-      console.log('Note: last_seen column not found');
-    }
-
-    res.json({ success: true, user });
+    res.json({ success: true, user: result.rows[0] });
   } catch (err) {
     console.error('Error getting user:', err);
     res.status(500).json({ success: false, message: 'Server error' });

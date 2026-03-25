@@ -1,5 +1,6 @@
 import express from 'express';
 import { query } from '../db.js';
+import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -23,8 +24,9 @@ router.get('/:roomId', async (req, res) => {
 });
 
 // Send a message
-router.post('/', async (req, res) => {
-  const { roomId, authorId, text, type = 'text' } = req.body;
+router.post('/', auth, async (req, res) => {
+  const { roomId, text, type = 'text' } = req.body;
+  const authorId = req.user.id; // Use authenticated user ID securely
 
   try {
     // Insert the message into the database
@@ -48,7 +50,10 @@ router.post('/', async (req, res) => {
 
     // Emit the new message to all clients in the room
     const io = req.app.get('io');
-    io.to(roomId).emit('receiveMessage', message);
+    if (io) {
+      // align with frontend useChat.ts (line 250 expects 'receive_message')
+      io.to(roomId.toString()).emit('receive_message', { message });
+    }
 
     res.status(201).json(message);
   } catch (err) {
