@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import { query } from '../db.js';
 import { auth } from '../middleware/auth.js';
 
@@ -27,49 +28,57 @@ router.post('/', auth, async (req, res) => {
     const createdByInt =
       req.user && Number.isInteger(Number(req.user.id)) ? Number(req.user.id) : null;
 
-    console.log(`Creating room: "${name}", type: ${type}, by: ${createdByInt || 'anonymous'}`);
+    // 🚀 Robust ID & Code Generation
+    // We generate a code to satisfy older NOT NULL constraints and for unique indexing
+    const code = crypto.randomBytes(4).toString('hex'); // e.g. "a1b2c3d4"
 
-    // Standardize: 'name' from the frontend is used as the UNIQUE room SLUG
+    console.log(`Creating room: "${name}", code: ${code}, by: ${createdByInt || 'anonymous'}`);
+
+    // Full, transactional INSERT ensuring all mandatory columns are satisfied
     const result = await query(
-      'INSERT INTO rooms (name, type, privacy, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, type, privacy, createdByInt]
+      `INSERT INTO rooms (name, code, type, privacy, created_by) 
+       VALUES ($1, $2, $3, $4, $5) 
+       RETURNING *`,
+      [name, code, type, privacy, createdByInt]
     );
 
     const newRoom = result.rows[0];
 
-    // Auto-join the creator
+    // Autojoin creator
     if (createdByInt && newRoom) {
-      await query('INSERT INTO room_members (room_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [
-        newRoom.id,
-        createdByInt,
-      ]);
+      await query(
+        'INSERT INTO room_members (room_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [newRoom.id, createdByInt]
+      );
     }
 
     res.status(201).json(newRoom);
   } catch (err) {
-    console.error('Error creating room:', err);
+    console.error('CRITICAL: Room creation failed');
+    console.error(err.message);
     res.status(500).json({
-      message: 'Failed to create room',
+      message: 'Failed to create room due to schema inconsistency or constraint violation',
       error: err.message
     });
   }
 });
 
-// Get room details (Supports both Numeric ID and Name/Slug)
+// Get room details (Supports both ID and slug/name)
 router.get('/:roomIdOrName', async (req, res) => {
   const { roomIdOrName } = req.params;
   try {
     let room;
-    // Check if it's a numeric ID
     if (/^\d+$/.test(roomIdOrName)) {
-      const res = await query('SELECT * FROM rooms WHERE id = $1', [roomIdOrName]);
-      room = res.rows[0];
-    } 
-    
-    // Fallback search by name (slug) if not found by ID
+      const resp = await query('SELECT * FROM rooms WHERE id = $1', [roomIdOrName]);
+      room = resp.rows[0];
+    }
     if (!room) {
-      const res = await query('SELECT * FROM rooms WHERE name = $1', [roomIdOrName]);
-      room = res.rows[0];
+      const resp = await query('SELECT * FROM rooms WHERE name = $1', [roomIdOrName]);
+      room = resp.rows[0];
+    }
+    if (!room) {
+      const resp = await query('SELECT * FROM rooms WHERE code = $1', [roomIdOrName]);
+      room = resp.rows[0];
     }
 
     if (!room) {
@@ -94,21 +103,24 @@ router.get('/:roomIdOrName', async (req, res) => {
   }
 });
 
-// Join a room (Supports both Numeric ID and Name/Slug)
+// Join a room (Supports ID and slug/name)
 router.post('/:roomIdOrName/join', auth, async (req, res) => {
   const { roomIdOrName } = req.params;
   const userId = req.user.id;
 
   try {
-    // Resolve room numeric ID
     let room;
     if (/^\d+$/.test(roomIdOrName)) {
-      const res = await query('SELECT id FROM rooms WHERE id = $1', [roomIdOrName]);
-      room = res.rows[0];
+      const resp = await query('SELECT id FROM rooms WHERE id = $1', [roomIdOrName]);
+      room = resp.rows[0];
     }
     if (!room) {
-      const res = await query('SELECT id FROM rooms WHERE name = $1', [roomIdOrName]);
-      room = res.rows[0];
+      const resp = await query('SELECT id FROM rooms WHERE name = $1', [roomIdOrName]);
+      room = resp.rows[0];
+    }
+    if (!room) {
+      const resp = await query('SELECT id FROM rooms WHERE code = $1', [roomIdOrName]);
+      room = resp.rows[0];
     }
 
     if (!room) {
@@ -117,18 +129,11 @@ router.post('/:roomIdOrName/join', auth, async (req, res) => {
 
     const roomId = room.id;
 
-    const existingMember = await query(
-      'SELECT * FROM room_members WHERE room_id = $1 AND user_id = $2',
-      [roomId, userId]
-    );
+    await query('INSERT INTO room_members (room_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [
+      roomId,
+      userId,
+    ]);
 
-    if (existingMember.rows.length > 0) {
-      return res.status(200).json({ message: 'Already a member' });
-    }
-
-    await query('INSERT INTO room_members (room_id, user_id) VALUES ($1, $2)', [roomId, userId]);
-
-    // Cleanup: Fetch updated state
     const roomResult = await query('SELECT * FROM rooms WHERE id = $1', [roomId]);
     const membersResult = await query(
       `SELECT u.id, u.username, u.name, u.profile_picture, u.is_online
@@ -148,7 +153,7 @@ router.post('/:roomIdOrName/join', auth, async (req, res) => {
       io.to(roomId.toString()).emit('room_updated', roomData);
     }
 
-    res.json({ message: 'Joined room successfully', room: roomData });
+    res.json({ message: 'Joined successfully', room: roomData });
   } catch (err) {
     console.error('Error joining room:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
