@@ -30,6 +30,7 @@ export async function runMigrations(rollback = false) {
       '002_create_rooms_table.sql',
       '003_upgrade_to_bigint.sql',
       '004_add_last_seen.sql',
+      '005_repair_rooms_schema.sql',
     ];
 
     if (rollback) {
