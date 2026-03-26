@@ -31,5 +31,14 @@ $$;
 -- 3. Ensure room names are indexed for fast lookups
 CREATE UNIQUE INDEX IF NOT EXISTS idx_rooms_name ON rooms(name);
 
--- 4. Ensure last_seen index for presence tracking scalability
+-- 4. Ensure 'last_seen' column is present in 'users' table for presence tracking
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='last_seen') THEN
+    ALTER TABLE users ADD COLUMN last_seen TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+  END IF;
+END
+$$;
+
+-- 5. Ensure last_seen index for presence tracking scalability
 CREATE INDEX IF NOT EXISTS idx_users_last_seen ON users(last_seen);

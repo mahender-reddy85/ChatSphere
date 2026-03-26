@@ -19,16 +19,15 @@ router.get('/', async (req, res) => {
 // Create a room
 router.post('/', auth, async (req, res, next) => {
   try {
-    console.log("ROOM CREATE HIT"); // debug
+    console.log("🚨 ROOM API HIT");
+    console.log("BODY:", req.body);
 
     const { name, type = 'group', visibility = 'public' } = req.body;
 
-    if (!name || String(name).trim() === '') {
-      return res.status(400).json({ message: 'Invalid room name' });
-    }
-
-    const code = nanoid(6);
-    console.log("Generated code:", code); // debug
+    // Hardcoded test as requested
+    const code = "TEST123";
+    console.log("Generated code:", code); 
+    console.log("INSERTING ROOM WITH CODE:", code);
 
     // Using pool.query directly to match user requirement
     const result = await pool.query(
