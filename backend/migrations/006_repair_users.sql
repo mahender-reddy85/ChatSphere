@@ -1,5 +1,14 @@
--- 🛠️ Database Repair - Users Table
--- 1. Ensure 'last_seen' column is present in 'users' table
+-- 1. Ensure 'name' column is present in 'users' table (Repairing potentially incomplete schema)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='name') THEN
+    ALTER TABLE users ADD COLUMN name VARCHAR(255);
+    UPDATE users SET name = username WHERE name IS NULL;
+  END IF;
+END
+$$;
+
+-- 2. Ensure 'last_seen' column is present in 'users' table
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='last_seen') THEN
