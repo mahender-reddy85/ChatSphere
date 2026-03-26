@@ -8,7 +8,7 @@ import { ToastProvider } from './hooks/toastService';
 const App: React.FC = () => {
   // Fix: Destructure `login` from `useAuth` to pass it to the AuthForm.
   // This ensures a single source of truth for the authentication state.
-  const { user, loading, login, updateUser, logout } = useAuth();
+  const { user, loading, login, register, updateUser, logout } = useAuth();
   const { settings, toggleDarkMode, toggleEnterToSend } = useSettings();
 
   const [showLoginPage, setShowLoginPage] = useState(false);
@@ -17,12 +17,12 @@ const App: React.FC = () => {
     setShowLoginPage(true);
   };
 
-  const handleLogin = async (username: string) => {
-    const success = await login(username);
-    if (success) {
-      setShowLoginPage(false);
-    }
-    return success;
+  const handleLogin = async (username: string, password?: string) => {
+    return await login(username, password);
+  };
+
+  const handleRegister = async (username: string, password?: string) => {
+    return await register(username, password);
   };
 
   if (loading) {
@@ -52,7 +52,7 @@ const App: React.FC = () => {
             {...settingProps}
           />
         ) : (
-          <AuthForm onLogin={handleLogin} />
+          <AuthForm onLogin={handleLogin} onRegister={handleRegister} />
         )}
       </div>
     </ToastProvider>

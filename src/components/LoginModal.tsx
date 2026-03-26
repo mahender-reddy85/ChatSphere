@@ -9,10 +9,10 @@ interface User {
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin?: (token: string, user: User) => void;
+  onAuth: (isRegister: boolean, username: string, pass: string) => Promise<boolean>;
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onAuth }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +21,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
 
   if (!isOpen) return null;
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (username.trim().length < 3) {
       setError('Username must be at least 3 characters long.');
@@ -36,59 +36,16 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
     setError('');
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Registration failed');
+      const success = await onAuth(isRegistering, username, password);
+      
+      if (success) {
+        onClose();
+        window.location.href = '/';
+      } else {
+        setError(isRegistering ? 'Registration failed' : 'Invalid username or password');
       }
-
-      // Save token and user data
-      localStorage.setItem('token', data.token);
-      if (onLogin) {
-        onLogin(data.token, data.user);
-      }
-      onClose();
-      window.location.href = '/';
     } catch (err) {
-      setError(err.message || 'Registration failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-
-      // Save token and user data
-      localStorage.setItem('token', data.token);
-      if (onLogin) {
-        onLogin(data.token, data.user);
-      }
-      onClose();
-      window.location.href = '/';
-    } catch (err) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      setError(err instanceof Error ? err.message : 'Auth failed');
     } finally {
       setIsLoading(false);
     }
@@ -103,10 +60,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClose();
-        }
         if (e.key === 'Escape') {
           e.preventDefault();
           onClose();
@@ -131,7 +84,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
           </button>
         </div>
         <div className="p-6 space-y-4">
-          <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label
                 htmlFor="login-username"
@@ -206,5 +159,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
     </div>
   );
 };
+
+export default LoginModal;
 
 export default LoginModal;

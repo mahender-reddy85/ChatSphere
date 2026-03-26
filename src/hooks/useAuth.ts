@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { User } from '../types';
 
-const TOKEN_KEY = 'chatsphere_auth_token';
+const TOKEN_KEY = 'token';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://chatsphere-7t8g.onrender.com';
 
 export const useAuth = () => {
@@ -48,26 +48,15 @@ export const useAuth = () => {
 
   const login = useCallback(async (username: string, password = 'password123'): Promise<boolean> => {
     try {
-      // For this app, we'll try to login first, if failed, try to register
-      let resp = await fetch(`${BACKEND_URL}/api/auth/login`, {
+      const resp = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
 
-      if (!resp.ok) {
-        // Try register
-        resp = await fetch(`${BACKEND_URL}/api/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-      }
-
       if (resp.ok) {
         const data = await resp.json();
         localStorage.setItem(TOKEN_KEY, data.token);
-        localStorage.setItem('token', data.token); // compat with useChat.ts
         setUser({
           id: data.user.id,
           name: data.user.name || data.user.username,
@@ -77,7 +66,32 @@ export const useAuth = () => {
       }
       return false;
     } catch (err) {
-      console.error('Login/Register failed', err);
+      console.error('Login failed', err);
+      return false;
+    }
+  }, []);
+
+  const register = useCallback(async (username: string, password = 'password123'): Promise<boolean> => {
+    try {
+      const resp = await fetch(`${BACKEND_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        localStorage.setItem(TOKEN_KEY, data.token);
+        setUser({
+          id: data.user.id,
+          name: data.user.name || data.user.username,
+          isOnline: true,
+        });
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Registration failed', err);
       return false;
     }
   }, []);
@@ -94,5 +108,5 @@ export const useAuth = () => {
      // Note: In production, you would PATCH /api/auth/me here
   }, []);
 
-  return { user, login, logout, loading, updateUser };
+  return { user, login, register, logout, loading, updateUser };
 };

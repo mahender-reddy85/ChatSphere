@@ -4,10 +4,11 @@ import LoginModal from './LoginModal';
 
 // Fix: Define props for the component to accept the login handler from its parent.
 interface AuthFormProps {
-  onLogin: (username: string) => Promise<boolean>;
+  onLogin: (username: string, password?: string) => Promise<boolean>;
+  onRegister: (username: string, password?: string) => Promise<boolean>;
 }
 
-const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
+const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [showLoginPage, setShowLoginPage] = useState(false);
@@ -32,14 +33,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
     setShowLoginPage(false);
   };
 
-  const handlePasswordLogin = (token: string, user: { id: number; username: string }) => {
-    // Save token and notify parent that login succeeded
-    try {
-      localStorage.setItem('token', token);
-    } catch (e) {
-      console.warn('Failed to persist token locally', e);
+  const handlePasswordAuth = async (isRegister: boolean, username: string, pass: string) => {
+    if (isRegister) {
+       return await onRegister(username, pass);
+    } else {
+       return await onLogin(username, pass);
     }
-    onLogin(user.username);
   };
 
   return (
@@ -101,7 +100,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onLogin }) => {
       <LoginModal
         isOpen={showLoginPage}
         onClose={handleLoginModalClose}
-        onLogin={handlePasswordLogin}
+        onAuth={handlePasswordAuth}
       />
     </>
   );

@@ -13,9 +13,7 @@ import roomRoutes from './routes/rooms.js';
 import debugRoutes from './routes/debug.js';
 import { runMigrations } from './scripts/run-migrations.js';
 
-
-// Load environment variables
-dotenv.config();
+// Environment variables are loaded by db.js import below
 
 // Define allowed origins (add deployed frontend origin so deployed clients can talk to this API)
 const allowedOrigins = [
