@@ -1,6 +1,6 @@
 import express from 'express';
-import crypto from 'crypto';
-import { query } from '../db.js';
+import { nanoid } from 'nanoid';
+import { pool, query } from '../db.js';
 import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -17,49 +17,42 @@ router.get('/', async (req, res) => {
 });
 
 // Create a room
-router.post('/', auth, async (req, res) => {
-  const { name, type = 'group', privacy = 'public' } = req.body;
-
-  if (!name || String(name).trim() === '') {
-    return res.status(400).json({ message: 'Invalid room name' });
-  }
-
+router.post('/', auth, async (req, res, next) => {
   try {
-    const createdByInt =
-      req.user && Number.isInteger(Number(req.user.id)) ? Number(req.user.id) : null;
+    console.log("ROOM CREATE HIT"); // debug
 
-    // 🚀 Robust ID & Code Generation
-    // We generate a code to satisfy older NOT NULL constraints and for unique indexing
-    const code = crypto.randomBytes(4).toString('hex'); // e.g. "a1b2c3d4"
+    const { name, type = 'group', visibility = 'public' } = req.body;
 
-    console.log(`Creating room: "${name}", code: ${code}, by: ${createdByInt || 'anonymous'}`);
+    if (!name || String(name).trim() === '') {
+      return res.status(400).json({ message: 'Invalid room name' });
+    }
 
-    // Full, transactional INSERT ensuring all mandatory columns are satisfied
-    const result = await query(
-      `INSERT INTO rooms (name, code, type, privacy, created_by) 
-       VALUES ($1, $2, $3, $4, $5) 
+    const code = nanoid(6);
+    console.log("Generated code:", code); // debug
+
+    // Using pool.query directly to match user requirement
+    const result = await pool.query(
+      `INSERT INTO rooms 
+       (name, code, type, visibility, created_by)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [name, code, type, privacy, createdByInt]
+      [name, code, type, visibility, req.user.id]
     );
 
     const newRoom = result.rows[0];
 
-    // Autojoin creator
-    if (createdByInt && newRoom) {
-      await query(
+    // Autojoin creator (Essential for ChatWindow to load)
+    if (newRoom && req.user.id) {
+      await pool.query(
         'INSERT INTO room_members (room_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        [newRoom.id, createdByInt]
+        [newRoom.id, req.user.id]
       );
     }
 
     res.status(201).json(newRoom);
   } catch (err) {
-    console.error('CRITICAL: Room creation failed');
-    console.error(err.message);
-    res.status(500).json({
-      message: 'Failed to create room due to schema inconsistency or constraint violation',
-      error: err.message
-    });
+    console.error("Error creating room:", err);
+    next(err);
   }
 });
 

@@ -98,7 +98,7 @@ export const useChat = (currentUser: User) => {
         type: 'self',
         users: [currentUser.id],
         messages: [selfChatInitialMessage],
-        privacy: 'private' as const,
+        visibility: 'private' as const,
         activeCall: undefined,
       },
       {
@@ -107,7 +107,7 @@ export const useChat = (currentUser: User) => {
         type: 'ai' as const,
         users: [currentUser.id, 'ai-bot'],
         messages: [aiChatInitialMessage],
-        privacy: 'private' as const,
+        visibility: 'private' as const,
         activeCall: undefined,
       },
     ];
@@ -848,7 +848,7 @@ export const useChat = (currentUser: User) => {
 
   // Create a new room
   const createRoom = useCallback(
-    (name: string, privacy: 'public' | 'private' = 'public'): string => {
+    (name: string, visibility: 'public' | 'private' = 'public'): string => {
       // Generate a random 4-character alphanumeric ID
       const randomId = Math.random().toString(36).substring(2, 6);
 
@@ -864,7 +864,7 @@ export const useChat = (currentUser: User) => {
         type: 'group', // Only 'group', 'self', or 'ai' are allowed
         users: [currentUser.id],
         messages: [],
-        privacy,
+        visibility,
         activeCall: undefined,
       };
 
@@ -895,7 +895,7 @@ export const useChat = (currentUser: User) => {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
-            body: JSON.stringify({ name: newRoom.id, type: newRoom.type, privacy, createdBy: createdByPayload }),
+            body: JSON.stringify({ name: newRoom.id, type: newRoom.type, visibility, createdBy: createdByPayload }),
           });
 
           if (resp.ok) {
@@ -978,7 +978,7 @@ export const useChat = (currentUser: User) => {
           interface ServerRoom {
             id: string;
             name?: string;
-            privacy?: 'private' | 'public';
+            visibility?: 'private' | 'public';
             password?: string;
             type?: string;
           }
@@ -998,10 +998,10 @@ export const useChat = (currentUser: User) => {
           if (!found) return 'not_found';
 
           // If room is private and password not provided, prompt for password
-          if (found.privacy === 'private' && !password) return 'needs_password';
+          if (found.visibility === 'private' && !password) return 'needs_password';
 
           // If private and password provided, validate (server stores password as plain text in demo)
-          if (found.privacy === 'private' && password && found.password !== password)
+          if (found.visibility === 'private' && password && found.password !== password)
             return 'invalid_password';
 
           // Build a local ExtendedRoom from server record
@@ -1011,7 +1011,7 @@ export const useChat = (currentUser: User) => {
             type: (found.type as 'self' | 'ai' | 'group') || 'group',
             users: [currentUser.id],
             messages: [],
-            privacy: found.privacy || 'public',
+            visibility: found.visibility || 'public',
             activeCall: undefined,
           };
 
@@ -1057,7 +1057,7 @@ export const useChat = (currentUser: User) => {
         return 'already_joined';
       }
 
-      if (room.privacy === 'private' && !password) {
+      if (room.visibility === 'private' && !password) {
         return 'needs_password';
       }
 

@@ -76,7 +76,7 @@ export interface Room {
   type: 'self' | 'ai' | 'group';
   users: string[]; // array of user IDs
   messages: Message[];
-  privacy: 'public' | 'private';
+  visibility: 'public' | 'private';
   password?: string;
   activeCall?: ActiveCall;
 }

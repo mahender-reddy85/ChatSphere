@@ -140,7 +140,7 @@ const RoomList: React.FC<RoomListProps> = ({
                       </div>
                       {isGroup && (
                         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {room.privacy === 'private' ? (
+                          {room.visibility === 'private' ? (
                             <IconLock className="w-3 h-3" />
                           ) : (
                             <IconGlobe className="w-3 h-3" />
