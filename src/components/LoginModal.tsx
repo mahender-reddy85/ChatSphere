@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
 import { IconX } from './Icons';
 
-interface User {
-  id: number;
-  username: string;
-}
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -159,7 +155,5 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onAuth }) => {
     </div>
   );
 };
-
-export default LoginModal;
 
 export default LoginModal;
