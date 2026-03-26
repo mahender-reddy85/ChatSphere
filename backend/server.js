@@ -466,12 +466,17 @@ io.on('connection', (socket) => {
 ========================= */
 const PORT = process.env.PORT || 5000;
 
-// Run migrations and health check before starting server
 (async () => {
+  // START listening ASAP so PaaS systems like Render see the process as healthy
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
+
+  // Run migrations and health check in background
   try {
     const isConnected = await testConnection();
     if (!isConnected) {
-       console.error('❌ Database connection unavailable. Retrying or exiting...');
+       console.error('❌ Database connection unavailable.');
     }
     
     await runMigrations();
@@ -479,8 +484,4 @@ const PORT = process.env.PORT || 5000;
   } catch (err) {
     console.warn('⚠️ Startup migrations failed or skipped:', err.message);
   }
-
-  server.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-  });
 })();

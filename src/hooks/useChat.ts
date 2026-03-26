@@ -162,7 +162,7 @@ export const useChat = (currentUser: User) => {
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      timeout: 20000,
+      timeout: 45000,
     });
 
     socketRef.current = socket;
@@ -179,12 +179,6 @@ export const useChat = (currentUser: User) => {
 
     socket.on('connect', onConnect);
     socket.on('connect_error', onConnectError);
-
-    // Cleanup
-    return () => {
-      socket.off('connect', onConnect);
-      socket.off('connect_error', onConnectError);
-    };
 
     // Handle connection
     socket.on('connect', () => {
