@@ -206,6 +206,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         onCancelReply={() => setReplyingMessage(null)}
         currentUser={currentUser}
         room={room}
+        emitTyping={emitTyping}
       />
 
       {/* Members Modal */}
