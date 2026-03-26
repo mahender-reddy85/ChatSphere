@@ -13,6 +13,17 @@ import roomRoutes from './routes/rooms.js';
 import debugRoutes from './routes/debug.js';
 import { runMigrations } from './scripts/run-migrations.js';
 
+// 🛡️ Global Exception Handlers (Production Safeguard)
+process.on('uncaughtException', (err) => {
+  console.error('🔥 CRITICAL UNCAUGHT EXCEPTION:', err);
+  // Give logs a chance to flush then exit (Restarting will fix temporary glitches)
+  setTimeout(() => process.exit(1), 100);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('⚠️ UNHANDLED REJECTION:', reason);
+});
+
 // Environment variables are loaded by db.js import below
 
 // Define allowed origins (add deployed frontend origin so deployed clients can talk to this API)
