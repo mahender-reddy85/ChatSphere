@@ -47,6 +47,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
     searchResults,
     isSearching,
     deleteRoom,
+    emitTyping,
   } = useChat(user);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -143,6 +144,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({
             togglePinMessage={togglePinMessage}
             isSending={isSending}
             typingUsers={activeTypingUsers}
+            emitTyping={emitTyping}
             settings={settingProps.settings}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
             jumpToMessageId={jumpToMessageId}

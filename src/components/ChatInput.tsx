@@ -1,6 +1,4 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { io } from 'socket.io-client';
-import type { Socket } from 'socket.io-client';
 import type { Message, MessageLocation, User } from '../types';
 import type { Settings } from '../hooks/useSettings';
 import CreatePollModal from './CreatePollModal';
@@ -42,6 +40,7 @@ interface ChatInputProps {
     type: string;
     name: string;
   };
+  emitTyping: (roomId: string, isTyping: boolean) => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -55,6 +54,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onCancelReply,
   currentUser,
   room,
+  emitTyping,
 }) => {
   const [text, setText] = useState('');
   const [isPollModalOpen, setPollModalOpen] = useState(false);
@@ -75,35 +75,19 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
-  const socketRef = useRef<Socket | null>(null);
+  const [isCurrentlyTyping, setIsCurrentlyTyping] = useState(false);
   // Get the current user from the replying message or use a default
   const currentUserId = currentUser?.id;
 
-  useEffect(() => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://chatsphere-7t8g.onrender.com';
-    const socket = io(backendUrl, {
-      transports: ['websocket'],
-    });
-    socketRef.current = socket;
-
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
-
   const handleTyping = useCallback(
     (isTyping: boolean) => {
-      if (!socketRef.current || !currentUserId || !room?.id) return;
+      if (!currentUserId || !room?.id) return;
+      if (isTyping === isCurrentlyTyping) return; // Prevent duplicate events
 
-      console.log(`Sending typing event:`, { roomId: room.id, userId: currentUserId, isTyping });
-
-      socketRef.current.emit('typing', {
-        roomId: room.id,
-        userId: currentUserId,
-        isTyping,
-      });
+      setIsCurrentlyTyping(isTyping);
+      emitTyping(room.id, isTyping);
     },
-    [currentUserId, room?.id]
+    [currentUserId, room?.id, isCurrentlyTyping, emitTyping]
   );
 
   const handleInputChange = useCallback(

@@ -27,6 +27,7 @@ export async function testConnection() {
     // Define the REQUIRED schema state
     const requiredColumns = [
       { table: 'users', column: 'id', type: 'bigint' },
+      { table: 'users', column: 'name', type: 'character varying' },
       { table: 'users', column: 'last_seen', type: 'timestamp with time zone' },
       { table: 'rooms', column: 'id', type: 'bigint' },
       { table: 'rooms', column: 'code', type: 'character varying' }, // Must exist for room indexing

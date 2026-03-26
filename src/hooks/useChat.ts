@@ -154,8 +154,6 @@ export const useChat = (currentUser: User) => {
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://chatsphere-7t8g.onrender.com';
 
-    console.log('🔌 Connecting to Socket.IO server at:', backendUrl);
-
     const socket = io(backendUrl, {
       transports: ['websocket', 'polling'],
       auth: { userId: currentUser.id },
@@ -172,7 +170,6 @@ export const useChat = (currentUser: User) => {
     // Mark as no longer connecting
     const onConnect = () => {
       isConnecting.current = false;
-      console.log('✅ Socket.IO connected');
     };
 
     const onConnectError = (error: Error) => {
@@ -477,10 +474,7 @@ export const useChat = (currentUser: User) => {
     if (!socket || !socket.connected || rooms.length === 0) return;
 
     rooms.forEach((room) => {
-      // Only join if we're a member and haven't joined this room yet
       if (room.users.includes(currentUser.id) && !joinedRooms.current.has(room.id)) {
-        console.log(`🚀 Joining room: ${room.id}`);
-
         socket.emit(
           'join_room',
           {
@@ -491,7 +485,6 @@ export const useChat = (currentUser: User) => {
           },
           (response: { success: boolean; error?: string }) => {
             if (response?.success) {
-              console.log(`✅ Successfully joined room: ${room.id}`);
               joinedRooms.current.add(room.id);
             } else {
               console.error(
@@ -1193,5 +1186,14 @@ export const useChat = (currentUser: User) => {
     isSending,
     createRoom,
     joinRoom,
+    emitTyping: useCallback((roomId: string, isTyping: boolean) => {
+      if (socketRef.current) {
+        socketRef.current.emit('typing', {
+          roomId,
+          userId: currentUser.id,
+          isTyping,
+        });
+      }
+    }, [currentUser.id]),
   };
 };

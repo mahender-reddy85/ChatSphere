@@ -2,7 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
-import { pool } from '../db.js';
+import { query } from '../db.js';
 import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -34,7 +34,7 @@ router.post('/register', async (req, res) => {
     const { username, password } = validation.data;
 
     // 2. Check if user exists
-    const userExists = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    const userExists = await query('SELECT id FROM users WHERE username = $1', [username]);
     if (userExists.rows.length > 0) {
       return res.status(400).json({ success: false, message: 'Username already taken' });
     }
@@ -44,7 +44,7 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // 4. Create user
-    const result = await pool.query(
+    const result = await query(
       'INSERT INTO users (username, name, password_hash) VALUES ($1, $1, $2) RETURNING id, username',
       [username, hashedPassword]
     );
@@ -81,7 +81,7 @@ router.post('/login', async (req, res) => {
 
     const { username, password } = validation.data;
 
-    const result = await pool.query(
+    const result = await query(
       'SELECT id, username, password_hash FROM users WHERE username = $1',
       [username]
     );
@@ -115,7 +115,7 @@ router.post('/login', async (req, res) => {
 // Get current user (protected route)
 router.get('/me', auth, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, username, created_at FROM users WHERE id = $1', [
+    const result = await query('SELECT id, username, created_at FROM users WHERE id = $1', [
       req.user.id,
     ]);
 

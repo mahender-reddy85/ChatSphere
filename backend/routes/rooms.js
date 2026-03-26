@@ -1,6 +1,6 @@
 import express from 'express';
 import { nanoid } from 'nanoid';
-import { pool, query } from '../db.js';
+import { query } from '../db.js';
 import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -23,8 +23,7 @@ router.post('/', auth, async (req, res, next) => {
 
     const code = nanoid(6);
 
-    // Using pool.query directly to match user requirement
-    const result = await pool.query(
+    const result = await query(
       `INSERT INTO rooms 
        (name, code, type, visibility, created_by)
        VALUES ($1, $2, $3, $4, $5)
@@ -36,7 +35,7 @@ router.post('/', auth, async (req, res, next) => {
 
     // Autojoin creator (Essential for ChatWindow to load)
     if (newRoom && req.user.id) {
-      await pool.query(
+      await query(
         'INSERT INTO room_members (room_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
         [newRoom.id, req.user.id]
       );

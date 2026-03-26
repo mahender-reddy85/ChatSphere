@@ -30,6 +30,7 @@ interface ChatWindowProps {
   togglePinMessage: (messageId: string) => void;
   isSending: boolean;
   typingUsers: User[];
+  emitTyping: (roomId: string, isTyping: boolean) => void;
   settings: Settings;
   onOpenSettings: () => void;
   jumpToMessageId: string | null;
@@ -59,6 +60,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   togglePinMessage,
   isSending,
   typingUsers,
+  emitTyping,
   settings,
   onOpenSettings,
   jumpToMessageId,

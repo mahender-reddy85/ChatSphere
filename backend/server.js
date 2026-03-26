@@ -75,13 +75,7 @@ const safeEmit = (socket, event, data, callback) => {
   }
 };
 
-// Test database connection on startup
-testConnection().then((isConnected) => {
-  if (!isConnected) {
-    console.error('Failed to connect to database. Exiting...');
-    process.exit(1);
-  }
-});
+// Environment variables are loaded by db.js import below
 
 /* =========================
    SOCKET.IO CONFIG
@@ -471,12 +465,22 @@ io.on('connection', (socket) => {
    START SERVER
 ========================= */
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, async () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+
+// Run migrations and health check before starting server
+(async () => {
   try {
+    const isConnected = await testConnection();
+    if (!isConnected) {
+       console.error('❌ Database connection unavailable. Retrying or exiting...');
+    }
+    
     await runMigrations();
     console.log('✅ Startup migrations complete');
   } catch (err) {
-    console.warn('⚠️ Startup migrations failed (DB might already be up to date or connecting too early):', err.message);
+    console.warn('⚠️ Startup migrations failed or skipped:', err.message);
   }
-});
+
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
+})();
