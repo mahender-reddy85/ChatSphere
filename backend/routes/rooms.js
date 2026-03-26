@@ -24,8 +24,7 @@ router.post('/', auth, async (req, res, next) => {
 
     const { name, type = 'group', visibility = 'public' } = req.body;
 
-    // Hardcoded test as requested
-    const code = "TEST123";
+    const code = nanoid(6);
     console.log("Generated code:", code); 
     console.log("INSERTING ROOM WITH CODE:", code);
 
