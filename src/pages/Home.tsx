@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -11,14 +11,25 @@ import {
   query,
   where,
   getDocs,
-  updateDoc,
-  arrayUnion,
   serverTimestamp,
   runTransaction,
   doc,
+  onSnapshot,
+  orderBy,
+  arrayUnion,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Plus, LogIn, LogOut, Copy, MessageSquare } from "lucide-react";
+import {
+  Plus,
+  LogIn,
+  LogOut,
+  MessageSquare,
+  Clock,
+  Shield,
+  Timer,
+  User,
+  ChevronRight,
+} from "lucide-react";
 
 const generateInviteCode = () => {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -29,12 +40,46 @@ const generateInviteCode = () => {
   return code;
 };
 
+interface RoomListItem {
+  id: string;
+  inviteCode: string;
+  participants: string[];
+  isFull: boolean;
+  lastMessage: string | null;
+  updatedAt: any;
+  chatMode?: "permanent" | "temporary";
+  unreadCount?: number;
+}
+
 const Home = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState("");
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [rooms, setRooms] = useState<RoomListItem[]>([]);
+  const [chatMode, setChatMode] = useState<"permanent" | "temporary">("permanent");
+  const [showProfile, setShowProfile] = useState(false);
+
+  // Load user's rooms
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, "rooms"),
+      where("participants", "array-contains", user.uid)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const roomList: RoomListItem[] = snapshot.docs
+        .map((d) => ({ id: d.id, ...d.data() } as RoomListItem))
+        .sort((a, b) => {
+          const aTime = a.updatedAt?.seconds || 0;
+          const bTime = b.updatedAt?.seconds || 0;
+          return bTime - aTime;
+        });
+      setRooms(roomList);
+    });
+    return unsubscribe;
+  }, [user]);
 
   const handleCreateRoom = async () => {
     if (!user) return;
@@ -48,6 +93,8 @@ const Home = () => {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         lastMessage: null,
+        chatMode,
+        autoDeleteMinutes: chatMode === "temporary" ? 30 : null,
       });
       toast.success("Room created!", {
         description: `Invite code: ${inviteCode}`,
@@ -81,7 +128,6 @@ const Home = () => {
       const roomDoc = snapshot.docs[0];
       const roomData = roomDoc.data();
 
-      // Already a participant
       if (roomData.participants.includes(user.uid)) {
         navigate(`/chat/${roomDoc.id}`);
         return;
@@ -93,7 +139,6 @@ const Home = () => {
         return;
       }
 
-      // Use transaction to prevent race conditions
       await runTransaction(db, async (transaction) => {
         const roomRef = doc(db, "rooms", roomDoc.id);
         const freshDoc = await transaction.get(roomRef);
@@ -117,23 +162,57 @@ const Home = () => {
   };
 
   const displayName = user?.displayName || (user?.isAnonymous ? "Guest" : "User");
+  const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6 animate-fade-in">
+    <div className="flex min-h-screen flex-col items-center p-4 pt-8">
+      <div className="w-full max-w-md space-y-5 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold text-foreground">QuickChat</h1>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">{displayName}</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowProfile(!showProfile)}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold"
+            >
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt="" className="h-8 w-8 rounded-full" />
+              ) : (
+                avatarLetter
+              )}
+            </button>
             <Button variant="ghost" size="icon" onClick={signOut}>
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
+
+        {/* Profile card */}
+        {showProfile && (
+          <Card className="animate-fade-in">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground text-lg font-bold">
+                {user?.photoURL ? (
+                  <img src={user.photoURL} alt="" className="h-12 w-12 rounded-full" />
+                ) : (
+                  avatarLetter
+                )}
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">{displayName}</p>
+                <p className="text-xs text-muted-foreground">
+                  {user?.email || (user?.isAnonymous ? "Anonymous Guest" : "No email")}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  UID: {user?.uid?.slice(0, 8)}...
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Create Room */}
         <Card>
@@ -141,7 +220,32 @@ const Home = () => {
             <CardTitle className="text-lg">Create a Room</CardTitle>
             <CardDescription>Start a private 1:1 conversation</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            <div className="flex gap-2">
+              <Button
+                variant={chatMode === "permanent" ? "default" : "outline"}
+                size="sm"
+                className="flex-1 gap-1.5 text-xs"
+                onClick={() => setChatMode("permanent")}
+              >
+                <Shield className="h-3.5 w-3.5" />
+                Permanent
+              </Button>
+              <Button
+                variant={chatMode === "temporary" ? "default" : "outline"}
+                size="sm"
+                className="flex-1 gap-1.5 text-xs"
+                onClick={() => setChatMode("temporary")}
+              >
+                <Timer className="h-3.5 w-3.5" />
+                Temporary
+              </Button>
+            </div>
+            {chatMode === "temporary" && (
+              <p className="text-xs text-muted-foreground">
+                Messages auto-delete after 30 minutes
+              </p>
+            )}
             <Button
               onClick={handleCreateRoom}
               disabled={creating}
@@ -181,6 +285,48 @@ const Home = () => {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Recent Chats */}
+        {rooms.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Recent Chats
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1 p-2">
+              {rooms.map((room) => (
+                <button
+                  key={room.id}
+                  onClick={() => navigate(`/chat/${room.id}`)}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-accent"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary">
+                    <MessageSquare className="h-4 w-4 text-secondary-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-foreground font-mono">
+                        {room.inviteCode}
+                      </span>
+                      {room.chatMode === "temporary" && (
+                        <Timer className="h-3 w-3 text-muted-foreground" />
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {room.participants.length}/2
+                      </span>
+                    </div>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {room.lastMessage || "No messages yet"}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

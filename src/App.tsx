@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import ChatRoom from "./pages/ChatRoom";
+import JoinRoom from "./pages/JoinRoom";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,13 +24,15 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  return user ? <>{children}</> : <Navigate to="/auth" />;
+  if (!user) return <Navigate to="/auth" replace />;
+  return <>{children}</>;
 };
 
 const AuthRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
-  return user ? <Navigate to="/" /> : <>{children}</>;
+  if (user) return <Navigate to="/" replace />;
+  return <>{children}</>;
 };
 
 const App = () => (
@@ -42,6 +45,7 @@ const App = () => (
             <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
             <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
             <Route path="/chat/:roomId" element={<ProtectedRoute><ChatRoom /></ProtectedRoute>} />
+            <Route path="/join/:code" element={<JoinRoom />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
