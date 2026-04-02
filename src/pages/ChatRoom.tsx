@@ -234,7 +234,7 @@ const ChatRoom = () => {
                 <Circle
                   className={cn(
                     "h-2 w-2",
-                    otherPresence.isOnline ? "fill-green-500 text-green-500" : "fill-muted-foreground text-muted-foreground"
+                    otherPresence.isOnline ? "fill-online text-online" : "fill-offline text-offline"
                   )}
                 />
                 <span className="text-xs text-muted-foreground">
