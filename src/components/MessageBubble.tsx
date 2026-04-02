@@ -1,15 +1,31 @@
 import { format } from "date-fns";
 import { Timestamp } from "firebase/firestore";
 import { cn } from "@/lib/utils";
+import { Check, CheckCheck, Eye } from "lucide-react";
+
+export type MessageStatus = "sent" | "delivered" | "seen";
 
 interface MessageBubbleProps {
   text: string;
   senderId: string;
   currentUserId: string;
   createdAt: Timestamp | null;
+  status?: MessageStatus;
+  showStatus?: boolean;
 }
 
-const MessageBubble = ({ text, senderId, currentUserId, createdAt }: MessageBubbleProps) => {
+const StatusIcon = ({ status }: { status: MessageStatus }) => {
+  switch (status) {
+    case "sent":
+      return <Check className="h-3 w-3" />;
+    case "delivered":
+      return <CheckCheck className="h-3 w-3" />;
+    case "seen":
+      return <CheckCheck className="h-3 w-3 text-primary" />;
+  }
+};
+
+const MessageBubble = ({ text, senderId, currentUserId, createdAt, status = "sent", showStatus = false }: MessageBubbleProps) => {
   const isSent = senderId === currentUserId;
   const time = createdAt ? format(createdAt.toDate(), "HH:mm") : "";
 
@@ -24,16 +40,24 @@ const MessageBubble = ({ text, senderId, currentUserId, createdAt }: MessageBubb
         )}
       >
         <p className="text-sm leading-relaxed break-words">{text}</p>
-        {time && (
-          <p
-            className={cn(
-              "mt-1 text-[10px]",
+        <div className={cn(
+          "mt-1 flex items-center gap-1",
+          isSent ? "justify-end" : "justify-start"
+        )}>
+          {time && (
+            <span className={cn(
+              "text-[10px]",
               isSent ? "text-chat-sent-foreground/60" : "text-muted-foreground"
-            )}
-          >
-            {time}
-          </p>
-        )}
+            )}>
+              {time}
+            </span>
+          )}
+          {isSent && showStatus && (
+            <span className="text-chat-sent-foreground/60">
+              <StatusIcon status={status} />
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
