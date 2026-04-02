@@ -54,6 +54,8 @@ export default {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
         },
+        online: "hsl(var(--online))",
+        offline: "hsl(var(--offline))",
         "chat-sent": {
           DEFAULT: "hsl(var(--chat-bubble-sent))",
           foreground: "hsl(var(--chat-bubble-sent-foreground))",

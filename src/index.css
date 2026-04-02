@@ -52,6 +52,9 @@
     --sidebar-accent-foreground: 210 20% 92%;
     --sidebar-border: 220 14% 20%;
     --sidebar-ring: 217 91% 60%;
+
+    --online: 142 71% 45%;
+    --offline: 215 15% 55%;
   }
 }
 
