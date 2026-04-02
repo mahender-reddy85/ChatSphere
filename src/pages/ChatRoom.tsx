@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePresence } from "@/hooks/usePresence";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MessageBubble from "@/components/MessageBubble";
+import TypingIndicator from "@/components/TypingIndicator";
 import { toast } from "sonner";
 import {
   collection,
@@ -15,21 +17,29 @@ import {
   orderBy,
   updateDoc,
   Timestamp,
+  writeBatch,
+  getDocs,
+  where,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { ArrowLeft, Send, Copy, Users } from "lucide-react";
+import { ref, set, onValue } from "firebase/database";
+import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
+import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield } from "lucide-react";
+import { MessageStatus } from "@/components/MessageBubble";
 
 interface Message {
   id: string;
   senderId: string;
   text: string;
   createdAt: Timestamp | null;
+  status: MessageStatus;
 }
 
 interface RoomData {
   inviteCode: string;
   participants: string[];
   isFull: boolean;
+  chatMode?: "permanent" | "temporary";
+  autoDeleteMinutes?: number;
 }
 
 const ChatRoom = () => {
@@ -40,7 +50,12 @@ const ChatRoom = () => {
   const [newMessage, setNewMessage] = useState("");
   const [room, setRoom] = useState<RoomData | null>(null);
   const [sending, setSending] = useState(false);
+  const [otherTyping, setOtherTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+
+  const otherUid = room?.participants.find((p) => p !== user?.uid);
+  const otherPresence = usePresence(otherUid);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -68,19 +83,35 @@ const ChatRoom = () => {
       orderBy("createdAt", "asc")
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs: Message[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      const msgs: Message[] = snapshot.docs.map((d) => ({
+        id: d.id,
+        status: "sent" as MessageStatus,
+        ...d.data(),
       })) as Message[];
       setMessages(msgs);
     });
     return unsubscribe;
   }, [roomId]);
 
+  // Mark messages as seen
+  useEffect(() => {
+    if (!roomId || !user || !messages.length) return;
+    const unseenFromOther = messages.filter(
+      (m) => m.senderId !== user.uid && m.status !== "seen"
+    );
+    if (unseenFromOther.length > 0) {
+      const batch = writeBatch(db);
+      unseenFromOther.forEach((m) => {
+        batch.update(doc(db, "rooms", roomId, "messages", m.id), { status: "seen" });
+      });
+      batch.commit().catch(() => {});
+    }
+  }, [messages, roomId, user]);
+
   // Auto-scroll
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, otherTyping]);
 
   // Check access
   useEffect(() => {
@@ -90,16 +121,56 @@ const ChatRoom = () => {
     }
   }, [room, user, navigate]);
 
+  // Listen to typing indicator
+  useEffect(() => {
+    if (!roomId || !otherUid || !isFirebaseConfigured()) return;
+    try {
+      const typingRef = ref(rtdb, `typing/${roomId}/${otherUid}`);
+      const unsubscribe = onValue(typingRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          setOtherTyping(data.isTyping === true);
+        } else {
+          setOtherTyping(false);
+        }
+      });
+      return () => unsubscribe();
+    } catch {
+      // RTDB not available
+    }
+  }, [roomId, otherUid]);
+
+  // Set typing status
+  const setTyping = useCallback(
+    (isTyping: boolean) => {
+      if (!roomId || !user || !isFirebaseConfigured()) return;
+      try {
+        const typingRef = ref(rtdb, `typing/${roomId}/${user.uid}`);
+        set(typingRef, { isTyping });
+      } catch {}
+    },
+    [roomId, user]
+  );
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    setTyping(true);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => setTyping(false), 2000);
+  };
+
   const handleSend = async () => {
     if (!newMessage.trim() || !user || !roomId || sending) return;
     const text = newMessage.trim();
     setNewMessage("");
+    setTyping(false);
     setSending(true);
     try {
       await addDoc(collection(db, "rooms", roomId, "messages"), {
         senderId: user.uid,
         text,
         createdAt: serverTimestamp(),
+        status: "sent" as MessageStatus,
       });
       await updateDoc(doc(db, "rooms", roomId), {
         lastMessage: text,
@@ -117,6 +188,14 @@ const ChatRoom = () => {
     if (room?.inviteCode) {
       navigator.clipboard.writeText(room.inviteCode);
       toast.success("Invite code copied!");
+    }
+  };
+
+  const copyInviteLink = () => {
+    if (room?.inviteCode) {
+      const link = `${window.location.origin}/join/${room.inviteCode}`;
+      navigator.clipboard.writeText(link);
+      toast.success("Invite link copied!");
     }
   };
 
@@ -143,23 +222,48 @@ const ChatRoom = () => {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h2 className="text-sm font-semibold text-foreground">Chat Room</h2>
           <div className="flex items-center gap-2">
-            <Users className="h-3 w-3 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">
-              {participantCount}/2 participants
-            </span>
+            <h2 className="text-sm font-semibold text-foreground">Chat Room</h2>
+            {room.chatMode === "temporary" && (
+              <Timer className="h-3.5 w-3.5 text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {otherUid && (
+              <div className="flex items-center gap-1">
+                <Circle
+                  className={cn(
+                    "h-2 w-2",
+                    otherPresence.isOnline ? "fill-online text-online" : "fill-offline text-offline"
+                  )}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {otherPresence.isOnline ? "Online" : "Offline"}
+                </span>
+              </div>
+            )}
+            {!otherUid && (
+              <div className="flex items-center gap-1">
+                <Users className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">{participantCount}/2</span>
+              </div>
+            )}
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={copyInviteCode}
-          className="gap-1.5 text-xs text-muted-foreground"
-        >
-          <Copy className="h-3.5 w-3.5" />
-          {room.inviteCode}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={copyInviteLink} title="Copy invite link">
+            <Link className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={copyInviteCode}
+            className="gap-1.5 text-xs text-muted-foreground font-mono"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            {room.inviteCode}
+          </Button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -173,6 +277,15 @@ const ChatRoom = () => {
               <p className="mt-1 text-xs text-muted-foreground">
                 Share code: <span className="font-mono font-bold text-primary">{room.inviteCode}</span>
               </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 gap-1 text-xs"
+                onClick={copyInviteLink}
+              >
+                <Link className="h-3 w-3" />
+                Copy invite link
+              </Button>
             </div>
           </div>
         )}
@@ -183,8 +296,11 @@ const ChatRoom = () => {
             senderId={msg.senderId}
             currentUserId={user.uid}
             createdAt={msg.createdAt}
+            status={msg.status}
+            showStatus={true}
           />
         ))}
+        <TypingIndicator visible={otherTyping} />
         <div ref={messagesEndRef} />
       </div>
 
@@ -192,9 +308,9 @@ const ChatRoom = () => {
       <div className="border-t border-border bg-card p-4">
         <div className="flex gap-2">
           <Input
-            placeholder="Type a message..."
+            placeholder={waitingForPartner ? "Waiting for partner..." : "Type a message..."}
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             className="flex-1"
             disabled={waitingForPartner}
@@ -211,5 +327,10 @@ const ChatRoom = () => {
     </div>
   );
 };
+
+// Helper
+function cn(...classes: (string | boolean | undefined)[]) {
+  return classes.filter(Boolean).join(" ");
+}
 
 export default ChatRoom;
