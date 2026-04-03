@@ -33,7 +33,7 @@ const Auth = () => {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary">
             <MessageSquare className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">QuickChat</h1>
+          <h1 className="text-2xl font-bold text-foreground">ChatSphere</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Private 1:1 conversations with invite codes
           </p>

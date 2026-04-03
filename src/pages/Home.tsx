@@ -172,7 +172,7 @@ const Home = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold text-foreground">QuickChat</h1>
+            <h1 className="text-xl font-bold text-foreground">ChatSphere</h1>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
