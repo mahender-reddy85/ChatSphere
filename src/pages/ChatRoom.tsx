@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MessageBubble from "@/components/MessageBubble";
 import TypingIndicator from "@/components/TypingIndicator";
+import EmojiPicker from "@/components/EmojiPicker";
+import ThemeToggle from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import {
   collection,
