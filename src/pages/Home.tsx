@@ -175,6 +175,7 @@ const Home = () => {
             <h1 className="text-xl font-bold text-foreground">QuickChat</h1>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <button
               onClick={() => setShowProfile(!showProfile)}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold"

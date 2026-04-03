@@ -309,7 +309,10 @@ const ChatRoom = () => {
 
       {/* Input */}
       <div className="border-t border-border bg-card p-4">
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <EmojiPicker
+            onSelect={(emoji) => setNewMessage((prev) => prev + emoji)}
+          />
           <Input
             placeholder={waitingForPartner ? "Waiting for partner..." : "Type a message..."}
             value={newMessage}
