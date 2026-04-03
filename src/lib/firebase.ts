@@ -6,13 +6,13 @@ import { getDatabase } from "firebase/database";
 // Replace with your Firebase project configuration
 // These are publishable client-side keys (safe to include in code)
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  databaseURL: "YOUR_DATABASE_URL",
+  apiKey: "AIzaSyDW883aNWaWMRjI7edhVDaZDsmIzznvt1I",
+  authDomain: "chatsphere-a5bbf.firebaseapp.com",
+  projectId: "chatsphere-a5bbf",
+  storageBucket: "chatsphere-a5bbf.firebasestorage.app",
+  messagingSenderId: "442555540994",
+  appId: "1:442555540994:web:eff7b67fc6f69b4a87291b",
+  databaseURL: "https://chatsphere-a5bbf-default-rtdb.firebaseio.com",
 };
 
 export const isFirebaseConfigured = () => {
