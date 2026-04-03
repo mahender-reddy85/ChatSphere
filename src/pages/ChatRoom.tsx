@@ -253,6 +253,7 @@ const ChatRoom = () => {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <ThemeToggle />
           <Button variant="ghost" size="icon" onClick={copyInviteLink} title="Copy invite link">
             <Link className="h-4 w-4" />
           </Button>
