@@ -18,6 +18,7 @@ import {
   onSnapshot,
   orderBy,
   arrayUnion,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
@@ -49,7 +50,7 @@ interface RoomListItem {
   lastMessage: string | null;
   updatedAt: any;
   chatMode?: "permanent" | "temporary";
-  unreadCount?: number;
+  lastReadAt?: Record<string, Timestamp>;
 }
 
 const Home = () => {
@@ -61,6 +62,7 @@ const Home = () => {
   const [rooms, setRooms] = useState<RoomListItem[]>([]);
   const [chatMode, setChatMode] = useState<"permanent" | "temporary">("permanent");
   const [showProfile, setShowProfile] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   // Load user's rooms
   useEffect(() => {
@@ -81,6 +83,29 @@ const Home = () => {
     });
     return unsubscribe;
   }, [user]);
+
+  // Count unread messages per room
+  useEffect(() => {
+    if (!user || rooms.length === 0) return;
+    const unsubscribes = rooms.map((room) => {
+      const messagesQuery = query(
+        collection(db, "rooms", room.id, "messages"),
+        orderBy("createdAt", "asc")
+      );
+      return onSnapshot(messagesQuery, (snapshot) => {
+        const lastRead = room.lastReadAt?.[user.uid];
+        const lastReadTime = lastRead?.toMillis?.() || 0;
+        const count = snapshot.docs.filter((d) => {
+          const data = d.data();
+          if (data.senderId === user.uid) return false;
+          const msgTime = data.createdAt?.toMillis?.() || 0;
+          return msgTime > lastReadTime;
+        }).length;
+        setUnreadCounts((prev) => ({ ...prev, [room.id]: count }));
+      });
+    });
+    return () => unsubscribes.forEach((u) => u());
+  }, [user, rooms]);
 
   const handleCreateRoom = async () => {
     if (!user) return;
@@ -323,7 +348,14 @@ const Home = () => {
                       {room.lastMessage || "No messages yet"}
                     </p>
                   </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="flex flex-col items-end gap-1">
+                    {unreadCounts[room.id] > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+                        {unreadCounts[room.id]}
+                      </span>
+                    )}
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </div>
                 </button>
               ))}
             </CardContent>
