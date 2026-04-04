@@ -84,6 +84,29 @@ const Home = () => {
     return unsubscribe;
   }, [user]);
 
+  // Count unread messages per room
+  useEffect(() => {
+    if (!user || rooms.length === 0) return;
+    const unsubscribes = rooms.map((room) => {
+      const messagesQuery = query(
+        collection(db, "rooms", room.id, "messages"),
+        orderBy("createdAt", "asc")
+      );
+      return onSnapshot(messagesQuery, (snapshot) => {
+        const lastRead = room.lastReadAt?.[user.uid];
+        const lastReadTime = lastRead?.toMillis?.() || 0;
+        const count = snapshot.docs.filter((d) => {
+          const data = d.data();
+          if (data.senderId === user.uid) return false;
+          const msgTime = data.createdAt?.toMillis?.() || 0;
+          return msgTime > lastReadTime;
+        }).length;
+        setUnreadCounts((prev) => ({ ...prev, [room.id]: count }));
+      });
+    });
+    return () => unsubscribes.forEach((u) => u());
+  }, [user, rooms]);
+
   const handleCreateRoom = async () => {
     if (!user) return;
     setCreating(true);
