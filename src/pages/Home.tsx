@@ -348,7 +348,14 @@ const Home = () => {
                       {room.lastMessage || "No messages yet"}
                     </p>
                   </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="flex flex-col items-end gap-1">
+                    {unreadCounts[room.id] > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+                        {unreadCounts[room.id]}
+                      </span>
+                    )}
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </div>
                 </button>
               ))}
             </CardContent>
