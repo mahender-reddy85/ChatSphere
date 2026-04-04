@@ -107,7 +107,7 @@ const ChatRoom = () => {
     return unsubscribe;
   }, [roomId, user?.uid, playSound]);
 
-  // Mark messages as seen
+  // Mark messages as seen + update lastReadAt
   useEffect(() => {
     if (!roomId || !user || !messages.length) return;
     const unseenFromOther = messages.filter(
@@ -120,6 +120,10 @@ const ChatRoom = () => {
       });
       batch.commit().catch(() => {});
     }
+    // Update lastReadAt for this user
+    updateDoc(doc(db, "rooms", roomId), {
+      [`lastReadAt.${user.uid}`]: serverTimestamp(),
+    }).catch(() => {});
   }, [messages, roomId, user]);
 
   // Auto-scroll
