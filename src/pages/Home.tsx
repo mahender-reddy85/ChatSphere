@@ -162,7 +162,7 @@ const Home = () => {
     }
   };
 
-  const displayName = user?.displayName || (user?.isAnonymous ? "Guest" : "User");
+  const displayName = profile?.name || user?.displayName || (user?.isAnonymous ? "Guest" : "User");
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (
