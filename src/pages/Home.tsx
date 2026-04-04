@@ -53,7 +53,7 @@ interface RoomListItem {
 }
 
 const Home = () => {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState("");
   const [creating, setCreating] = useState(false);
