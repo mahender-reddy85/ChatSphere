@@ -50,7 +50,7 @@ interface RoomListItem {
   lastMessage: string | null;
   updatedAt: any;
   chatMode?: "permanent" | "temporary";
-  unreadCount?: number;
+  lastReadAt?: Record<string, Timestamp>;
 }
 
 const Home = () => {
