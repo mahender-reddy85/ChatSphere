@@ -53,7 +53,7 @@ interface RoomListItem {
 }
 
 const Home = () => {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState("");
   const [creating, setCreating] = useState(false);
@@ -162,7 +162,7 @@ const Home = () => {
     }
   };
 
-  const displayName = user?.displayName || (user?.isAnonymous ? "Guest" : "User");
+  const displayName = profile?.name || user?.displayName || (user?.isAnonymous ? "Guest" : "User");
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (

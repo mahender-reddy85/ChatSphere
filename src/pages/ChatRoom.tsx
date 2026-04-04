@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePresence } from "@/hooks/usePresence";
+import useNotificationSound from "@/hooks/useNotificationSound";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MessageBubble from "@/components/MessageBubble";
@@ -20,8 +21,6 @@ import {
   updateDoc,
   Timestamp,
   writeBatch,
-  getDocs,
-  where,
 } from "firebase/firestore";
 import { ref, set, onValue } from "firebase/database";
 import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
@@ -31,6 +30,8 @@ import { MessageStatus } from "@/components/MessageBubble";
 interface Message {
   id: string;
   senderId: string;
+  senderName?: string;
+  senderPhoto?: string;
   text: string;
   createdAt: Timestamp | null;
   status: MessageStatus;
@@ -46,8 +47,9 @@ interface RoomData {
 
 const ChatRoom = () => {
   const { roomId } = useParams<{ roomId: string }>();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const playSound = useNotificationSound();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [room, setRoom] = useState<RoomData | null>(null);
@@ -55,6 +57,7 @@ const ChatRoom = () => {
   const [otherTyping, setOtherTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const prevMsgCountRef = useRef(0);
 
   const otherUid = room?.participants.find((p) => p !== user?.uid);
   const otherPresence = usePresence(otherUid);
@@ -90,10 +93,19 @@ const ChatRoom = () => {
         status: "sent" as MessageStatus,
         ...d.data(),
       })) as Message[];
+      
+      // Play sound for new incoming messages
+      if (msgs.length > prevMsgCountRef.current && prevMsgCountRef.current > 0) {
+        const lastMsg = msgs[msgs.length - 1];
+        if (lastMsg && lastMsg.senderId !== user?.uid) {
+          playSound();
+        }
+      }
+      prevMsgCountRef.current = msgs.length;
       setMessages(msgs);
     });
     return unsubscribe;
-  }, [roomId]);
+  }, [roomId, user?.uid, playSound]);
 
   // Mark messages as seen
   useEffect(() => {
@@ -130,16 +142,13 @@ const ChatRoom = () => {
       const typingRef = ref(rtdb, `typing/${roomId}/${otherUid}`);
       const unsubscribe = onValue(typingRef, (snapshot) => {
         if (snapshot.exists()) {
-          const data = snapshot.val();
-          setOtherTyping(data.isTyping === true);
+          setOtherTyping(snapshot.val().isTyping === true);
         } else {
           setOtherTyping(false);
         }
       });
       return () => unsubscribe();
-    } catch {
-      // RTDB not available
-    }
+    } catch {}
   }, [roomId, otherUid]);
 
   // Set typing status
@@ -147,8 +156,7 @@ const ChatRoom = () => {
     (isTyping: boolean) => {
       if (!roomId || !user || !isFirebaseConfigured()) return;
       try {
-        const typingRef = ref(rtdb, `typing/${roomId}/${user.uid}`);
-        set(typingRef, { isTyping });
+        set(ref(rtdb, `typing/${roomId}/${user.uid}`), { isTyping });
       } catch {}
     },
     [roomId, user]
@@ -170,6 +178,8 @@ const ChatRoom = () => {
     try {
       await addDoc(collection(db, "rooms", roomId, "messages"), {
         senderId: user.uid,
+        senderName: profile?.name || user.displayName || "Guest",
+        senderPhoto: profile?.photoURL || user.photoURL || "",
         text,
         createdAt: serverTimestamp(),
         status: "sent" as MessageStatus,
@@ -195,8 +205,7 @@ const ChatRoom = () => {
 
   const copyInviteLink = () => {
     if (room?.inviteCode) {
-      const link = `${window.location.origin}/join/${room.inviteCode}`;
-      navigator.clipboard.writeText(link);
+      navigator.clipboard.writeText(`${window.location.origin}/join/${room.inviteCode}`);
       toast.success("Invite link copied!");
     }
   };
@@ -274,18 +283,11 @@ const ChatRoom = () => {
         {waitingForPartner && (
           <div className="flex justify-center py-8 animate-fade-in">
             <div className="rounded-xl bg-secondary px-4 py-3 text-center">
-              <p className="text-sm text-secondary-foreground">
-                Waiting for someone to join...
-              </p>
+              <p className="text-sm text-secondary-foreground">Waiting for someone to join...</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Share code: <span className="font-mono font-bold text-primary">{room.inviteCode}</span>
               </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2 gap-1 text-xs"
-                onClick={copyInviteLink}
-              >
+              <Button variant="ghost" size="sm" className="mt-2 gap-1 text-xs" onClick={copyInviteLink}>
                 <Link className="h-3 w-3" />
                 Copy invite link
               </Button>
@@ -298,6 +300,8 @@ const ChatRoom = () => {
             text={msg.text}
             senderId={msg.senderId}
             currentUserId={user.uid}
+            senderName={msg.senderName}
+            senderPhoto={msg.senderPhoto}
             createdAt={msg.createdAt}
             status={msg.status}
             showStatus={true}
@@ -310,9 +314,7 @@ const ChatRoom = () => {
       {/* Input */}
       <div className="border-t border-border bg-card p-4">
         <div className="flex items-center gap-2">
-          <EmojiPicker
-            onSelect={(emoji) => setNewMessage((prev) => prev + emoji)}
-          />
+          <EmojiPicker onSelect={(emoji) => setNewMessage((prev) => prev + emoji)} />
           <Input
             placeholder={waitingForPartner ? "Waiting for partner..." : "Type a message..."}
             value={newMessage}
@@ -321,11 +323,7 @@ const ChatRoom = () => {
             className="flex-1"
             disabled={waitingForPartner}
           />
-          <Button
-            onClick={handleSend}
-            size="icon"
-            disabled={!newMessage.trim() || sending || waitingForPartner}
-          >
+          <Button onClick={handleSend} size="icon" disabled={!newMessage.trim() || sending || waitingForPartner}>
             <Send className="h-4 w-4" />
           </Button>
         </div>
@@ -334,7 +332,6 @@ const ChatRoom = () => {
   );
 };
 
-// Helper
 function cn(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }

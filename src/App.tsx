@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import GuestNameDialog from "@/components/GuestNameDialog";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import ChatRoom from "./pages/ChatRoom";
@@ -35,8 +36,14 @@ const AuthRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const GuestNamePrompt = () => {
+  const { needsName, setGuestName } = useAuth();
+  return <GuestNameDialog open={needsName} onSubmit={setGuestName} />;
+};
+
 const AppRoutes = () => (
   <BrowserRouter>
+    <GuestNamePrompt />
     <Routes>
       <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
       <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
