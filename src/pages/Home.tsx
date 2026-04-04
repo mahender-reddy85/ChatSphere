@@ -62,6 +62,7 @@ const Home = () => {
   const [rooms, setRooms] = useState<RoomListItem[]>([]);
   const [chatMode, setChatMode] = useState<"permanent" | "temporary">("permanent");
   const [showProfile, setShowProfile] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   // Load user's rooms
   useEffect(() => {
