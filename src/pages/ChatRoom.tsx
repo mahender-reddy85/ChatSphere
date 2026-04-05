@@ -22,6 +22,7 @@ import {
   updateDoc,
   deleteDoc,
   getDocs,
+  getDoc,
   Timestamp,
   writeBatch,
   arrayRemove,
@@ -286,7 +287,10 @@ const ChatRoom = () => {
   };
 
   const handleDeleteRoom = async () => {
-    if (!roomId || !user || !room) return;
+    if (!roomId || !user || !room) {
+      toast.error("Room not found or invalid state");
+      return;
+    }
     
     const confirmed = window.confirm(
       "Are you sure you want to delete this room? This action cannot be undone and will remove all messages."
@@ -295,7 +299,16 @@ const ChatRoom = () => {
     if (!confirmed) return;
     
     try {
+      // First check if room exists
       const roomRef = doc(db, "rooms", roomId);
+      const roomDoc = await getDoc(roomRef);
+      
+      if (!roomDoc.exists()) {
+        toast.error("Room not found");
+        navigate("/");
+        return;
+      }
+      
       const messagesSnap = await getDocs(collection(db, "rooms", roomId, "messages"));
       
       if (messagesSnap.empty) {
@@ -346,8 +359,10 @@ const ChatRoom = () => {
       console.error("Failed to delete room:", error);
       
       // Provide specific error messages
-      if (error.message?.includes('permission')) {
+      if (error.code === 'permission-denied') {
         toast.error("Permission denied. You may not have rights to delete this room.");
+      } else if (error.code === 'not-found') {
+        toast.error("Room not found or has already been deleted.");
       } else if (error.message?.includes('quota')) {
         toast.error("Service temporarily unavailable. Please try again later.");
       } else if (error.message?.includes('network')) {
