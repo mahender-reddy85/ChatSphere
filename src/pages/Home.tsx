@@ -136,6 +136,8 @@ const Home = () => {
       
       console.log("Room created successfully with ID:", roomRef.id);
       
+      setCreating(false); // Reset creating state immediately after success
+      
       toast.success("Room created!", {
         description: `Invite code: ${inviteCode}`,
         action: {

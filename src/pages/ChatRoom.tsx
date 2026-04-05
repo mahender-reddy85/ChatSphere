@@ -29,7 +29,7 @@ import {
 } from "firebase/firestore";
 import { ref, set, onValue } from "firebase/database";
 import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
-import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode, Trash2, ArrowUp, Volume2, VolumeX, Smartphone, ArrowUpDown } from "lucide-react";
+import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, DoorOpen, Settings, QrCode, Trash2, ArrowUp, Volume2, VolumeX, Smartphone, ArrowUpDown } from "lucide-react";
 import { MessageStatus } from "@/components/MessageBubble";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/contexts/SettingsContext";
