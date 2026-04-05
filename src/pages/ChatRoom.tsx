@@ -66,6 +66,7 @@ const ChatRoom = () => {
   const [otherTyping, setOtherTyping] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [messageVisibility, setMessageVisibility] = useState<Record<string, { showAvatar: boolean; showName: boolean }>>({});
+  const [quotaExceeded, setQuotaExceeded] = useState(false); // 🔧 QUOTA PROTECTION
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
@@ -108,7 +109,7 @@ const ChatRoom = () => {
 
   // Listen to room data
   useEffect(() => {
-    if (!roomId || !auth.currentUser) return;
+    if (!roomId || !auth.currentUser || quotaExceeded) return;
     console.log("ATTACHING ROOM LISTENER");
     const unsub = onSnapshot(doc(db, "rooms", roomId), (snapshot) => {
       console.log("ROOM SNAPSHOT TRIGGERED");
@@ -124,22 +125,35 @@ const ChatRoom = () => {
         toast.error("Room not found");
         navigate("/");
       }
+    }, (error) => {
+      console.error("🔥 Room listener error:", error);
+      // 🔧 AGGRESSIVE QUOTA PROTECTION - Stop on quota exceeded
+      if (error.code === 'resource-exhausted') {
+        console.error("❌ QUOTA EXCEEDED - Stopping room listener");
+        setQuotaExceeded(true);
+        unsub();
+        toast.error("Service temporarily unavailable. Please wait a few minutes.");
+      }
     });
     return () => {
       console.log("CLEANING ROOM LISTENER");
       unsub();
     };
-  }, [roomId]);
+  }, [roomId, quotaExceeded]);
 
   // Listen to messages
   useEffect(() => {
-    if (!roomId || !auth.currentUser) return;
+    if (!roomId || !auth.currentUser || quotaExceeded) return;
+    
+    // 🔧 AGGRESSIVE QUOTA PROTECTION - Prevent rapid re-attachments
     console.log("ATTACHING MESSAGES LISTENER");
+    
     const q = query(
       collection(db, "rooms", roomId, "messages"),
       orderBy("createdAt"),
-      limit(50) // 🔧 REDUCE LOAD - limit to 50 messages
+      limit(25) // 🔧 REDUCE LOAD further - limit to 25 messages
     );
+    
     const unsub = onSnapshot(q, (snapshot) => {
       console.log("MESSAGES SNAPSHOT TRIGGERED");
       const msgs = snapshot.docs.map((doc) => {
@@ -158,12 +172,22 @@ const ChatRoom = () => {
       if (lastMsg && lastMsg.senderId !== user?.uid) {
         playSound();
       }
+    }, (error) => {
+      console.error("🔥 Messages listener error:", error);
+      // 🔧 AGGRESSIVE QUOTA PROTECTION - Stop on quota exceeded
+      if (error.code === 'resource-exhausted') {
+        console.error("❌ QUOTA EXCEEDED - Stopping messages listener");
+        setQuotaExceeded(true);
+        unsub();
+        toast.error("Service temporarily unavailable. Please wait a few minutes.");
+      }
     });
+    
     return () => {
       console.log("CLEANING MESSAGES LISTENER");
       unsub();
     };
-  }, [roomId]);
+  }, [roomId, quotaExceeded]);
 
   // Mark messages as seen + update lastReadAt
   useEffect(() => {
@@ -245,7 +269,7 @@ const ChatRoom = () => {
   };
 
   const handleSend = async () => {
-    if (!newMessage.trim() || !user || !roomId || sending) return;
+    if (!newMessage.trim() || !user || !roomId || sending || quotaExceeded) return;
     
     const text = newMessage.trim();
     if (text.length > MAX_MESSAGE_LENGTH) {
@@ -287,7 +311,12 @@ const ChatRoom = () => {
       });
     } catch (error) {
       console.error("Failed to send message:", error);
-      toast.error("Failed to send message");
+      if (error.code === 'resource-exhausted') {
+        setQuotaExceeded(true);
+        toast.error("Service temporarily unavailable. Please wait a few minutes.");
+      } else {
+        toast.error("Failed to send message");
+      }
       // Restore message only if send failed
       setNewMessage(messageToSend);
     } finally {
