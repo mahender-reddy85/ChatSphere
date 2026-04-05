@@ -51,7 +51,6 @@ const ThemeToggle = () => {
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
     >
       {theme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
-      <span>Theme Toggle</span>
     </Button>
   );
 };
