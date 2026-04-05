@@ -477,47 +477,40 @@ const ChatRoom = () => {
           </div>
         </div>
         
-        {/* Simplified top bar with only theme and sound */}
-        <div className="flex items-center gap-1">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setSettingsOpen(true)}
-            className="mobile-touch-target"
-          >
-            {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-          </Button>
-          <ThemeToggle />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="mobile-touch-target">
-                <Settings className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="bottom" className="w-48 sm:w-56">
-              <DropdownMenuItem onClick={copyInviteLink} className="gap-3 p-3 sm:p-2">
-                <Link className="h-4 w-4 shrink-0" />
-                <span className="text-sm">Copy Invite Link</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={handleDeleteRoom} 
-                className="gap-3 p-3 sm:p-2 text-destructive focus:text-destructive"
-              >
-                <Trash2 className="h-4 w-4 shrink-0" />
-                <span className="text-sm">Delete Room</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={handleLeaveRoom} 
-                className="gap-3 p-3 sm:p-2 text-destructive focus:text-destructive"
-              >
-                <DoorOpen className="h-4 w-4 shrink-0" />
-                <span className="text-sm">Leave Room</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        {/* Settings button with dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="mobile-touch-target">
+              <Settings className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="bottom" className="w-48 sm:w-56">
+            <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="gap-3 p-3 sm:p-2">
+              <Settings className="h-4 w-4 shrink-0" />
+              <span className="text-sm">Settings</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={copyInviteLink} className="gap-3 p-3 sm:p-2">
+              <Link className="h-4 w-4 shrink-0" />
+              <span className="text-sm">Copy Invite Link</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={handleDeleteRoom} 
+              className="gap-3 p-3 sm:p-2 text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 shrink-0" />
+              <span className="text-sm">Delete Room</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={handleLeaveRoom} 
+              className="gap-3 p-3 sm:p-2 text-destructive focus:text-destructive"
+            >
+              <DoorOpen className="h-4 w-4 shrink-0" />
+              <span className="text-sm">Leave Room</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Messages */}
