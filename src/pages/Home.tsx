@@ -124,6 +124,7 @@ const Home = () => {
         inviteCode,
         participants: [user.uid],
         isFull: false,
+        allowJoin: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         lastMessage: null,
