@@ -510,13 +510,15 @@ const ChatRoom = () => {
           </div>
         </div>
         
-        {/* Settings button only */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="mobile-touch-target">
-              <Settings className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
+        {/* Theme toggle and settings */}
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="mobile-touch-target">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="bottom" className="w-56 sm:w-64">
             <div className="px-3 py-2">
               <div className="flex items-center justify-between">
@@ -557,12 +559,6 @@ const ChatRoom = () => {
                 />
               </div>
             </div>
-            <DropdownMenuSeparator />
-            <div className="px-3 py-2 hover:bg-accent hover:text-accent-foreground rounded-sm cursor-pointer">
-              <div className="flex items-center gap-2">
-                <ThemeToggle />
-              </div>
-            </div>
             <DropdownMenuItem onClick={copyInviteLink} className="gap-3 p-3 sm:p-2">
               <Link className="h-4 w-4 shrink-0" />
               <span className="text-sm">Invite Link</span>
@@ -589,6 +585,7 @@ const ChatRoom = () => {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
 
       {/* Messages */}
