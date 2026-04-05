@@ -176,7 +176,9 @@ const ChatRoom = () => {
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewMessage(e.target.value);
+    const value = e.target.value;
+    if (value.length > MAX_MESSAGE_LENGTH) return;
+    setNewMessage(value);
     setTyping(true);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => setTyping(false), 2000);
@@ -185,6 +187,24 @@ const ChatRoom = () => {
   const handleSend = async () => {
     if (!newMessage.trim() || !user || !roomId || sending) return;
     const text = newMessage.trim();
+    if (text.length > MAX_MESSAGE_LENGTH) {
+      toast.error(`Message too long (max ${MAX_MESSAGE_LENGTH} chars)`);
+      return;
+    }
+
+    // Rate limiting
+    const now = Date.now();
+    if (now - lastSendTimeRef.current < RATE_LIMIT_WINDOW) {
+      sendCountRef.current++;
+      if (sendCountRef.current > RATE_LIMIT_MAX) {
+        toast.error("Slow down! Too many messages.");
+        return;
+      }
+    } else {
+      sendCountRef.current = 1;
+      lastSendTimeRef.current = now;
+    }
+
     setNewMessage("");
     setTyping(false);
     setSending(true);
@@ -206,6 +226,33 @@ const ChatRoom = () => {
       setNewMessage(text);
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleLeaveRoom = async () => {
+    if (!roomId || !user || !room) return;
+    try {
+      const roomRef = doc(db, "rooms", roomId);
+      const newParticipants = room.participants.filter((p) => p !== user.uid);
+      if (newParticipants.length === 0) {
+        // Delete all messages then delete room
+        const messagesSnap = await getDocs(collection(db, "rooms", roomId, "messages"));
+        const batch = writeBatch(db);
+        messagesSnap.docs.forEach((d) => batch.delete(d.ref));
+        batch.delete(roomRef);
+        await batch.commit();
+        toast.success("Room deleted");
+      } else {
+        await updateDoc(roomRef, {
+          participants: arrayRemove(user.uid),
+          isFull: false,
+          updatedAt: serverTimestamp(),
+        });
+        toast.success("Left room");
+      }
+      navigate("/");
+    } catch {
+      toast.error("Failed to leave room");
     }
   };
 
