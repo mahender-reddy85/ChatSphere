@@ -31,6 +31,7 @@ import { ref, set, onValue } from "firebase/database";
 import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
 import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode } from "lucide-react";
 import { MessageStatus } from "@/components/MessageBubble";
+import { cn } from "@/lib/utils";
 
 interface Message {
   id: string;
@@ -435,9 +436,5 @@ const ChatRoom = () => {
     </div>
   );
 };
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
-}
 
 export default ChatRoom;
