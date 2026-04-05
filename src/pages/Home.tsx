@@ -193,7 +193,19 @@ const Home = () => {
     }
   };
 
-  const displayName = profile?.name || user?.displayName || (user?.isAnonymous ? "Guest" : "User");
+  const handleSaveName = async () => {
+    if (!user || !newName.trim()) return;
+    try {
+      await setDoc(doc(db, "users", user.uid), { name: newName.trim() }, { merge: true });
+      toast.success("Name updated!");
+      setEditingName(false);
+      // Update local profile via context
+      window.location.reload();
+    } catch {
+      toast.error("Failed to update name");
+    }
+  };
+
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (
