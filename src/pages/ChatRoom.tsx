@@ -29,11 +29,12 @@ import {
 } from "firebase/firestore";
 import { ref, set, onValue } from "firebase/database";
 import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
-import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode, Trash2, ArrowUp, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode, Trash2, ArrowUp, Volume2, VolumeX, Smartphone, ArrowUpDown } from "lucide-react";
 import { MessageStatus } from "@/components/MessageBubble";
 import { cn } from "@/lib/utils";
 import SettingsDialog from "@/components/SettingsDialog";
 import { useSettings } from "@/contexts/SettingsContext";
+import { Switch } from "@/components/ui/switch";
 
 interface Message {
   id: string;
@@ -55,7 +56,7 @@ interface RoomData {
 const ChatRoom = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const { user, profile } = useAuth();
-  const { soundEnabled } = useSettings();
+  const { soundEnabled, setSoundEnabled, vibrationEnabled, setVibrationEnabled, autoScroll, setAutoScroll } = useSettings();
   const navigate = useNavigate();
   const playSound = useNotificationSound();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -485,20 +486,56 @@ const ChatRoom = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="bottom" className="w-56 sm:w-64">
-            <DropdownMenuItem 
-              onClick={() => setSoundEnabled(!soundEnabled)} 
-              className="gap-3 p-3 sm:p-2"
-            >
-              {soundEnabled ? <Volume2 className="h-4 w-4 shrink-0" /> : <VolumeX className="h-4 w-4 shrink-0" />}
-              <span className="text-sm">Sound Toggle</span>
-            </DropdownMenuItem>
+            <div className="px-3 py-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  <span className="text-sm">Sound</span>
+                </div>
+                <Switch
+                  checked={soundEnabled}
+                  onCheckedChange={setSoundEnabled}
+                  className="data-[state=checked]:bg-primary"
+                />
+              </div>
+            </div>
+            <div className="px-3 py-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Smartphone className="h-4 w-4" />
+                  <span className="text-sm">Vibration</span>
+                </div>
+                <Switch
+                  checked={vibrationEnabled}
+                  onCheckedChange={setVibrationEnabled}
+                  className="data-[state=checked]:bg-primary"
+                />
+              </div>
+            </div>
+            <div className="px-3 py-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="h-4 w-4" />
+                  <span className="text-sm">Auto-scroll</span>
+                </div>
+                <Switch
+                  checked={autoScroll}
+                  onCheckedChange={setAutoScroll}
+                  className="data-[state=checked]:bg-primary"
+                />
+              </div>
+            </div>
             <DropdownMenuItem className="gap-3 p-3 sm:p-2">
               <ThemeToggle />
-              <span className="text-sm ml-2">Theme Toggle</span>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={copyInviteLink} className="gap-3 p-3 sm:p-2">
               <Link className="h-4 w-4 shrink-0" />
               <span className="text-sm">Invite Link</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="gap-3 p-3 sm:p-2">
+              <Settings className="h-4 w-4 shrink-0" />
+              <span className="text-sm">Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
