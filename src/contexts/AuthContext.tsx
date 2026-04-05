@@ -4,6 +4,8 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   signInAnonymously,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
 } from "firebase/auth";
 import { ref, set, onDisconnect, serverTimestamp as rtdbTimestamp } from "firebase/database";
@@ -18,8 +20,11 @@ interface AuthContextType {
   firebaseReady: boolean;
   needsName: boolean;
   setGuestName: (name: string) => Promise<void>;
+  updateProfile: (name: string, photoURL?: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInAsGuest: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -51,7 +56,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const presenceRef = ref(rtdb, `presence/${u.uid}`);
           set(presenceRef, { isOnline: true, lastSeen: rtdbTimestamp() });
           onDisconnect(presenceRef).set({ isOnline: false, lastSeen: rtdbTimestamp() });
-        } catch {}
+        } catch (error) {
+          console.error('Failed to set up presence:', error);
+        }
 
         // Save/load profile
         if (u.isAnonymous) {
@@ -62,14 +69,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setNeedsName(true);
             }
             setProfile(p);
-          } catch {
+          } catch (error) {
+            console.error('Failed to save/load profile:', error);
             setNeedsName(true);
           }
         } else {
           try {
             const p = await saveUserProfile(u);
             setProfile(p);
-          } catch {}
+          } catch (error) {
+            console.error('Failed to save authenticated user profile:', error);
+          }
         }
       } else {
         setProfile(null);
@@ -86,8 +96,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const p = await saveUserProfile(user, name);
       setProfile(p);
       setNeedsName(false);
-    } catch {
+    } catch (error) {
+      console.error('Failed to save guest name:', error);
       toast.error("Failed to save name");
+    }
+  };
+
+  const updateProfile = async (name: string, photoURL?: string) => {
+    if (!user) return;
+    try {
+      const p = await saveUserProfile(user, name, photoURL);
+      setProfile(p);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      toast.error("Failed to update profile");
     }
   };
 
@@ -101,13 +123,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (result.user) {
         await saveUserProfile(result.user);
       }
-    } catch (error: any) {
-      if (error.code === "auth/popup-closed-by-user") return;
-      if (error.code === "auth/unauthorized-domain") {
+    } catch (error: unknown) {
+      const firebaseError = error as { code?: string; message?: string };
+      if (firebaseError.code === "auth/popup-closed-by-user") return;
+      if (firebaseError.code === "auth/unauthorized-domain") {
         toast.error("This domain is not authorized for Google sign-in. Add it in Firebase Console → Authentication → Settings → Authorized domains.");
         return;
       }
-      toast.error(error.message || "Failed to sign in with Google");
+      toast.error(firebaseError.message || "Failed to sign in with Google");
     }
   };
 
@@ -118,8 +141,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     try {
       await signInAnonymously(auth);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to sign in as guest");
+    } catch (error: unknown) {
+      const firebaseError = error as { message?: string };
+      toast.error(firebaseError.message || "Failed to sign in as guest");
+    }
+  };
+
+  const signInWithEmail = async (email: string, password: string) => {
+    if (!firebaseReady) {
+      toast.error("Firebase not configured");
+      return;
+    }
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error: unknown) {
+      const firebaseError = error as { code?: string; message?: string };
+      if (firebaseError.code === "auth/user-not-found") {
+        toast.error("No account found with this email");
+      } else if (firebaseError.code === "auth/wrong-password") {
+        toast.error("Incorrect password");
+      } else if (firebaseError.code === "auth/invalid-email") {
+        toast.error("Invalid email address");
+      } else {
+        toast.error(firebaseError.message || "Failed to sign in with email");
+      }
+    }
+  };
+
+  const signUpWithEmail = async (email: string, password: string, name: string) => {
+    if (!firebaseReady) {
+      toast.error("Firebase not configured");
+      return;
+    }
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      if (result.user) {
+        // Save user profile with name
+        const p = await saveUserProfile(result.user, name);
+        setProfile(p);
+        toast.success("Account created successfully!");
+      }
+    } catch (error: unknown) {
+      const firebaseError = error as { code?: string; message?: string };
+      if (firebaseError.code === "auth/email-already-in-use") {
+        toast.error("An account with this email already exists");
+      } else if (firebaseError.code === "auth/weak-password") {
+        toast.error("Password should be at least 6 characters");
+      } else if (firebaseError.code === "auth/invalid-email") {
+        toast.error("Invalid email address");
+      } else {
+        toast.error(firebaseError.message || "Failed to create account");
+      }
     }
   };
 
@@ -128,13 +200,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const presenceRef = ref(rtdb, `presence/${user.uid}`);
         await set(presenceRef, { isOnline: false, lastSeen: rtdbTimestamp() });
-      } catch {}
+      } catch (error) {
+        console.error('Failed to update presence on sign out:', error);
+      }
     }
     await firebaseSignOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, firebaseReady, needsName, setGuestName, signInWithGoogle, signInAsGuest, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, firebaseReady, needsName, setGuestName, updateProfile, signInWithGoogle, signInAsGuest, signInWithEmail, signUpWithEmail, signOut }}>
       {children}
     </AuthContext.Provider>
   );

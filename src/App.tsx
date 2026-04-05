@@ -4,7 +4,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import GuestNameDialog from "@/components/GuestNameDialog";
+import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import EmailAuth from "./pages/EmailAuth";
 import Home from "./pages/Home";
 import ChatRoom from "./pages/ChatRoom";
 import JoinRoom from "./pages/JoinRoom";
@@ -33,7 +35,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AuthRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/home" replace />;
   return <>{children}</>;
 };
 
@@ -46,8 +48,10 @@ const AppRoutes = () => (
   <BrowserRouter>
     <GuestNamePrompt />
     <Routes>
+      <Route path="/" element={<Landing />} />
       <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-      <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+      <Route path="/email-auth" element={<AuthRoute><EmailAuth /></AuthRoute>} />
+      <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
       <Route path="/chat/:roomId" element={<ProtectedRoute><ChatRoom /></ProtectedRoute>} />
       <Route path="/join/:code" element={<JoinRoom />} />
       <Route path="*" element={<NotFound />} />

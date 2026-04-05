@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import ThemeToggle from "@/components/ThemeToggle";
 import { collection, query, where, getDocs, runTransaction, doc, arrayUnion, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
@@ -61,8 +62,9 @@ const JoinRoom = () => {
         });
 
         navigate(`/chat/${roomDoc.id}`);
-      } catch (error: any) {
-        toast.error(error.message || "Failed to join room");
+      } catch (error: unknown) {
+        const firebaseError = error as { message?: string };
+        toast.error(firebaseError.message || "Failed to join room");
         navigate("/");
       }
     };
@@ -71,7 +73,12 @@ const JoinRoom = () => {
   }, [code, user, loading, navigate]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center relative">
+      {/* Fixed Theme Toggle */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
+      
       <div className="flex gap-1">
         <div className="h-2 w-2 rounded-full bg-primary animate-pulse-dot" />
         <div className="h-2 w-2 rounded-full bg-primary animate-pulse-dot [animation-delay:0.2s]" />

@@ -1,4 +1,4 @@
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { db } from "./firebase";
 import { User } from "firebase/auth";
 
@@ -6,21 +6,22 @@ export interface UserProfile {
   name: string;
   photoURL: string;
   email: string;
-  createdAt: any;
+  createdAt: Timestamp;
 }
 
 const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/initials/svg?seed=";
 
-export const saveUserProfile = async (user: User, customName?: string) => {
+export const saveUserProfile = async (user: User, customName?: string, customPhotoURL?: string) => {
   const profileRef = doc(db, "users", user.uid);
   const existing = await getDoc(profileRef);
   
-  if (existing.exists() && !customName) return existing.data() as UserProfile;
+  if (existing.exists() && !customName && !customPhotoURL) return existing.data() as UserProfile;
 
   const name = customName || user.displayName || "Guest";
+  const photoURL = customPhotoURL || user.photoURL || `${DEFAULT_AVATAR}${encodeURIComponent(name)}`;
   const profile: UserProfile = {
     name,
-    photoURL: user.photoURL || `${DEFAULT_AVATAR}${encodeURIComponent(name)}`,
+    photoURL,
     email: user.email || "",
     createdAt: serverTimestamp(),
   };

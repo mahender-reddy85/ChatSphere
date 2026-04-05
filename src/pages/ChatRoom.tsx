@@ -161,7 +161,9 @@ const ChatRoom = () => {
         }
       });
       return () => unsubscribe();
-    } catch {}
+    } catch (error) {
+      console.error('Failed to set up typing listener:', error);
+    }
   }, [roomId, otherUid]);
 
   // Set typing status
@@ -170,7 +172,9 @@ const ChatRoom = () => {
       if (!roomId || !user || !isFirebaseConfigured()) return;
       try {
         set(ref(rtdb, `typing/${roomId}/${user.uid}`), { isTyping });
-      } catch {}
+      } catch (error) {
+        console.error('Failed to set typing status:', error);
+      }
     },
     [roomId, user]
   );
@@ -286,9 +290,9 @@ const ChatRoom = () => {
   const waitingForPartner = participantCount < 2;
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen max-h-screen flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border bg-card px-4 py-3">
+      <div className="flex items-center gap-3 bg-card px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -381,8 +385,8 @@ const ChatRoom = () => {
       </div>
 
       {/* Input */}
-      <div className="border-t border-border bg-card p-4">
-        <div className="flex items-center gap-2">
+      <div className="border-t border-border bg-card p-3 sm:p-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           <EmojiPicker onSelect={(emoji) => setNewMessage((prev) => prev + emoji)} />
           <div className="relative flex-1">
             <Input

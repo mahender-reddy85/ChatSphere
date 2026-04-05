@@ -1,10 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "@/components/ThemeToggle";
+import ProfileSettingsDialog from "@/components/ProfileSettingsDialog";
+import ProfilePictureDialog from "@/components/ProfilePictureDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import {
   collection,
@@ -26,14 +29,13 @@ import {
   Plus,
   LogIn,
   LogOut,
-  MessageSquare,
   Clock,
   Shield,
   Timer,
   User,
   ChevronRight,
-  Pencil,
-  Check,
+  Settings,
+  Copy,
 } from "lucide-react";
 
 const generateInviteCode = () => {
@@ -51,7 +53,7 @@ interface RoomListItem {
   participants: string[];
   isFull: boolean;
   lastMessage: string | null;
-  updatedAt: any;
+  updatedAt: Timestamp;
   chatMode?: "permanent" | "temporary";
   lastReadAt?: Record<string, Timestamp>;
 }
@@ -64,11 +66,9 @@ const Home = () => {
   const [joining, setJoining] = useState(false);
   const [rooms, setRooms] = useState<RoomListItem[]>([]);
   const [chatMode, setChatMode] = useState<"permanent" | "temporary">("permanent");
-  const [showProfile, setShowProfile] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
-  const [editingName, setEditingName] = useState(false);
-  const [newName, setNewName] = useState("");
-  const nameInputRef = useRef<HTMLInputElement>(null);
+  const [profileSettingsOpen, setProfileSettingsOpen] = useState(false);
+  const [profilePictureOpen, setProfilePictureOpen] = useState(false);
 
   // Load user's rooms
   useEffect(() => {
@@ -186,23 +186,11 @@ const Home = () => {
       });
 
       navigate(`/chat/${roomDoc.id}`);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to join room");
+    } catch (error: unknown) {
+      const firebaseError = error as { message?: string };
+      toast.error(firebaseError.message || "Failed to join room");
     } finally {
       setJoining(false);
-    }
-  };
-
-  const handleSaveName = async () => {
-    if (!user || !newName.trim()) return;
-    try {
-      await setDoc(doc(db, "users", user.uid), { name: newName.trim() }, { merge: true });
-      toast.success("Name updated!");
-      setEditingName(false);
-      // Update local profile via context
-      window.location.reload();
-    } catch {
-      toast.error("Failed to update name");
     }
   };
 
@@ -210,93 +198,108 @@ const Home = () => {
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="flex min-h-screen flex-col items-center p-4 pt-8">
+    <div className="flex min-h-screen flex-col items-center justify-center p-4 pt-8">
       <div className="w-full max-w-md space-y-5 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MessageSquare className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold text-foreground">ChatSphere</h1>
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <button
-              onClick={() => setShowProfile(!showProfile)}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold"
-            >
-              {user?.photoURL ? (
-                <img src={user.photoURL} alt="" className="h-8 w-8 rounded-full" />
-              ) : (
-                avatarLetter
-              )}
-            </button>
-            <Button variant="ghost" size="icon" onClick={signOut}>
-              <LogOut className="h-4 w-4" />
-            </Button>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:opacity-80 transition-opacity"
+                  >
+                    {profile?.photoURL ? (
+                      <img src={profile.photoURL} alt="" className="h-8 w-8 rounded-full" />
+                    ) : (
+                      avatarLetter
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 max-w-[calc(100vw-2rem)]">
+                  {/* User Details Section */}
+                  <div className="px-2 py-3 border-b">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProfilePictureOpen(true);
+                        }}>
+                        {profile?.photoURL ? (
+                          <img src={profile.photoURL} alt="" className="h-10 w-10 rounded-full" />
+                        ) : (
+                          avatarLetter
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div>
+                          <p className="font-medium text-sm truncate">{displayName}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {user?.email || (user?.isAnonymous ? "Guest" : "No email")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Icons section */}
+                  <div className="px-2 py-2">
+                    <div className="flex items-center justify-center gap-2">
+                      {user?.isAnonymous ? (
+                        <>
+                          <DropdownMenuItem 
+                            className="p-2 cursor-pointer" 
+                            onSelect={(e) => e.preventDefault()}
+                            asChild
+                          >
+                            <ThemeToggle />
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={signOut} className="p-2 cursor-pointer">
+                            <LogOut className="h-4 w-4" />
+                          </DropdownMenuItem>
+                        </>
+                      ) : (
+                        <>
+                          <DropdownMenuItem onClick={() => setProfileSettingsOpen(true)} className="p-2 cursor-pointer">
+                            <Settings className="h-4 w-4" />
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="p-2 cursor-pointer" 
+                            onSelect={(e) => e.preventDefault()}
+                            asChild
+                          >
+                            <ThemeToggle />
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={signOut} className="p-2 cursor-pointer">
+                            <LogOut className="h-4 w-4" />
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center gap-2 ml-4">
+                <ThemeToggle />
+                <Button
+                  onClick={() => navigate('/auth')}
+                  size="sm"
+                  className="px-1.5"
+                >
+                  Sign In
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Profile card */}
-        {showProfile && (
-          <Card className="animate-fade-in">
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground text-lg font-bold">
-                {user?.photoURL ? (
-                  <img src={user.photoURL} alt="" className="h-12 w-12 rounded-full" />
-                ) : (
-                  avatarLetter
-                )}
-              </div>
-              <div className="flex-1">
-                {editingName ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      ref={nameInputRef}
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      className="h-7 text-sm"
-                      maxLength={30}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleSaveName();
-                        } else if (e.key === "Escape") {
-                          setEditingName(false);
-                        }
-                      }}
-                    />
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSaveName}>
-                      <Check className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5">
-                    <p className="font-semibold text-foreground">{displayName}</p>
-                    <button
-                      onClick={() => {
-                        setNewName(displayName);
-                        setEditingName(true);
-                        setTimeout(() => nameInputRef.current?.focus(), 50);
-                      }}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  {user?.email || (user?.isAnonymous ? "Anonymous Guest" : "No email")}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  UID: {user?.uid?.slice(0, 8)}...
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Create Room */}
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 text-center">
             <CardTitle className="text-lg">Create a Room</CardTitle>
             <CardDescription>Start a private 1:1 conversation</CardDescription>
           </CardHeader>
@@ -340,7 +343,7 @@ const Home = () => {
 
         {/* Join Room */}
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 text-center">
             <CardTitle className="text-lg">Join a Room</CardTitle>
             <CardDescription>Enter an invite code to join</CardDescription>
           </CardHeader>
@@ -370,7 +373,7 @@ const Home = () => {
         {rooms.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
+              <CardTitle className="text-lg flex items-center justify-center gap-2">
                 <Clock className="h-4 w-4" />
                 Recent Chats
               </CardTitle>
@@ -383,7 +386,7 @@ const Home = () => {
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-accent"
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary">
-                    <MessageSquare className="h-4 w-4 text-secondary-foreground" />
+                    <div className="h-4 w-4 rounded-full bg-primary"></div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -415,6 +418,19 @@ const Home = () => {
           </Card>
         )}
       </div>
+      
+      {/* Profile Settings Dialog */}
+      <ProfileSettingsDialog 
+        open={profileSettingsOpen} 
+        onOpenChange={setProfileSettingsOpen} 
+        onProfilePictureClick={() => setProfilePictureOpen(true)}
+      />
+      
+      {/* Profile Picture Dialog */}
+      <ProfilePictureDialog 
+        open={profilePictureOpen} 
+        onOpenChange={setProfilePictureOpen} 
+      />
     </div>
   );
 };
