@@ -10,7 +10,8 @@ import ChatRoom from "./pages/ChatRoom";
 import JoinRoom from "./pages/JoinRoom";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();\n
+const queryClient = new QueryClient();
+
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
