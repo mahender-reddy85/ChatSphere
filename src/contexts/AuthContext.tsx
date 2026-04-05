@@ -51,11 +51,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {
-        // Set up presence
+        // Set up presence with heartbeat and focus handling
         try {
           const presenceRef = ref(rtdb, `presence/${u.uid}`);
+          
+          // Initial presence
           set(presenceRef, { isOnline: true, lastSeen: rtdbTimestamp() });
+          
+          // Handle disconnection
           onDisconnect(presenceRef).set({ isOnline: false, lastSeen: rtdbTimestamp() });
+          
+          // Handle focus/blur events
+          const handleFocus = () => {
+            set(presenceRef, { isOnline: true, lastSeen: rtdbTimestamp() });
+          };
+          
+          const handleBlur = () => {
+            set(presenceRef, { isOnline: false, lastSeen: rtdbTimestamp() });
+          };
+          
+          // Add event listeners
+          window.addEventListener('focus', handleFocus);
+          window.addEventListener('blur', handleBlur);
+          
+          // Set up periodic heartbeat (every 30 seconds)
+          const heartbeatInterval = setInterval(() => {
+            if (document.hasFocus()) {
+              set(presenceRef, { isOnline: true, lastSeen: rtdbTimestamp() });
+            }
+          }, 30000);
+          
+          // Cleanup on page unload
+          const cleanup = () => {
+            window.removeEventListener('focus', handleFocus);
+            window.removeEventListener('blur', handleBlur);
+            clearInterval(heartbeatInterval);
+            // Set offline when leaving page
+            set(presenceRef, { isOnline: false, lastSeen: rtdbTimestamp() });
+          };
+          
+          window.addEventListener('beforeunload', cleanup);
         } catch (error) {
           console.error('Failed to set up presence:', error);
         }

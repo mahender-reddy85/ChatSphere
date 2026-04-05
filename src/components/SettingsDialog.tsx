@@ -10,14 +10,18 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useSettings } from "@/contexts/SettingsContext";
-import { Volume2, VolumeX, Vibrate, Smartphone, ArrowUpDown } from "lucide-react";
+import { Volume2, VolumeX, Vibrate, Smartphone, ArrowUpDown, Trash2 } from "lucide-react";
+import { collection, getDocs, writeBatch, deleteDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { toast } from "sonner";
 
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  roomId?: string;
 }
 
-const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
+const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => {
   const { 
     soundEnabled, 
     setSoundEnabled, 
@@ -26,6 +30,46 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
     autoScroll,
     setAutoScroll
   } = useSettings();
+
+  const handleClearChat = async () => {
+    if (!roomId) {
+      toast.error("Cannot clear chat: Room not found");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to clear all messages in this chat? This action cannot be undone."
+    );
+    
+    if (confirmed) {
+      try {
+        // Get all messages in the room
+        const messagesRef = collection(db, "rooms", roomId, "messages");
+        const messagesSnap = await getDocs(messagesRef);
+        
+        if (messagesSnap.empty) {
+          toast.info("No messages to clear");
+          return;
+        }
+
+        // Delete all messages in a batch
+        const batch = writeBatch(db);
+        messagesSnap.docs.forEach((doc) => {
+          batch.delete(doc.ref);
+        });
+        
+        await batch.commit();
+        toast.success(`Cleared ${messagesSnap.docs.length} messages`);
+        onOpenChange(false);
+        
+        // Trigger a page reload to refresh the chat
+        window.location.reload();
+      } catch (error) {
+        console.error("Failed to clear chat:", error);
+        toast.error("Failed to clear chat");
+      }
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -96,6 +140,31 @@ const SettingsDialog = ({ open, onOpenChange }: SettingsDialogProps) => {
                 checked={autoScroll}
                 onCheckedChange={setAutoScroll}
               />
+            </div>
+          </div>
+
+          {/* Clear Chat Section */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium flex items-center gap-2">
+              <Trash2 className="h-4 w-4" />
+              Clear Chat
+            </h3>
+            
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Clear Messages</Label>
+                <p className="text-xs text-muted-foreground">
+                  Delete all messages in this chat
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleClearChat}
+                className="px-3"
+              >
+                Clear
+              </Button>
             </div>
           </div>
         </div>

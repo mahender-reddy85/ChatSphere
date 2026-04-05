@@ -402,7 +402,7 @@ const ChatRoom = () => {
               <Settings className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 sm:w-56">
+          <DropdownMenuContent align="end" side="bottom" className="w-48 sm:w-56">
             <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="gap-3 p-3 sm:p-2">
               <Settings className="h-4 w-4 shrink-0" />
               <span className="text-sm">Sound {soundEnabled ? 'On' : 'Off'}</span>
@@ -537,7 +537,7 @@ const ChatRoom = () => {
       </div>
       
       {/* Settings Dialog */}
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} roomId={roomId} />
     </div>
   );
 };
