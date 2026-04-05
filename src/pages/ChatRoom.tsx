@@ -384,14 +384,21 @@ const ChatRoom = () => {
       <div className="border-t border-border bg-card p-4">
         <div className="flex items-center gap-2">
           <EmojiPicker onSelect={(emoji) => setNewMessage((prev) => prev + emoji)} />
-          <Input
-            placeholder={waitingForPartner ? "Waiting for partner..." : "Type a message..."}
-            value={newMessage}
-            onChange={handleInputChange}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            className="flex-1"
-            disabled={waitingForPartner}
-          />
+          <div className="relative flex-1">
+            <Input
+              placeholder={waitingForPartner ? "Waiting for partner..." : "Type a message..."}
+              value={newMessage}
+              onChange={handleInputChange}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              disabled={waitingForPartner}
+              maxLength={MAX_MESSAGE_LENGTH}
+            />
+            {newMessage.length > MAX_MESSAGE_LENGTH * 0.8 && (
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
+                {newMessage.length}/{MAX_MESSAGE_LENGTH}
+              </span>
+            )}
+          </div>
           <Button onClick={handleSend} size="icon" disabled={!newMessage.trim() || sending || waitingForPartner}>
             <Send className="h-4 w-4" />
           </Button>
