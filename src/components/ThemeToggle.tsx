@@ -28,7 +28,14 @@ const ThemeToggle = () => {
         ['Enter', ' '].includes((e as React.KeyboardEvent).key))
     ) {
       e.preventDefault();
-      e.stopPropagation();
+      // More robust stop propagation with proper typing
+      const mouseEvent = e as React.MouseEvent;
+      if (mouseEvent.stopPropagation) {
+        mouseEvent.stopPropagation();
+      }
+      if (mouseEvent.nativeEvent?.stopImmediatePropagation) {
+        mouseEvent.nativeEvent.stopImmediatePropagation();
+      }
       setTheme(theme === "dark" ? "light" : "dark");
     }
   };
