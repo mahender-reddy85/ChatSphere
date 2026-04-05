@@ -52,21 +52,46 @@ const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => 
           return;
         }
 
-        // Delete all messages in a batch
-        const batch = writeBatch(db);
-        messagesSnap.docs.forEach((doc) => {
-          batch.delete(doc.ref);
-        });
+        const totalMessages = messagesSnap.docs.length;
+        let clearedCount = 0;
         
-        await batch.commit();
-        toast.success(`Cleared ${messagesSnap.docs.length} messages`);
+        // Process messages in smaller batches to avoid quota limits
+        const batchSize = 400; // Firestore limit is 500 operations per batch
+        for (let i = 0; i < messagesSnap.docs.length; i += batchSize) {
+          const batch = writeBatch(db);
+          const batchMessages = messagesSnap.docs.slice(i, i + batchSize);
+          
+          batchMessages.forEach((doc) => {
+            batch.delete(doc.ref);
+          });
+          
+          await batch.commit();
+          clearedCount += batchMessages.length;
+          
+          // Show progress for large clears
+          if (totalMessages > 500) {
+            toast.info(`Cleared ${clearedCount}/${totalMessages} messages...`);
+          }
+          
+          // Small delay between batches to avoid rate limiting
+          if (i + batchSize < messagesSnap.docs.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        }
+        
+        toast.success(`Cleared all ${totalMessages} messages`);
         onOpenChange(false);
         
         // Trigger a page reload to refresh the chat
         window.location.reload();
       } catch (error) {
         console.error("Failed to clear chat:", error);
-        toast.error("Failed to clear chat");
+        
+        if (error.message?.includes('quota')) {
+          toast.error("Too many messages to clear at once. Please try again later.");
+        } else {
+          toast.error("Failed to clear chat");
+        }
       }
     }
   };
@@ -103,6 +128,7 @@ const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => 
                 id="sound"
                 checked={soundEnabled}
                 onCheckedChange={setSoundEnabled}
+                className="data-[state=checked]:bg-primary"
               />
             </div>
             
@@ -117,6 +143,7 @@ const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => 
                 id="vibration"
                 checked={vibrationEnabled}
                 onCheckedChange={setVibrationEnabled}
+                className="data-[state=checked]:bg-primary"
               />
             </div>
           </div>
@@ -139,6 +166,7 @@ const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => 
                 id="autoscroll"
                 checked={autoScroll}
                 onCheckedChange={setAutoScroll}
+                className="data-[state=checked]:bg-primary"
               />
             </div>
           </div>

@@ -65,6 +65,7 @@ const ChatRoom = () => {
   const [otherTyping, setOtherTyping] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [messageVisibility, setMessageVisibility] = useState<Record<string, { showAvatar: boolean; showName: boolean }>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
@@ -127,24 +128,32 @@ const ChatRoom = () => {
       orderBy("createdAt", "asc")
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs: Message[] = snapshot.docs.map((d) => ({
-        id: d.id,
-        status: "sent" as MessageStatus,
-        ...d.data(),
-      })) as Message[];
-      
-      // Play sound for new incoming messages
-      if (msgs.length > prevMsgCountRef.current && prevMsgCountRef.current > 0) {
-        const lastMsg = msgs[msgs.length - 1];
-        if (lastMsg && lastMsg.senderId !== user?.uid) {
-          playSound();
+      const msgs = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        const msgData = { id: doc.id, ...data } as Message;
+        
+        // Update visibility tracking for new messages
+        if (!messageVisibility[msgData.senderId]) {
+          setMessageVisibility(prev => ({
+            ...prev,
+            [msgData.senderId]: { showAvatar: true, showName: true }
+          }));
         }
+        
+        return msgData;
+      });
+      
+      // Play notification for new messages (not sent by current user)
+      const lastMsg = msgs[msgs.length - 1];
+      if (lastMsg && lastMsg.senderId !== user?.uid) {
+        playSound();
       }
+      
       prevMsgCountRef.current = msgs.length;
       setMessages(msgs);
     });
     return unsubscribe;
-  }, [roomId, user?.uid, playSound]);
+  }, [roomId, user?.uid, playSound, messageVisibility]);
 
   // Mark messages as seen + update lastReadAt
   useEffect(() => {
@@ -472,19 +481,26 @@ const ChatRoom = () => {
             </div>
           </div>
         )}
-        {messages.map((msg) => (
-          <MessageBubble
-            key={msg.id}
-            text={msg.text}
-            senderId={msg.senderId}
-            currentUserId={user.uid}
-            senderName={msg.senderName}
-            senderPhoto={msg.senderPhoto}
-            createdAt={msg.createdAt}
-            status={msg.status}
-            showStatus={true}
-          />
-        ))}
+        {messages.map((msg, index) => {
+          const visibility = messageVisibility[msg.senderId] || { showAvatar: true, showName: true };
+          const isFirstFromSender = index === 0 || messages[index - 1]?.senderId !== msg.senderId;
+          
+          return (
+            <MessageBubble
+              key={msg.id}
+              text={msg.text}
+              senderId={msg.senderId}
+              currentUserId={user.uid}
+              senderName={msg.senderName}
+              senderPhoto={msg.senderPhoto}
+              createdAt={msg.createdAt}
+              status={msg.status}
+              showStatus={true}
+              showAvatar={isFirstFromSender ? visibility.showAvatar : false}
+              showName={isFirstFromSender ? visibility.showName : false}
+            />
+          );
+        })}
         <TypingIndicator visible={otherTyping} />
         <div ref={messagesEndRef} />
         

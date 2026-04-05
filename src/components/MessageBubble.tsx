@@ -14,6 +14,8 @@ interface MessageBubbleProps {
   createdAt: Timestamp | null;
   status?: MessageStatus;
   showStatus?: boolean;
+  showAvatar?: boolean;
+  showName?: boolean;
 }
 
 const StatusIcon = ({ status }: { status: MessageStatus }) => {
@@ -36,6 +38,8 @@ const MessageBubble = ({
   createdAt,
   status = "sent",
   showStatus = false,
+  showAvatar = true,
+  showName = true,
 }: MessageBubbleProps) => {
   const isSent = senderId === currentUserId;
   const time = createdAt ? format(createdAt.toDate(), "HH:mm") : "";
@@ -44,7 +48,7 @@ const MessageBubble = ({
 
   return (
     <div className={cn("flex animate-fade-in gap-2 slide-in-up", isSent ? "justify-end" : "justify-start")}>
-      {!isSent && (
+      {!isSent && showAvatar && (
         <img
           src={avatarUrl}
           alt={senderName || "User"}
@@ -52,7 +56,7 @@ const MessageBubble = ({
         />
       )}
       <div className="max-w-[85%] sm:max-w-[75%]">
-        {!isSent && senderName && (
+        {!isSent && showName && senderName && (
           <p className="text-[10px] sm:text-[10px] text-muted-foreground mb-0.5 ml-1">{senderName}</p>
         )}
         <div
