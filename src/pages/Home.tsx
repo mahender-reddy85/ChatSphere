@@ -120,6 +120,7 @@ const Home = () => {
     
     try {
       const inviteCode = generateInviteCode();
+      console.log("Creating room with invite code:", inviteCode);
       
       // Create room
       const roomRef = await addDoc(collection(db, "rooms"), {
@@ -133,6 +134,8 @@ const Home = () => {
         autoDeleteMinutes: chatMode === "temporary" ? 30 : null,
       });
       
+      console.log("Room created successfully with ID:", roomRef.id);
+      
       toast.success("Room created!", {
         description: `Invite code: ${inviteCode}`,
         action: {
@@ -141,6 +144,7 @@ const Home = () => {
         },
       });
       
+      console.log("Navigating to chat room...");
       navigate(`/chat/${roomRef.id}`);
     } catch (error) {
       console.error("Room creation error:", error);
