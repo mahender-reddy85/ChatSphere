@@ -32,6 +32,8 @@ import {
   Timer,
   User,
   ChevronRight,
+  Pencil,
+  Check,
 } from "lucide-react";
 
 const generateInviteCode = () => {
