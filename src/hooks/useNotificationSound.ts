@@ -44,7 +44,8 @@ const useNotificationSound = () => {
     try {
       // Create audio context on first user interaction
       if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        audioCtxRef.current = new AudioContextClass();
       }
       
       const ctx = audioCtxRef.current;
