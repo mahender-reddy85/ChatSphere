@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePresence } from "@/hooks/usePresence";
 import useNotificationSound from "@/hooks/useNotificationSound";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import MessageBubble from "@/components/MessageBubble";
 import TypingIndicator from "@/components/TypingIndicator";
@@ -181,14 +181,14 @@ const ChatRoom = () => {
     [roomId, user]
   );
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value.length > MAX_MESSAGE_LENGTH) return;
     setNewMessage(value);
@@ -421,15 +421,14 @@ const ChatRoom = () => {
       <div className="border-t border-border bg-card p-3 sm:p-4 mobile-no-zoom mobile-safe-area">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="relative flex-1">
-            <Textarea
+            <Input
               placeholder={waitingForPartner ? "Waiting for partner..." : "Type a message..."}
               value={newMessage}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               disabled={waitingForPartner}
               maxLength={MAX_MESSAGE_LENGTH}
-              className="text-base sm:text-sm min-h-[40px] max-h-32 resize-none overflow-y-auto mobile-no-zoom"
-              rows={1}
+              className="text-base sm:text-sm mobile-no-zoom"
             />
             {newMessage.length > MAX_MESSAGE_LENGTH * 0.8 && (
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
