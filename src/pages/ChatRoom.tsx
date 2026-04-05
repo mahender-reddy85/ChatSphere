@@ -477,17 +477,32 @@ const ChatRoom = () => {
           </div>
         </div>
         
-        {/* Settings button with dropdown */}
+        {/* Settings button only */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="mobile-touch-target">
               <Settings className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="bottom" className="w-48 sm:w-56">
+          <DropdownMenuContent align="end" side="bottom" className="w-56 sm:w-64">
+            <DropdownMenuItem 
+              onClick={() => setSoundEnabled(!soundEnabled)} 
+              className="gap-3 p-3 sm:p-2"
+            >
+              {soundEnabled ? <Volume2 className="h-4 w-4 shrink-0" /> : <VolumeX className="h-4 w-4 shrink-0" />}
+              <span className="text-sm">Sound Toggle</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="gap-3 p-3 sm:p-2">
+              <ThemeToggle />
+              <span className="text-sm ml-2">Theme Toggle</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="gap-3 p-3 sm:p-2">
+              <Settings className="h-4 w-4 shrink-0" />
+              <span className="text-sm">Settings</span>
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={copyInviteLink} className="gap-3 p-3 sm:p-2">
               <Link className="h-4 w-4 shrink-0" />
-              <span className="text-sm">Copy Invite Link</span>
+              <span className="text-sm">Invite Link</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
@@ -497,7 +512,6 @@ const ChatRoom = () => {
               <Trash2 className="h-4 w-4 shrink-0" />
               <span className="text-sm">Delete Room</span>
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem 
               onClick={handleLeaveRoom} 
               className="gap-3 p-3 sm:p-2 text-destructive focus:text-destructive"
