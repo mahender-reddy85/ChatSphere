@@ -1,11 +1,34 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { useSettings } from "@/contexts/SettingsContext";
 
 const useNotificationSound = () => {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const { soundEnabled, vibrationEnabled } = useSettings();
+  const hasInteracted = useRef(false);
+
+  // Set up user interaction detection
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      hasInteracted.current = true;
+    };
+
+    // Listen for user interactions
+    const events = ['click', 'keydown', 'touchstart', 'mousedown'];
+    events.forEach(event => {
+      document.addEventListener(event, handleUserInteraction, { once: true });
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserInteraction);
+      });
+    };
+  }, []);
 
   const play = useCallback(() => {
+    // Only play if user has interacted with the page
+    if (!hasInteracted.current) return;
+
     // Vibration for mobile devices
     if (vibrationEnabled && 'vibrate' in navigator) {
       try {
@@ -19,9 +42,11 @@ const useNotificationSound = () => {
     if (!soundEnabled) return;
 
     try {
+      // Create audio context on first user interaction
       if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioContext();
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
+      
       const ctx = audioCtxRef.current;
       const oscillator = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -41,7 +66,7 @@ const useNotificationSound = () => {
     } catch {
       // Audio not available
     }
-  }, [soundEnabled, vibrationEnabled]);
+  }, [soundEnabled, vibrationEnabled, hasInteracted]);
 
   return play;
 };

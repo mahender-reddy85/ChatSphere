@@ -36,16 +36,15 @@ const ThemeToggle = () => {
   return (
     <Button
       variant="ghost"
-      size="icon"
       onClick={handleToggle}
       onKeyDown={handleToggle}
       title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-      className="cursor-pointer focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      className="flex items-center gap-2 h-9 px-3 py-2 text-sm cursor-pointer focus:ring-2 focus:ring-ring focus:ring-offset-2"
       type="button"
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
     >
       {theme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
-      <span className="text-sm ml-2">Theme</span>
+      <span>Theme</span>
     </Button>
   );
 };

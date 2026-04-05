@@ -118,8 +118,17 @@ const Home = () => {
   const handleCreateRoom = async () => {
     if (!user) return;
     setCreating(true);
+    
+    // Add timeout to prevent hanging
+    const timeoutId = setTimeout(() => {
+      setCreating(false);
+      toast.error("Room creation timed out. Please try again.");
+    }, 10000); // 10 second timeout
+    
     try {
       const inviteCode = generateInviteCode();
+      
+      // Create room with minimal data first, then update
       const roomRef = await addDoc(collection(db, "rooms"), {
         inviteCode,
         participants: [user.uid],
@@ -131,6 +140,9 @@ const Home = () => {
         chatMode,
         autoDeleteMinutes: chatMode === "temporary" ? 30 : null,
       });
+      
+      clearTimeout(timeoutId);
+      
       toast.success("Room created!", {
         description: `Invite code: ${inviteCode}`,
         action: {
@@ -138,9 +150,22 @@ const Home = () => {
           onClick: () => navigator.clipboard.writeText(inviteCode),
         },
       });
+      
       navigate(`/chat/${roomRef.id}`);
     } catch (error) {
-      toast.error("Failed to create room");
+      clearTimeout(timeoutId);
+      console.error("Room creation error:", error);
+      
+      // Provide more specific error messages
+      if (error.message?.includes('quota')) {
+        toast.error("Service temporarily unavailable. Please try again in a few minutes.");
+      } else if (error.message?.includes('permission')) {
+        toast.error("Permission denied. Please check your account.");
+      } else if (error.message?.includes('network')) {
+        toast.error("Network error. Please check your connection.");
+      } else {
+        toast.error("Failed to create room. Please try again.");
+      }
     } finally {
       setCreating(false);
     }

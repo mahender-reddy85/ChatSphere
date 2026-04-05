@@ -117,10 +117,10 @@ const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => 
               Notifications
             </h3>
             
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="sound">Sound</Label>
-                <p className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between py-2">
+              <div className="flex-1 mr-4">
+                <Label htmlFor="sound" className="text-sm font-medium">Sound</Label>
+                <p className="text-xs text-muted-foreground mt-1">
                   Play sound for new messages
                 </p>
               </div>
@@ -132,10 +132,10 @@ const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => 
               />
             </div>
             
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="vibration">Vibration</Label>
-                <p className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between py-2">
+              <div className="flex-1 mr-4">
+                <Label htmlFor="vibration" className="text-sm font-medium">Vibration</Label>
+                <p className="text-xs text-muted-foreground mt-1">
                   Vibrate on new messages (mobile)
                 </p>
               </div>
@@ -155,10 +155,10 @@ const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => 
               Chat Behavior
             </h3>
             
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="autoscroll">Auto-scroll</Label>
-                <p className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between py-2">
+              <div className="flex-1 mr-4">
+                <Label htmlFor="autoscroll" className="text-sm font-medium">Auto-scroll</Label>
+                <p className="text-xs text-muted-foreground mt-1">
                   Automatically scroll to new messages
                 </p>
               </div>
@@ -172,29 +172,31 @@ const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => 
           </div>
 
           {/* Clear Chat Section */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium flex items-center gap-2">
-              <Trash2 className="h-4 w-4" />
-              Clear Chat
-            </h3>
-            
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Clear Messages</Label>
-                <p className="text-xs text-muted-foreground">
-                  Delete all messages in this chat
-                </p>
+          {roomId && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium flex items-center gap-2">
+                <Trash2 className="h-4 w-4" />
+                Clear Chat
+              </h3>
+              
+              <div className="flex items-center justify-between py-2">
+                <div className="flex-1 mr-4">
+                  <Label className="text-sm font-medium">Clear Messages</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Delete all messages in this chat
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleClearChat}
+                  className="px-4 py-2"
+                >
+                  Clear
+                </Button>
               </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleClearChat}
-                className="px-3"
-              >
-                Clear
-              </Button>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="flex justify-center pt-4">
