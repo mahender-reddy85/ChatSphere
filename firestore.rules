@@ -27,7 +27,9 @@ service cloud.firestore {
         request.resource.data.participants.size() == 1 &&
         request.resource.data.participants[0] == request.auth.uid &&
         request.resource.data.inviteCode is string &&
-        request.resource.data.inviteCode.size() > 0;
+        request.resource.data.inviteCode.size() > 0 &&
+        request.resource.data.allowJoin == true &&
+        request.resource.data.createdAt == request.resource.data.createdAt;
 
       // UPDATE: allow existing participants to update OR new users to join
       allow update: if request.auth != null &&
