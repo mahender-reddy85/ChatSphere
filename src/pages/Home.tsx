@@ -118,34 +118,20 @@ const Home = () => {
     if (!user) return;
     setCreating(true);
     
-    // Add timeout to prevent hanging
-    let timeoutId: NodeJS.Timeout;
-    const timeoutPromise = new Promise((_, reject) => {
-      timeoutId = setTimeout(() => {
-        setCreating(false);
-        reject(new Error("Room creation timed out. Please try again."));
-      }, 10000); // 10 second timeout
-    });
-    
     try {
       const inviteCode = generateInviteCode();
       
-      // Create room with minimal data first, then update
-      const roomRef = await Promise.race([
-        addDoc(collection(db, "rooms"), {
-          inviteCode,
-          participants: [user.uid],
-          allowJoin: true,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          lastMessage: null,
-          chatMode,
-          autoDeleteMinutes: chatMode === "temporary" ? 30 : null,
-        }),
-        timeoutPromise
-      ]);
-      
-      clearTimeout(timeoutId);
+      // Create room
+      const roomRef = await addDoc(collection(db, "rooms"), {
+        inviteCode,
+        participants: [user.uid],
+        allowJoin: true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        lastMessage: null,
+        chatMode,
+        autoDeleteMinutes: chatMode === "temporary" ? 30 : null,
+      });
       
       toast.success("Room created!", {
         description: `Invite code: ${inviteCode}`,
@@ -157,7 +143,6 @@ const Home = () => {
       
       navigate(`/chat/${roomRef.id}`);
     } catch (error) {
-      clearTimeout(timeoutId);
       console.error("Room creation error:", error);
       
       // Provide more specific error messages
