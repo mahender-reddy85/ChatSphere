@@ -19,6 +19,7 @@ import {
   serverTimestamp,
   query,
   orderBy,
+  limit,
   updateDoc,
   deleteDoc,
   getDocs,
@@ -28,7 +29,7 @@ import {
   arrayRemove,
 } from "firebase/firestore";
 import { ref, set, onValue } from "firebase/database";
-import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
+import { db, rtdb, isFirebaseConfigured, auth } from "@/lib/firebase";
 import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, DoorOpen, Settings, QrCode, Trash2, ArrowUp, Volume2, VolumeX, Smartphone, ArrowUpDown } from "lucide-react";
 import { MessageStatus } from "@/components/MessageBubble";
 import { cn } from "@/lib/utils";
@@ -107,73 +108,43 @@ const ChatRoom = () => {
 
   // Listen to room data
   useEffect(() => {
-    // ⚠️ VERY IMPORTANT: Proper guard to prevent permission denied
-    if (!roomId || !user) {
-      console.log("❌ Room listener blocked - missing data:", { roomId, user: !!user });
-      return;
-    }
-    
-    console.log("✅ Attaching room listener for:", roomId);
-    
-    const unsubscribe = onSnapshot(doc(db, "rooms", roomId), (snapshot) => {
+    if (!roomId || !auth.currentUser) return;
+    console.log("ATTACHING ROOM LISTENER");
+    const unsub = onSnapshot(doc(db, "rooms", roomId), (snapshot) => {
+      console.log("ROOM SNAPSHOT TRIGGERED");
       if (snapshot.exists()) {
         const roomData = snapshot.data() as RoomData;
-        
-        // 🔧 CRITICAL: Verify user is participant before processing
         if (!roomData.participants.includes(user.uid)) {
-          console.error("❌ User not in room participants - detaching listener");
-          unsubscribe();
+          console.error("❌ User not in room participants");
           navigate("/");
           return;
         }
-        
         setRoom(roomData);
-        console.log("✅ Room data loaded, user confirmed as participant");
       } else {
         toast.error("Room not found");
         navigate("/");
       }
-    }, (error) => {
-      console.error("🔥 Room listener error:", error);
-      if (error.code === 'permission-denied') {
-        toast.error("Access denied - you may not be in this room");
-        navigate("/");
-      }
     });
-    
     return () => {
-      console.log("🧹 Cleaning up room listener");
-      unsubscribe();
+      console.log("CLEANING ROOM LISTENER");
+      unsub();
     };
-  }, [roomId, user, navigate]);
+  }, [roomId]);
 
   // Listen to messages
   useEffect(() => {
-    // ⚠️ VERY IMPORTANT: Proper guard to prevent permission denied
-    if (!roomId || !user || !room) {
-      console.log("❌ Messages listener blocked - missing data:", { roomId, user: !!user, room: !!room });
-      return;
-    }
-    
-    // 🔧 CRITICAL: Only attach if user is confirmed participant
-    if (!room.participants.includes(user.uid)) {
-      console.error("❌ User not in room participants - blocking messages listener");
-      return;
-    }
-    
-    console.log("✅ Attaching messages listener for:", roomId);
-    
+    if (!roomId || !auth.currentUser) return;
+    console.log("ATTACHING MESSAGES LISTENER");
     const q = query(
       collection(db, "rooms", roomId, "messages"),
-      orderBy("createdAt", "asc")
+      orderBy("createdAt"),
+      limit(50) // 🔧 REDUCE LOAD - limit to 50 messages
     );
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsub = onSnapshot(q, (snapshot) => {
+      console.log("MESSAGES SNAPSHOT TRIGGERED");
       const msgs = snapshot.docs.map((doc) => {
         const data = doc.data();
         const msgData = { id: doc.id, ...data } as Message;
-        
-        // Update visibility tracking for new messages
         if (!messageVisibility[msgData.senderId]) {
           setMessageVisibility(prev => ({
             ...prev,
@@ -182,29 +153,17 @@ const ChatRoom = () => {
         }
         return msgData;
       });
-      
       setMessages(msgs);
-      console.log("✅ Messages loaded:", msgs.length);
-      
-      // Play notification for new messages (not sent by current user)
       const lastMsg = msgs[msgs.length - 1];
       if (lastMsg && lastMsg.senderId !== user?.uid) {
         playSound();
       }
-      
-      prevMsgCountRef.current = msgs.length;
-    }, (error) => {
-      console.error("🔥 Messages listener error:", error);
-      if (error.code === 'permission-denied') {
-        console.error("❌ Messages access denied - user may not be in room");
-      }
     });
-    
     return () => {
-      console.log("🧹 Cleaning up messages listener");
-      unsubscribe();
+      console.log("CLEANING MESSAGES LISTENER");
+      unsub();
     };
-  }, [roomId, user, room, messageVisibility]);
+  }, [roomId]);
 
   // Mark messages as seen + update lastReadAt
   useEffect(() => {
