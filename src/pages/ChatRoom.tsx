@@ -29,7 +29,7 @@ import {
 } from "firebase/firestore";
 import { ref, set, onValue } from "firebase/database";
 import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
-import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode, Trash2, ArrowUp } from "lucide-react";
+import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode, Trash2, ArrowUp, Volume2, VolumeX } from "lucide-react";
 import { MessageStatus } from "@/components/MessageBubble";
 import { cn } from "@/lib/utils";
 import SettingsDialog from "@/components/SettingsDialog";
@@ -436,7 +436,20 @@ const ChatRoom = () => {
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-foreground">Chat Room</h2>
+            <h2 className="text-sm font-semibold text-foreground">Room Code:</h2>
+            <div className="flex items-center gap-1">
+              <span className="font-mono text-sm font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                {room.inviteCode}
+              </span>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={copyInviteCode}
+                className="h-6 w-6 hover:bg-primary/20"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
             {room.chatMode === "temporary" && (
               <Timer className="h-3.5 w-3.5 text-muted-foreground" />
             )}
@@ -463,39 +476,52 @@ const ChatRoom = () => {
             )}
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="mobile-touch-target">
-              <Settings className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="bottom" className="w-48 sm:w-56">
-            <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="gap-3 p-3 sm:p-2">
-              <Settings className="h-4 w-4 shrink-0" />
-              <span className="text-sm">Sound {soundEnabled ? 'On' : 'Off'}</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <div className="px-3 py-2 sm:px-2 sm:py-1 flex justify-center">
-              <ThemeToggle />
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={handleDeleteRoom} 
-              className="gap-3 p-3 sm:p-2 text-destructive focus:text-destructive"
-            >
-              <Trash2 className="h-4 w-4 shrink-0" />
-              <span className="text-sm">Delete Room</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={handleLeaveRoom} 
-              className="gap-3 p-3 sm:p-2 text-destructive focus:text-destructive"
-            >
-              <DoorOpen className="h-4 w-4 shrink-0" />
-              <span className="text-sm">Leave Room</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        
+        {/* Simplified top bar with only theme and sound */}
+        <div className="flex items-center gap-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setSettingsOpen(true)}
+            className="mobile-touch-target"
+          >
+            {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+          </Button>
+          <ThemeToggle />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="mobile-touch-target">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="bottom" className="w-48 sm:w-56">
+              <DropdownMenuItem onClick={copyInviteCode} className="gap-3 p-3 sm:p-2">
+                <Copy className="h-4 w-4 shrink-0" />
+                <span className="text-sm">Copy Invite Code</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={copyInviteLink} className="gap-3 p-3 sm:p-2">
+                <Link className="h-4 w-4 shrink-0" />
+                <span className="text-sm">Copy Invite Link</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={handleDeleteRoom} 
+                className="gap-3 p-3 sm:p-2 text-destructive focus:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 shrink-0" />
+                <span className="text-sm">Delete Room</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={handleLeaveRoom} 
+                className="gap-3 p-3 sm:p-2 text-destructive focus:text-destructive"
+              >
+                <DoorOpen className="h-4 w-4 shrink-0" />
+                <span className="text-sm">Leave Room</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Messages */}

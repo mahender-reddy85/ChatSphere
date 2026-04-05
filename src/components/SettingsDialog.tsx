@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useSettings } from "@/contexts/SettingsContext";
-import { Volume2, VolumeX, Vibrate, Smartphone, ArrowUpDown, Trash2 } from "lucide-react";
-import { collection, getDocs, writeBatch, deleteDoc, doc } from "firebase/firestore";
+import { Volume2, VolumeX, Vibrate, Smartphone, ArrowUpDown, Trash2, Copy } from "lucide-react";
+import { collection, getDocs, writeBatch, deleteDoc, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 
@@ -30,6 +30,25 @@ const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => 
     autoScroll,
     setAutoScroll
   } = useSettings();
+  
+  const [roomData, setRoomData] = useState<any>(null);
+
+  // Fetch room data to get invite code
+  useEffect(() => {
+    if (roomId && open) {
+      const fetchRoomData = async () => {
+        try {
+          const roomDoc = await getDoc(doc(db, "rooms", roomId));
+          if (roomDoc.exists()) {
+            setRoomData(roomDoc.data());
+          }
+        } catch (error) {
+          console.error("Failed to fetch room data:", error);
+        }
+      };
+      fetchRoomData();
+    }
+  }, [roomId, open]);
 
   const handleClearChat = async () => {
     if (!roomId) {
@@ -170,6 +189,45 @@ const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => 
               />
             </div>
           </div>
+
+          {/* Room Info Section */}
+          {roomId && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium flex items-center gap-2">
+                <Copy className="h-4 w-4" />
+                Room Information
+              </h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex-1 mr-4">
+                    <Label className="text-sm font-medium">Room Code</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Share this code to invite others
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm font-bold text-primary bg-primary/10 px-2 py-1 rounded">
+                      {roomData?.inviteCode || 'Loading...'}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (roomData?.inviteCode) {
+                          navigator.clipboard.writeText(roomData.inviteCode);
+                          toast.success("Room code copied!");
+                        }
+                      }}
+                      className="px-2 py-1"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Clear Chat Section */}
           {roomId && (
