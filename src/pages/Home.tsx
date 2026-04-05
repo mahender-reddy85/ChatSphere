@@ -66,6 +66,9 @@ const Home = () => {
   const [chatMode, setChatMode] = useState<"permanent" | "temporary">("permanent");
   const [showProfile, setShowProfile] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Load user's rooms
   useEffect(() => {
