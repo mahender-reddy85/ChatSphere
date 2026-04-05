@@ -8,8 +8,11 @@ service cloud.firestore {
     
     // Rooms collection with participant-based access
     match /rooms/{roomId} {
-      // Only participants can read room data
-      allow read: if request.auth != null && 
+      // Allow querying rooms by invite code for joining
+      allow list: if request.auth != null;
+      
+      // Only participants can read individual room data
+      allow get: if request.auth != null && 
         request.auth.uid in resource.data.participants;
       
       // Only authenticated users can create rooms

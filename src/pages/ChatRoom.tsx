@@ -333,26 +333,23 @@ const ChatRoom = () => {
               <Settings className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-20">
             <QRCodeDialog 
               inviteCode={room.inviteCode}
               inviteLink={`${window.location.origin}/join/${room.inviteCode}`}
             >
-              <DropdownMenuItem className="gap-2" onSelect={(e) => e.preventDefault()}>
+              <DropdownMenuItem className="gap-2 justify-center p-2" onSelect={(e) => e.preventDefault()}>
                 <QrCode className="h-4 w-4" />
-                Show QR Code
               </DropdownMenuItem>
             </QRCodeDialog>
-            <DropdownMenuItem onClick={copyInviteLink} className="gap-2">
+            <DropdownMenuItem onClick={copyInviteLink} className="gap-2 justify-center p-2">
               <Link className="h-4 w-4" />
-              Copy invite link
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={copyInviteCode} className="gap-2">
+            <DropdownMenuItem onClick={copyInviteCode} className="gap-2 justify-center p-2">
               <Copy className="h-4 w-4" />
-              Copy code: {room.inviteCode}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <div className="px-2 py-1">
+            <div className="px-2 py-1 flex justify-center">
               <ThemeToggle />
             </div>
             <DropdownMenuSeparator />
@@ -361,7 +358,7 @@ const ChatRoom = () => {
               className="gap-2 text-destructive focus:text-destructive"
             >
               <DoorOpen className="h-4 w-4" />
-              Leave room
+              <span className="text-xs">Leave</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
