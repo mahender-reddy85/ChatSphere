@@ -4,11 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePresence } from "@/hooks/usePresence";
 import useNotificationSound from "@/hooks/useNotificationSound";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import MessageBubble from "@/components/MessageBubble";
 import TypingIndicator from "@/components/TypingIndicator";
-import EmojiPicker from "@/components/EmojiPicker";
 import ThemeToggle from "@/components/ThemeToggle";
 import QRCodeDialog from "@/components/QRCodeDialog";
 import { toast } from "sonner";
@@ -29,7 +28,7 @@ import {
 } from "firebase/firestore";
 import { ref, set, onValue } from "firebase/database";
 import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
-import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode } from "lucide-react";
+import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, MoreVertical, QrCode } from "lucide-react";
 import { MessageStatus } from "@/components/MessageBubble";
 import { cn } from "@/lib/utils";
 import SettingsDialog from "@/components/SettingsDialog";
@@ -188,7 +187,14 @@ const ChatRoom = () => {
     [roomId, user]
   );
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     if (value.length > MAX_MESSAGE_LENGTH) return;
     setNewMessage(value);
@@ -199,6 +205,7 @@ const ChatRoom = () => {
 
   const handleSend = async () => {
     if (!newMessage.trim() || !user || !roomId || sending) return;
+    
     const text = newMessage.trim();
     if (text.length > MAX_MESSAGE_LENGTH) {
       toast.error(`Message too long (max ${MAX_MESSAGE_LENGTH} chars)`);
@@ -218,25 +225,30 @@ const ChatRoom = () => {
       lastSendTimeRef.current = now;
     }
 
+    // Clear input immediately to prevent duplicate sends
+    const messageToSend = text;
     setNewMessage("");
     setTyping(false);
     setSending(true);
+    
     try {
       await addDoc(collection(db, "rooms", roomId, "messages"), {
         senderId: user.uid,
         senderName: profile?.name || user.displayName || "Guest",
         senderPhoto: profile?.photoURL || user.photoURL || "",
-        text,
+        text: messageToSend,
         createdAt: serverTimestamp(),
         status: "sent" as MessageStatus,
       });
       await updateDoc(doc(db, "rooms", roomId), {
-        lastMessage: text,
+        lastMessage: messageToSend,
         updatedAt: serverTimestamp(),
       });
-    } catch {
+    } catch (error) {
+      console.error("Failed to send message:", error);
       toast.error("Failed to send message");
-      setNewMessage(text);
+      // Restore message only if send failed
+      setNewMessage(messageToSend);
     } finally {
       setSending(false);
     }
@@ -336,41 +348,21 @@ const ChatRoom = () => {
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" title="Settings">
-              <Settings className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="mobile-touch-target">
+              <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-20">
-            <QRCodeDialog 
-              inviteCode={room.inviteCode}
-              inviteLink={`${window.location.origin}/join/${room.inviteCode}`}
-            >
-              <DropdownMenuItem className="gap-2 justify-center p-2" onSelect={(e) => e.preventDefault()}>
-                <QrCode className="h-4 w-4" />
-              </DropdownMenuItem>
-            </QRCodeDialog>
-            <DropdownMenuItem onClick={copyInviteLink} className="gap-2 justify-center p-2">
-              <Link className="h-4 w-4" />
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={copyInviteCode} className="gap-2 justify-center p-2">
-              <Copy className="h-4 w-4" />
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="gap-2 justify-center p-2">
-              <Settings className="h-4 w-4" />
-              <span className="text-xs">Settings</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <div className="px-2 py-1 flex justify-center">
+          <DropdownMenuContent align="end" className="w-40 sm:w-48">
+            <div className="px-3 py-2 sm:px-2 sm:py-1 flex justify-center">
               <ThemeToggle />
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               onClick={handleLeaveRoom} 
-              className="gap-2 text-destructive focus:text-destructive"
+              className="gap-3 p-3 sm:p-2 text-destructive focus:text-destructive"
             >
-              <DoorOpen className="h-4 w-4" />
-              <span className="text-xs">Leave</span>
+              <DoorOpen className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline text-sm">Leave Room</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -382,9 +374,20 @@ const ChatRoom = () => {
           <div className="flex justify-center py-8 animate-fade-in">
             <div className="rounded-xl bg-secondary px-4 py-3 text-center">
               <p className="text-sm text-secondary-foreground">Waiting for someone to join...</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Share code: <span className="font-mono font-bold text-primary">{room.inviteCode}</span>
-              </p>
+              <div className="mt-2 flex items-center justify-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  Share code: <span className="font-mono font-bold text-primary">{room.inviteCode}</span>
+                </p>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-1 text-xs mobile-touch-target h-6 px-2" 
+                  onClick={copyInviteCode}
+                >
+                  <Copy className="h-3 w-3" />
+                  Copy
+                </Button>
+              </div>
               <div className="flex gap-2 justify-center mt-3">
                 <Button variant="ghost" size="sm" className="gap-1 text-xs mobile-touch-target" onClick={copyInviteLink}>
                   <Link className="h-3 w-3" />
@@ -423,16 +426,16 @@ const ChatRoom = () => {
       {/* Input */}
       <div className="border-t border-border bg-card p-3 sm:p-4 mobile-no-zoom mobile-safe-area">
         <div className="flex items-center gap-2 sm:gap-3">
-          <EmojiPicker onSelect={(emoji) => setNewMessage((prev) => prev + emoji)} />
           <div className="relative flex-1">
-            <Input
+            <Textarea
               placeholder={waitingForPartner ? "Waiting for partner..." : "Type a message..."}
               value={newMessage}
               onChange={handleInputChange}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              onKeyDown={handleKeyDown}
               disabled={waitingForPartner}
               maxLength={MAX_MESSAGE_LENGTH}
-              className="text-base sm:text-sm"
+              className="text-base sm:text-sm min-h-[40px] max-h-32 resize-none overflow-y-auto mobile-no-zoom"
+              rows={1}
             />
             {newMessage.length > MAX_MESSAGE_LENGTH * 0.8 && (
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
