@@ -32,7 +32,6 @@ import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
 import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode, Trash2, ArrowUp, Volume2, VolumeX, Smartphone, ArrowUpDown } from "lucide-react";
 import { MessageStatus } from "@/components/MessageBubble";
 import { cn } from "@/lib/utils";
-import SettingsDialog from "@/components/SettingsDialog";
 import { useSettings } from "@/contexts/SettingsContext";
 import { Switch } from "@/components/ui/switch";
 
@@ -64,7 +63,6 @@ const ChatRoom = () => {
   const [room, setRoom] = useState<RoomData | null>(null);
   const [sending, setSending] = useState(false);
   const [otherTyping, setOtherTyping] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [messageVisibility, setMessageVisibility] = useState<Record<string, { showAvatar: boolean; showName: boolean }>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -399,6 +397,40 @@ const ChatRoom = () => {
     }
   };
 
+  const handleClearChat = async () => {
+    if (!roomId) {
+      toast.error("Cannot clear chat: Room not found");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to clear all messages in this chat? This action cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const messagesQuery = query(collection(db, "rooms", roomId, "messages"));
+      const messagesSnapshot = await getDocs(messagesQuery);
+      
+      if (messagesSnapshot.empty) {
+        toast.info("No messages to clear");
+        return;
+      }
+
+      const batch = writeBatch(db);
+      messagesSnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+      toast.success("Chat cleared successfully");
+    } catch (error) {
+      console.error("Failed to clear chat:", error);
+      toast.error("Failed to clear chat");
+    }
+  };
+
   const copyInviteCode = () => {
     if (room?.inviteCode) {
       navigator.clipboard.writeText(room.inviteCode);
@@ -525,17 +557,20 @@ const ChatRoom = () => {
                 />
               </div>
             </div>
-            <DropdownMenuItem className="gap-3 p-3 sm:p-2">
-              <ThemeToggle />
-            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <div className="px-3 py-2 hover:bg-accent hover:text-accent-foreground rounded-sm cursor-pointer">
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+              </div>
+            </div>
             <DropdownMenuItem onClick={copyInviteLink} className="gap-3 p-3 sm:p-2">
               <Link className="h-4 w-4 shrink-0" />
               <span className="text-sm">Invite Link</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="gap-3 p-3 sm:p-2">
-              <Settings className="h-4 w-4 shrink-0" />
-              <span className="text-sm">Settings</span>
+            <DropdownMenuItem onClick={handleClearChat} className="gap-3 p-3 sm:p-2">
+              <Trash2 className="h-4 w-4 shrink-0" />
+              <span className="text-sm">Clear Chat</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
@@ -667,9 +702,6 @@ const ChatRoom = () => {
           </Button>
         </div>
       </div>
-      
-      {/* Settings Dialog */}
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} roomId={roomId} roomData={room} />
     </div>
   );
 };
