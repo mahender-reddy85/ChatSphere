@@ -495,10 +495,6 @@ const ChatRoom = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="bottom" className="w-48 sm:w-56">
-              <DropdownMenuItem onClick={copyInviteCode} className="gap-3 p-3 sm:p-2">
-                <Copy className="h-4 w-4 shrink-0" />
-                <span className="text-sm">Copy Invite Code</span>
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={copyInviteLink} className="gap-3 p-3 sm:p-2">
                 <Link className="h-4 w-4 shrink-0" />
                 <span className="text-sm">Copy Invite Link</span>
@@ -637,7 +633,7 @@ const ChatRoom = () => {
       </div>
       
       {/* Settings Dialog */}
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} roomId={roomId} />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} roomId={roomId} roomData={room} />
     </div>
   );
 };

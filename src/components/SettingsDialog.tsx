@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,17 +11,19 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useSettings } from "@/contexts/SettingsContext";
 import { Volume2, VolumeX, Vibrate, Smartphone, ArrowUpDown, Trash2, Copy } from "lucide-react";
-import { collection, getDocs, writeBatch, deleteDoc, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, writeBatch, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   roomId?: string;
+  roomData?: any;
 }
 
-const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => {
+const SettingsDialog = ({ open, onOpenChange, roomId, roomData }: SettingsDialogProps) => {
   const { 
     soundEnabled, 
     setSoundEnabled, 
@@ -30,25 +32,6 @@ const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => 
     autoScroll,
     setAutoScroll
   } = useSettings();
-  
-  const [roomData, setRoomData] = useState<any>(null);
-
-  // Fetch room data to get invite code
-  useEffect(() => {
-    if (roomId && open) {
-      const fetchRoomData = async () => {
-        try {
-          const roomDoc = await getDoc(doc(db, "rooms", roomId));
-          if (roomDoc.exists()) {
-            setRoomData(roomDoc.data());
-          }
-        } catch (error) {
-          console.error("Failed to fetch room data:", error);
-        }
-      };
-      fetchRoomData();
-    }
-  }, [roomId, open]);
 
   const handleClearChat = async () => {
     if (!roomId) {
@@ -143,12 +126,15 @@ const SettingsDialog = ({ open, onOpenChange, roomId }: SettingsDialogProps) => 
                   Play sound for new messages
                 </p>
               </div>
-              <Switch
-                id="sound"
-                checked={soundEnabled}
-                onCheckedChange={setSoundEnabled}
-                className="data-[state=checked]:bg-primary"
-              />
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="sound"
+                  checked={soundEnabled}
+                  onCheckedChange={setSoundEnabled}
+                  className="data-[state=checked]:bg-primary"
+                />
+                <ThemeToggle />
+              </div>
             </div>
             
             <div className="flex items-center justify-between py-2">
