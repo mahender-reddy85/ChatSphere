@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import ThemeToggle from "@/components/ThemeToggle";
 import ProfileSettingsDialog from "@/components/ProfileSettingsDialog";
 import ProfilePictureDialog from "@/components/ProfilePictureDialog";
+import QRCodeDialog from "@/components/QRCodeDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ import {
   ChevronRight,
   Settings,
   Copy,
+  QrCode,
 } from "lucide-react";
 
 const generateInviteCode = () => {
@@ -380,39 +382,48 @@ const Home = () => {
             </CardHeader>
             <CardContent className="space-y-1 p-2">
               {rooms.map((room) => (
-                <button
-                  key={room.id}
-                  onClick={() => navigate(`/chat/${room.id}`)}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-accent"
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary">
-                    <div className="h-4 w-4 rounded-full bg-primary"></div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-foreground font-mono">
-                        {room.inviteCode}
-                      </span>
-                      {room.chatMode === "temporary" && (
-                        <Timer className="h-3 w-3 text-muted-foreground" />
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {room.participants.length}/2
-                      </span>
+                <div key={room.id} className="flex items-center gap-2 rounded-lg px-3 py-2.5 hover:bg-accent">
+                  <button
+                    onClick={() => navigate(`/chat/${room.id}`)}
+                    className="flex flex-1 items-center gap-3 text-left"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary">
+                      <div className="h-4 w-4 rounded-full bg-primary"></div>
                     </div>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {room.lastMessage || "No messages yet"}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    {unreadCounts[room.id] > 0 && (
-                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
-                        {unreadCounts[room.id]}
-                      </span>
-                    )}
-                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  </div>
-                </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-foreground font-mono">
+                          {room.inviteCode}
+                        </span>
+                        {room.chatMode === "temporary" && (
+                          <Timer className="h-3 w-3 text-muted-foreground" />
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {room.participants.length}/2
+                        </span>
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {room.lastMessage || "No messages yet"}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      {unreadCounts[room.id] > 0 && (
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+                          {unreadCounts[room.id]}
+                        </span>
+                      )}
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </div>
+                  </button>
+                  <QRCodeDialog 
+                    inviteCode={room.inviteCode}
+                    inviteLink={`${window.location.origin}/join/${room.inviteCode}`}
+                  >
+                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                      <QrCode className="h-4 w-4" />
+                    </Button>
+                  </QRCodeDialog>
+                </div>
               ))}
             </CardContent>
           </Card>

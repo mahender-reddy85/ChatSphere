@@ -5,10 +5,12 @@ import { usePresence } from "@/hooks/usePresence";
 import useNotificationSound from "@/hooks/useNotificationSound";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import MessageBubble from "@/components/MessageBubble";
 import TypingIndicator from "@/components/TypingIndicator";
 import EmojiPicker from "@/components/EmojiPicker";
 import ThemeToggle from "@/components/ThemeToggle";
+import QRCodeDialog from "@/components/QRCodeDialog";
 import { toast } from "sonner";
 import {
   collection,
@@ -27,7 +29,7 @@ import {
 } from "firebase/firestore";
 import { ref, set, onValue } from "firebase/database";
 import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
-import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen } from "lucide-react";
+import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode } from "lucide-react";
 import { MessageStatus } from "@/components/MessageBubble";
 
 interface Message {
@@ -325,30 +327,44 @@ const ChatRoom = () => {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <ThemeToggle />
-          <Button variant="ghost" size="icon" onClick={copyInviteLink} title="Copy invite link">
-            <Link className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={copyInviteCode}
-            className="gap-1.5 text-xs text-muted-foreground font-mono"
-          >
-            <Copy className="h-3.5 w-3.5" />
-            {room.inviteCode}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLeaveRoom}
-            title="Leave room"
-            className="text-destructive hover:text-destructive"
-          >
-            <DoorOpen className="h-4 w-4" />
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" title="Settings">
+              <Settings className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <QRCodeDialog 
+              inviteCode={room.inviteCode}
+              inviteLink={`${window.location.origin}/join/${room.inviteCode}`}
+            >
+              <DropdownMenuItem className="gap-2" onSelect={(e) => e.preventDefault()}>
+                <QrCode className="h-4 w-4" />
+                Show QR Code
+              </DropdownMenuItem>
+            </QRCodeDialog>
+            <DropdownMenuItem onClick={copyInviteLink} className="gap-2">
+              <Link className="h-4 w-4" />
+              Copy invite link
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={copyInviteCode} className="gap-2">
+              <Copy className="h-4 w-4" />
+              Copy code: {room.inviteCode}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <div className="px-2 py-1">
+              <ThemeToggle />
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={handleLeaveRoom} 
+              className="gap-2 text-destructive focus:text-destructive"
+            >
+              <DoorOpen className="h-4 w-4" />
+              Leave room
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Messages */}
@@ -360,10 +376,21 @@ const ChatRoom = () => {
               <p className="mt-1 text-xs text-muted-foreground">
                 Share code: <span className="font-mono font-bold text-primary">{room.inviteCode}</span>
               </p>
-              <Button variant="ghost" size="sm" className="mt-2 gap-1 text-xs" onClick={copyInviteLink}>
-                <Link className="h-3 w-3" />
-                Copy invite link
-              </Button>
+              <div className="flex gap-2 justify-center mt-3">
+                <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={copyInviteLink}>
+                  <Link className="h-3 w-3" />
+                  Copy invite link
+                </Button>
+                <QRCodeDialog 
+                  inviteCode={room.inviteCode}
+                  inviteLink={`${window.location.origin}/join/${room.inviteCode}`}
+                >
+                  <Button variant="ghost" size="sm" className="gap-1 text-xs">
+                    <QrCode className="h-3 w-3" />
+                    Show QR
+                  </Button>
+                </QRCodeDialog>
+              </div>
             </div>
           </div>
         )}
