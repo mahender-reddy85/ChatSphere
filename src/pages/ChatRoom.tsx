@@ -28,11 +28,9 @@ import {
 } from "firebase/firestore";
 import { ref, set, onValue } from "firebase/database";
 import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
-import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, MoreVertical, QrCode } from "lucide-react";
+import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode } from "lucide-react";
 import { MessageStatus } from "@/components/MessageBubble";
 import { cn } from "@/lib/utils";
-import SettingsDialog from "@/components/SettingsDialog";
-import { useSettings } from "@/contexts/SettingsContext";
 
 interface Message {
   id: string;
@@ -55,7 +53,6 @@ interface RoomData {
 const ChatRoom = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const { user, profile } = useAuth();
-  const { autoScroll } = useSettings();
   const navigate = useNavigate();
   const playSound = useNotificationSound();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -63,7 +60,6 @@ const ChatRoom = () => {
   const [room, setRoom] = useState<RoomData | null>(null);
   const [sending, setSending] = useState(false);
   const [otherTyping, setOtherTyping] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const prevMsgCountRef = useRef(0);
@@ -78,9 +74,7 @@ const ChatRoom = () => {
   const otherPresence = usePresence(otherUid);
 
   const scrollToBottom = () => {
-    if (autoScroll) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   // Listen to room data
@@ -349,7 +343,7 @@ const ChatRoom = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="mobile-touch-target">
-              <MoreVertical className="h-5 w-5" />
+              <Settings className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40 sm:w-48">
@@ -448,9 +442,6 @@ const ChatRoom = () => {
           </Button>
         </div>
       </div>
-      
-      {/* Settings Dialog */}
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 };
