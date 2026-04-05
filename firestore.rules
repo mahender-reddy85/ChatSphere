@@ -12,12 +12,18 @@ service cloud.firestore {
     // ROOMS
     match /rooms/{roomId} {
 
-      // READ: allow only if participant OR joining via invite
+      // READ: allow only if participant OR joining via invite code query
       allow read: if request.auth != null &&
         (
           request.auth.uid in resource.data.participants
           || resource.data.allowJoin == true
         );
+
+      // LIST: allow querying by inviteCode for joining
+      allow list: if request.auth != null &&
+        request.query.limit <= 10 &&
+        request.query.where.0.field == 'inviteCode' &&
+        request.query.where.0.op == '==';
 
       // CREATE
       allow create: if request.auth != null &&
