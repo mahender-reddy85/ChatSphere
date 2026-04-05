@@ -28,7 +28,7 @@ import {
 } from "firebase/firestore";
 import { ref, set, onValue } from "firebase/database";
 import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
-import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode, Trash2 } from "lucide-react";
+import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode, Trash2, ArrowUp } from "lucide-react";
 import { MessageStatus } from "@/components/MessageBubble";
 import { cn } from "@/lib/utils";
 import SettingsDialog from "@/components/SettingsDialog";
@@ -64,7 +64,9 @@ const ChatRoom = () => {
   const [sending, setSending] = useState(false);
   const [otherTyping, setOtherTyping] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const prevMsgCountRef = useRef(0);
   const lastSendTimeRef = useRef(0);
@@ -80,6 +82,28 @@ const ChatRoom = () => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  const scrollToTop = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  // Show/hide scroll to top button based on scroll position
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const scrollTop = container.scrollTop;
+      setShowScrollTop(scrollTop > 100);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   // Listen to room data
   useEffect(() => {
@@ -408,7 +432,10 @@ const ChatRoom = () => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto chat-scrollbar mobile-scroll mobile-hide-scrollbar p-4 space-y-3">
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto chat-scrollbar mobile-scroll mobile-hide-scrollbar p-4 space-y-3 relative"
+      >
         {waitingForPartner && (
           <div className="flex justify-center py-8 animate-fade-in">
             <div className="rounded-xl bg-secondary px-4 py-3 text-center">
@@ -460,6 +487,18 @@ const ChatRoom = () => {
         ))}
         <TypingIndicator visible={otherTyping} />
         <div ref={messagesEndRef} />
+        
+        {/* Scroll to Top Button */}
+        {showScrollTop && (
+          <Button
+            onClick={scrollToTop}
+            className="fixed bottom-20 right-4 z-10 rounded-full shadow-lg mobile-touch-target bg-primary text-primary-foreground hover:bg-primary/90"
+            size="icon"
+            title="Scroll to top"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {/* Input */}
@@ -471,9 +510,19 @@ const ChatRoom = () => {
               value={newMessage}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
+              onFocus={() => {
+                // Mobile: ensure input is properly focused
+                if (messagesContainerRef.current) {
+                  messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+                }
+              }}
               disabled={waitingForPartner}
               maxLength={MAX_MESSAGE_LENGTH}
-              className="text-base sm:text-sm mobile-no-zoom"
+              className="text-base sm:text-sm mobile-no-zoom focus:outline-none"
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck="false"
             />
             {newMessage.length > MAX_MESSAGE_LENGTH * 0.8 && (
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
