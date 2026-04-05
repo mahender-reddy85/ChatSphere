@@ -234,8 +234,42 @@ const Home = () => {
                   avatarLetter
                 )}
               </div>
-              <div>
-                <p className="font-semibold text-foreground">{displayName}</p>
+              <div className="flex-1">
+                {editingName ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      ref={nameInputRef}
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="h-7 text-sm"
+                      maxLength={30}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleSaveName();
+                        } else if (e.key === "Escape") {
+                          setEditingName(false);
+                        }
+                      }}
+                    />
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSaveName}>
+                      <Check className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-semibold text-foreground">{displayName}</p>
+                    <button
+                      onClick={() => {
+                        setNewName(displayName);
+                        setEditingName(true);
+                        setTimeout(() => nameInputRef.current?.focus(), 50);
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">
                   {user?.email || (user?.isAnonymous ? "Anonymous Guest" : "No email")}
                 </p>
