@@ -496,10 +496,6 @@ const ChatRoom = () => {
               <ThemeToggle />
               <span className="text-sm ml-2">Theme Toggle</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="gap-3 p-3 sm:p-2">
-              <Settings className="h-4 w-4 shrink-0" />
-              <span className="text-sm">Settings</span>
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={copyInviteLink} className="gap-3 p-3 sm:p-2">
               <Link className="h-4 w-4 shrink-0" />
               <span className="text-sm">Invite Link</span>

@@ -14,7 +14,6 @@ import { Volume2, VolumeX, Vibrate, Smartphone, ArrowUpDown, Trash2, Copy } from
 import { collection, getDocs, writeBatch, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
-import ThemeToggle from "@/components/ThemeToggle";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -133,7 +132,6 @@ const SettingsDialog = ({ open, onOpenChange, roomId, roomData }: SettingsDialog
                   onCheckedChange={setSoundEnabled}
                   className="data-[state=checked]:bg-primary"
                 />
-                <ThemeToggle />
               </div>
             </div>
             
