@@ -206,6 +206,7 @@ const Home = () => {
     }
   };
 
+  const displayName = profile?.name || user?.displayName || (user?.isAnonymous ? "Guest" : "User");
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (
