@@ -297,19 +297,64 @@ const ChatRoom = () => {
     try {
       const roomRef = doc(db, "rooms", roomId);
       const messagesSnap = await getDocs(collection(db, "rooms", roomId, "messages"));
-      const batch = writeBatch(db);
       
-      // Delete all messages
-      messagesSnap.docs.forEach((d) => batch.delete(d.ref));
+      if (messagesSnap.empty) {
+        // If no messages, just delete the room
+        await deleteDoc(roomRef);
+        toast.success("Room deleted successfully");
+        navigate("/");
+        return;
+      }
       
-      // Delete the room
-      batch.delete(roomRef);
+      // Check batch size limits (Firestore max 500 operations per batch)
+      const batchSize = 400;
+      const totalMessages = messagesSnap.docs.length;
       
-      await batch.commit();
-      toast.success("Room deleted successfully");
-      navigate("/");
-    } catch {
-      toast.error("Failed to delete room");
+      if (totalMessages <= batchSize) {
+        // Delete in single batch
+        const batch = writeBatch(db);
+        messagesSnap.docs.forEach((d) => batch.delete(d.ref));
+        batch.delete(roomRef);
+        await batch.commit();
+        toast.success("Room deleted successfully");
+        navigate("/");
+      } else {
+        // Delete in multiple batches
+        for (let i = 0; i < messagesSnap.docs.length; i += batchSize) {
+          const batch = writeBatch(db);
+          const batchMessages = messagesSnap.docs.slice(i, i + batchSize);
+          
+          batchMessages.forEach((d) => batch.delete(d.ref));
+          
+          // Delete room in the last batch
+          if (i + batchSize >= messagesSnap.docs.length) {
+            batch.delete(roomRef);
+          }
+          
+          await batch.commit();
+          
+          // Small delay between batches to avoid quota issues
+          if (i + batchSize < messagesSnap.docs.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        }
+        
+        toast.success("Room deleted successfully");
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Failed to delete room:", error);
+      
+      // Provide specific error messages
+      if (error.message?.includes('permission')) {
+        toast.error("Permission denied. You may not have rights to delete this room.");
+      } else if (error.message?.includes('quota')) {
+        toast.error("Service temporarily unavailable. Please try again later.");
+      } else if (error.message?.includes('network')) {
+        toast.error("Network error. Please check your connection.");
+      } else {
+        toast.error("Failed to delete room. Please try again.");
+      }
     }
   };
 
