@@ -41,7 +41,7 @@ const JoinRoom = () => {
           return;
         }
 
-        if (roomData.isFull || roomData.participants.length >= 2) {
+        if (roomData.participants.length >= 2) {
           toast.error("Room is full");
           navigate("/");
           return;
@@ -56,7 +56,6 @@ const JoinRoom = () => {
           }
           transaction.update(roomRef, {
             participants: arrayUnion(user.uid),
-            isFull: freshData.participants.length + 1 >= 2,
             updatedAt: serverTimestamp(),
           });
         });

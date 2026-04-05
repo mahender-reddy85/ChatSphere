@@ -53,7 +53,6 @@ interface RoomListItem {
   id: string;
   inviteCode: string;
   participants: string[];
-  isFull: boolean;
   lastMessage: string | null;
   updatedAt: Timestamp;
   chatMode?: "permanent" | "temporary";
@@ -132,7 +131,6 @@ const Home = () => {
       const roomRef = await addDoc(collection(db, "rooms"), {
         inviteCode,
         participants: [user.uid],
-        isFull: false,
         allowJoin: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -193,7 +191,7 @@ const Home = () => {
         return;
       }
 
-      if (roomData.isFull || roomData.participants.length >= 2) {
+      if (roomData.participants.length >= 2) {
         toast.error("Room is full");
         setJoining(false);
         return;
@@ -208,7 +206,6 @@ const Home = () => {
         }
         transaction.update(roomRef, {
           participants: arrayUnion(user.uid),
-          isFull: freshData.participants.length + 1 >= 2,
           updatedAt: serverTimestamp(),
         });
       });

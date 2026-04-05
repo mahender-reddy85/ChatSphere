@@ -116,6 +116,15 @@ const ProfileSettingsDialog = ({ open, onOpenChange, onProfilePictureClick }: Pr
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Profile Settings
+          </DialogTitle>
+          <DialogDescription>
+            Manage your profile and preferences
+          </DialogDescription>
+        </DialogHeader>
         <div className="space-y-6">
           {/* Profile Section */}
           <div className="space-y-4">

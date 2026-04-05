@@ -19,7 +19,7 @@ service cloud.firestore {
           || resource.data.allowJoin == true
         );
 
-      // LIST: allow authenticated users to query rooms (needed for invite code lookup)
+      // LIST: allow authenticated users to query rooms they're in or public rooms  
       allow list: if request.auth != null;
 
       // CREATE: allow authenticated users to create rooms
@@ -48,10 +48,7 @@ service cloud.firestore {
 
         // PROTECT CRITICAL FIELDS
         && request.resource.data.inviteCode == resource.data.inviteCode
-        && request.resource.data.createdAt == resource.data.createdAt
-
-        // AUTO LOCK ROOM WHEN FULL
-        && request.resource.data.allowJoin == (request.resource.data.participants.size() < 2);
+        && request.resource.data.createdAt == resource.data.createdAt;
 
       // DELETE: allow participants to delete room
       allow delete: if request.auth != null &&

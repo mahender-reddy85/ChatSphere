@@ -48,7 +48,6 @@ interface Message {
 interface RoomData {
   inviteCode: string;
   participants: string[];
-  isFull: boolean;
   chatMode?: "permanent" | "temporary";
   autoDeleteMinutes?: number;
 }
@@ -389,7 +388,6 @@ const ChatRoom = () => {
       } else {
         await updateDoc(roomRef, {
           participants: arrayRemove(user.uid),
-          isFull: false,
           updatedAt: serverTimestamp(),
         });
         toast.success("Left room");
