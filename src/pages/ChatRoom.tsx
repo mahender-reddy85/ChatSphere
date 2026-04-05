@@ -485,10 +485,6 @@ const ChatRoom = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="bottom" className="w-48 sm:w-56">
-            <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="gap-3 p-3 sm:p-2">
-              <Settings className="h-4 w-4 shrink-0" />
-              <span className="text-sm">Settings</span>
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={copyInviteLink} className="gap-3 p-3 sm:p-2">
               <Link className="h-4 w-4 shrink-0" />
               <span className="text-sm">Copy Invite Link</span>
