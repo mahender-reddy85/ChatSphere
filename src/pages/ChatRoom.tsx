@@ -28,9 +28,11 @@ import {
 } from "firebase/firestore";
 import { ref, set, onValue } from "firebase/database";
 import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
-import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode } from "lucide-react";
+import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode, Trash2 } from "lucide-react";
 import { MessageStatus } from "@/components/MessageBubble";
 import { cn } from "@/lib/utils";
+import SettingsDialog from "@/components/SettingsDialog";
+import { useSettings } from "@/contexts/SettingsContext";
 
 interface Message {
   id: string;
@@ -53,6 +55,7 @@ interface RoomData {
 const ChatRoom = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const { user, profile } = useAuth();
+  const { soundEnabled } = useSettings();
   const navigate = useNavigate();
   const playSound = useNotificationSound();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -60,6 +63,7 @@ const ChatRoom = () => {
   const [room, setRoom] = useState<RoomData | null>(null);
   const [sending, setSending] = useState(false);
   const [otherTyping, setOtherTyping] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const prevMsgCountRef = useRef(0);
@@ -248,6 +252,34 @@ const ChatRoom = () => {
     }
   };
 
+  const handleDeleteRoom = async () => {
+    if (!roomId || !user || !room) return;
+    
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this room? This action cannot be undone and will remove all messages."
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      const roomRef = doc(db, "rooms", roomId);
+      const messagesSnap = await getDocs(collection(db, "rooms", roomId, "messages"));
+      const batch = writeBatch(db);
+      
+      // Delete all messages
+      messagesSnap.docs.forEach((d) => batch.delete(d.ref));
+      
+      // Delete the room
+      batch.delete(roomRef);
+      
+      await batch.commit();
+      toast.success("Room deleted successfully");
+      navigate("/");
+    } catch {
+      toast.error("Failed to delete room");
+    }
+  };
+
   const handleLeaveRoom = async () => {
     if (!roomId || !user || !room) return;
     try {
@@ -346,17 +378,30 @@ const ChatRoom = () => {
               <Settings className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40 sm:w-48">
+          <DropdownMenuContent align="end" className="w-48 sm:w-56">
+            <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="gap-3 p-3 sm:p-2">
+              <Settings className="h-4 w-4 shrink-0" />
+              <span className="text-sm">Sound {soundEnabled ? 'On' : 'Off'}</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <div className="px-3 py-2 sm:px-2 sm:py-1 flex justify-center">
               <ThemeToggle />
             </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={handleDeleteRoom} 
+              className="gap-3 p-3 sm:p-2 text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 shrink-0" />
+              <span className="text-sm">Delete Room</span>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               onClick={handleLeaveRoom} 
               className="gap-3 p-3 sm:p-2 text-destructive focus:text-destructive"
             >
               <DoorOpen className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline text-sm">Leave Room</span>
+              <span className="text-sm">Leave Room</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -441,6 +486,9 @@ const ChatRoom = () => {
           </Button>
         </div>
       </div>
+      
+      {/* Settings Dialog */}
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 };
