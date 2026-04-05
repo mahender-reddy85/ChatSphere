@@ -19,12 +19,15 @@ import {
   query,
   orderBy,
   updateDoc,
+  deleteDoc,
+  getDocs,
   Timestamp,
   writeBatch,
+  arrayRemove,
 } from "firebase/firestore";
 import { ref, set, onValue } from "firebase/database";
 import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
-import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield } from "lucide-react";
+import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen } from "lucide-react";
 import { MessageStatus } from "@/components/MessageBubble";
 
 interface Message {
