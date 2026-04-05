@@ -335,6 +335,15 @@ const ChatRoom = () => {
             <Copy className="h-3.5 w-3.5" />
             {room.inviteCode}
           </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLeaveRoom}
+            title="Leave room"
+            className="text-destructive hover:text-destructive"
+          >
+            <DoorOpen className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
