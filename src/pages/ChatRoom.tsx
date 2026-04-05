@@ -61,6 +61,12 @@ const ChatRoom = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const prevMsgCountRef = useRef(0);
+  const lastSendTimeRef = useRef(0);
+  const sendCountRef = useRef(0);
+
+  const MAX_MESSAGE_LENGTH = 1000;
+  const RATE_LIMIT_WINDOW = 3000; // 3 seconds
+  const RATE_LIMIT_MAX = 5; // max 5 messages per window
 
   const otherUid = room?.participants.find((p) => p !== user?.uid);
   const otherPresence = usePresence(otherUid);
