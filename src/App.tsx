@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 import GuestNameDialog from "@/components/GuestNameDialog";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -63,9 +64,11 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Sonner />
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
+      <SettingsProvider>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </SettingsProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

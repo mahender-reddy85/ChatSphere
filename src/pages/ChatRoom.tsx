@@ -32,6 +32,8 @@ import { db, rtdb, isFirebaseConfigured } from "@/lib/firebase";
 import { ArrowLeft, Send, Copy, Link, Users, Circle, Timer, Shield, DoorOpen, Settings, QrCode } from "lucide-react";
 import { MessageStatus } from "@/components/MessageBubble";
 import { cn } from "@/lib/utils";
+import SettingsDialog from "@/components/SettingsDialog";
+import { useSettings } from "@/contexts/SettingsContext";
 
 interface Message {
   id: string;
@@ -54,6 +56,7 @@ interface RoomData {
 const ChatRoom = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const { user, profile } = useAuth();
+  const { autoScroll } = useSettings();
   const navigate = useNavigate();
   const playSound = useNotificationSound();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -61,6 +64,7 @@ const ChatRoom = () => {
   const [room, setRoom] = useState<RoomData | null>(null);
   const [sending, setSending] = useState(false);
   const [otherTyping, setOtherTyping] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const prevMsgCountRef = useRef(0);
@@ -75,7 +79,9 @@ const ChatRoom = () => {
   const otherPresence = usePresence(otherUid);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (autoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   // Listen to room data
@@ -293,9 +299,9 @@ const ChatRoom = () => {
   const waitingForPartner = participantCount < 2;
 
   return (
-    <div className="flex h-screen max-h-screen flex-col">
+    <div className="flex h-screen max-h-screen flex-col mobile-full-height">
       {/* Header */}
-      <div className="flex items-center gap-3 bg-card px-4 py-3">
+      <div className="flex items-center gap-3 bg-card px-4 py-3 mobile-safe-area">
         <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -350,6 +356,11 @@ const ChatRoom = () => {
               <Copy className="h-4 w-4" />
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setSettingsOpen(true)} className="gap-2 justify-center p-2">
+              <Settings className="h-4 w-4" />
+              <span className="text-xs">Settings</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <div className="px-2 py-1 flex justify-center">
               <ThemeToggle />
             </div>
@@ -366,7 +377,7 @@ const ChatRoom = () => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto chat-scrollbar p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto chat-scrollbar mobile-scroll mobile-hide-scrollbar p-4 space-y-3">
         {waitingForPartner && (
           <div className="flex justify-center py-8 animate-fade-in">
             <div className="rounded-xl bg-secondary px-4 py-3 text-center">
@@ -375,7 +386,7 @@ const ChatRoom = () => {
                 Share code: <span className="font-mono font-bold text-primary">{room.inviteCode}</span>
               </p>
               <div className="flex gap-2 justify-center mt-3">
-                <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={copyInviteLink}>
+                <Button variant="ghost" size="sm" className="gap-1 text-xs mobile-touch-target" onClick={copyInviteLink}>
                   <Link className="h-3 w-3" />
                   Copy invite link
                 </Button>
@@ -383,7 +394,7 @@ const ChatRoom = () => {
                   inviteCode={room.inviteCode}
                   inviteLink={`${window.location.origin}/join/${room.inviteCode}`}
                 >
-                  <Button variant="ghost" size="sm" className="gap-1 text-xs">
+                  <Button variant="ghost" size="sm" className="gap-1 text-xs mobile-touch-target">
                     <QrCode className="h-3 w-3" />
                     Show QR
                   </Button>
@@ -410,7 +421,7 @@ const ChatRoom = () => {
       </div>
 
       {/* Input */}
-      <div className="border-t border-border bg-card p-3 sm:p-4">
+      <div className="border-t border-border bg-card p-3 sm:p-4 mobile-no-zoom mobile-safe-area">
         <div className="flex items-center gap-2 sm:gap-3">
           <EmojiPicker onSelect={(emoji) => setNewMessage((prev) => prev + emoji)} />
           <div className="relative flex-1">
@@ -421,6 +432,7 @@ const ChatRoom = () => {
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
               disabled={waitingForPartner}
               maxLength={MAX_MESSAGE_LENGTH}
+              className="text-base sm:text-sm"
             />
             {newMessage.length > MAX_MESSAGE_LENGTH * 0.8 && (
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
@@ -428,11 +440,14 @@ const ChatRoom = () => {
               </span>
             )}
           </div>
-          <Button onClick={handleSend} size="icon" disabled={!newMessage.trim() || sending || waitingForPartner}>
+          <Button onClick={handleSend} size="icon" disabled={!newMessage.trim() || sending || waitingForPartner} className="mobile-touch-target">
             <Send className="h-4 w-4" />
           </Button>
         </div>
       </div>
+      
+      {/* Settings Dialog */}
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 };

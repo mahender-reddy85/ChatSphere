@@ -9,13 +9,60 @@ service cloud.firestore {
         && request.auth.uid == userId;
     }
 
-    // ROOMS - TEMPORARY PERMISSIVE RULES FOR TESTING
+    // ROOMS
     match /rooms/{roomId} {
-      allow read, list, create, update: if request.auth != null;
-      
+
+      // READ: allow only if participant OR room allows joining
+      allow read: if request.auth != null &&
+        (
+          request.auth.uid in resource.data.participants
+          || resource.data.allowJoin == true
+        );
+
+      // LIST: allow authenticated users to query rooms (needed for invite code lookup)
+      allow list: if request.auth != null;
+
+      // CREATE: allow authenticated users to create rooms
+      allow create: if request.auth != null &&
+        request.resource.data.participants.size() == 1 &&
+        request.resource.data.participants[0] == request.auth.uid &&
+        request.resource.data.inviteCode is string &&
+        request.resource.data.inviteCode.size() > 0;
+
+      // UPDATE: allow existing participants to update OR new users to join
+      allow update: if request.auth != null &&
+        (
+          // EXISTING PARTICIPANT can update some fields
+          request.auth.uid in resource.data.participants
+          
+          ||
+          
+          // NEW USER JOINING
+          (
+            resource.data.allowJoin == true &&
+            request.auth.uid not in resource.data.participants &&
+            request.auth.uid in request.resource.data.participants &&
+            request.resource.data.participants.size() <= 2
+          )
+        )
+
+        // PROTECT CRITICAL FIELDS
+        && request.resource.data.inviteCode == resource.data.inviteCode
+        && request.resource.data.createdAt == resource.data.createdAt
+
+        // AUTO LOCK ROOM WHEN FULL
+        && request.resource.data.allowJoin == (request.resource.data.participants.size() < 2);
+
       // MESSAGES
       match /messages/{messageId} {
-        allow read, create: if request.auth != null;
+
+        allow read: if request.auth != null &&
+          request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.participants;
+
+        allow create: if request.auth != null &&
+          request.auth.uid == request.resource.data.senderId &&
+          request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.participants;
+
         allow update, delete: if false;
       }
     }

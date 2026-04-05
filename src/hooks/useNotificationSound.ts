@@ -1,9 +1,23 @@
 import { useCallback, useRef } from "react";
+import { useSettings } from "@/contexts/SettingsContext";
 
 const useNotificationSound = () => {
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const { soundEnabled, vibrationEnabled } = useSettings();
 
   const play = useCallback(() => {
+    // Vibration for mobile devices
+    if (vibrationEnabled && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(200); // 200ms vibration
+      } catch (error) {
+        // Vibration not supported or failed
+      }
+    }
+
+    // Sound notification
+    if (!soundEnabled) return;
+
     try {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new AudioContext();
@@ -27,7 +41,7 @@ const useNotificationSound = () => {
     } catch {
       // Audio not available
     }
-  }, []);
+  }, [soundEnabled, vibrationEnabled]);
 
   return play;
 };
