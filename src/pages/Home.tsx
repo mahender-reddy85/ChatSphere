@@ -16,6 +16,7 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
   serverTimestamp,
   runTransaction,
   doc,
@@ -135,6 +136,19 @@ const Home = () => {
       });
       
       console.log("Room created successfully with ID:", roomRef.id);
+      
+      // 🔧 CRITICAL: Wait for room to be properly created and user confirmed
+      const roomDoc = await getDoc(roomRef);
+      if (!roomDoc.exists()) {
+        throw new Error("Room creation failed - document not found");
+      }
+      
+      const roomData = roomDoc.data();
+      if (!roomData.participants.includes(user.uid)) {
+        throw new Error("User not added to room participants");
+      }
+      
+      console.log("✅ Room confirmed - User is participant:", roomData.participants);
       
       setCreating(false); // Reset creating state immediately after success
       

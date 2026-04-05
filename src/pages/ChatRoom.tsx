@@ -107,25 +107,67 @@ const ChatRoom = () => {
 
   // Listen to room data
   useEffect(() => {
-    if (!roomId) return;
+    // ⚠️ VERY IMPORTANT: Proper guard to prevent permission denied
+    if (!roomId || !user) {
+      console.log("❌ Room listener blocked - missing data:", { roomId, user: !!user });
+      return;
+    }
+    
+    console.log("✅ Attaching room listener for:", roomId);
+    
     const unsubscribe = onSnapshot(doc(db, "rooms", roomId), (snapshot) => {
       if (snapshot.exists()) {
-        setRoom(snapshot.data() as RoomData);
+        const roomData = snapshot.data() as RoomData;
+        
+        // 🔧 CRITICAL: Verify user is participant before processing
+        if (!roomData.participants.includes(user.uid)) {
+          console.error("❌ User not in room participants - detaching listener");
+          unsubscribe();
+          navigate("/");
+          return;
+        }
+        
+        setRoom(roomData);
+        console.log("✅ Room data loaded, user confirmed as participant");
       } else {
         toast.error("Room not found");
         navigate("/");
       }
+    }, (error) => {
+      console.error("🔥 Room listener error:", error);
+      if (error.code === 'permission-denied') {
+        toast.error("Access denied - you may not be in this room");
+        navigate("/");
+      }
     });
-    return unsubscribe;
-  }, [roomId, navigate]);
+    
+    return () => {
+      console.log("🧹 Cleaning up room listener");
+      unsubscribe();
+    };
+  }, [roomId, user, navigate]);
 
   // Listen to messages
   useEffect(() => {
-    if (!roomId) return;
+    // ⚠️ VERY IMPORTANT: Proper guard to prevent permission denied
+    if (!roomId || !user || !room) {
+      console.log("❌ Messages listener blocked - missing data:", { roomId, user: !!user, room: !!room });
+      return;
+    }
+    
+    // 🔧 CRITICAL: Only attach if user is confirmed participant
+    if (!room.participants.includes(user.uid)) {
+      console.error("❌ User not in room participants - blocking messages listener");
+      return;
+    }
+    
+    console.log("✅ Attaching messages listener for:", roomId);
+    
     const q = query(
       collection(db, "rooms", roomId, "messages"),
       orderBy("createdAt", "asc")
     );
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map((doc) => {
         const data = doc.data();
@@ -138,9 +180,11 @@ const ChatRoom = () => {
             [msgData.senderId]: { showAvatar: true, showName: true }
           }));
         }
-        
         return msgData;
       });
+      
+      setMessages(msgs);
+      console.log("✅ Messages loaded:", msgs.length);
       
       // Play notification for new messages (not sent by current user)
       const lastMsg = msgs[msgs.length - 1];
@@ -149,10 +193,18 @@ const ChatRoom = () => {
       }
       
       prevMsgCountRef.current = msgs.length;
-      setMessages(msgs);
+    }, (error) => {
+      console.error("🔥 Messages listener error:", error);
+      if (error.code === 'permission-denied') {
+        console.error("❌ Messages access denied - user may not be in room");
+      }
     });
-    return unsubscribe;
-  }, [roomId, user?.uid, playSound, messageVisibility]);
+    
+    return () => {
+      console.log("🧹 Cleaning up messages listener");
+      unsubscribe();
+    };
+  }, [roomId, user, room, messageVisibility]);
 
   // Mark messages as seen + update lastReadAt
   useEffect(() => {
