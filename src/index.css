@@ -1,0 +1,185 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+@layer base {
+  :root {
+    --background: 220 20% 10%;
+    --foreground: 210 20% 92%;
+    --card: 220 18% 13%;
+    --card-foreground: 210 20% 92%;
+    --popover: 220 18% 13%;
+    --popover-foreground: 210 20% 92%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 16% 18%;
+    --secondary-foreground: 210 20% 85%;
+    --muted: 220 14% 16%;
+    --muted-foreground: 215 15% 55%;
+    --accent: 220 16% 20%;
+    --accent-foreground: 210 20% 92%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 20%;
+    --input: 220 14% 20%;
+    --ring: 217 91% 60%;
+    --radius: 0.75rem;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --chat-bubble-sent: 217 91% 60%;
+    --chat-bubble-sent-foreground: 0 0% 100%;
+    --chat-bubble-received: 220 16% 18%;
+    --chat-bubble-received-foreground: 210 20% 92%;
+    --sidebar-background: 220 20% 10%;
+    --sidebar-foreground: 210 20% 92%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 16% 20%;
+    --sidebar-accent-foreground: 210 20% 92%;
+    --sidebar-border: 220 14% 20%;
+    --sidebar-ring: 217 91% 60%;
+    --online: 142 71% 45%;
+    --offline: 215 15% 55%;
+  }
+
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 220 15% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 15%;
+    --primary: 217 91% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 220 15% 30%;
+    --muted: 220 14% 93%;
+    --muted-foreground: 215 15% 45%;
+    --accent: 220 14% 90%;
+    --accent-foreground: 220 15% 15%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 86%;
+    --input: 220 14% 86%;
+    --ring: 217 91% 55%;
+    --chat-bubble-sent: 217 91% 55%;
+    --chat-bubble-sent-foreground: 0 0% 100%;
+    --chat-bubble-received: 220 14% 93%;
+    --chat-bubble-received-foreground: 220 15% 15%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 220 15% 15%;
+    --sidebar-primary: 217 91% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 90%;
+    --sidebar-accent-foreground: 220 15% 15%;
+    --sidebar-border: 220 14% 86%;
+    --sidebar-ring: 217 91% 55%;
+    --online: 142 71% 45%;
+    --offline: 215 15% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  .chat-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .chat-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .chat-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+  .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    .mobile-full-height {
+      height: 100vh;
+      height: 100dvh; /* Dynamic viewport height for mobile browsers */
+    }
+    
+    .mobile-safe-area {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+
+    /* Better touch targets for mobile */
+    .mobile-touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Prevent zoom on input focus (iOS) */
+    .mobile-no-zoom input {
+      font-size: 16px;
+    }
+
+    /* Smooth scrolling for mobile */
+    .mobile-scroll {
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+
+    /* Hide scrollbar on mobile for cleaner look */
+    .mobile-hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    
+    .mobile-hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  /* Animation for new messages */
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .slide-in-up {
+    animation: slideInUp 0.3s ease-out;
+  }
+
+  /* Pulse animation for typing indicator */
+  @keyframes pulse-dot {
+    0%, 60%, 100% {
+      opacity: 0.3;
+    }
+    30% {
+      opacity: 1;
+    }
+  }
+
+  .animate-pulse-dot {
+    animation: pulse-dot 1.4s infinite;
+  }
+}

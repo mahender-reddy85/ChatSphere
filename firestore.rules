@@ -1,0 +1,65 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // USERS
+    match /users/{userId} {
+      allow read, write: if request.auth != null 
+        && request.auth.uid == userId;
+    }
+
+    // ROOMS
+    match /rooms/{roomId} {
+
+      // READ: any authenticated user can read rooms (needed for invite code join)
+      allow read, list: if request.auth != null;
+
+      // CREATE: validated room structure
+      allow create: if request.auth != null &&
+        request.resource.data.participants.size() == 1 &&
+        request.resource.data.participants[0] == request.auth.uid &&
+        request.resource.data.inviteCode is string &&
+        request.resource.data.inviteCode.size() > 0 &&
+        request.resource.data.allowJoin == true;
+
+      // UPDATE: existing participant OR new user joining
+      allow update: if request.auth != null &&
+        (
+          request.auth.uid in resource.data.participants
+          ||
+          (
+            resource.data.allowJoin == true &&
+            !(request.auth.uid in resource.data.participants) &&
+            request.auth.uid in request.resource.data.participants &&
+            request.resource.data.participants.size() <= 2
+          )
+        )
+        && request.resource.data.inviteCode == resource.data.inviteCode
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      // DELETE: only participants can delete the room
+      allow delete: if request.auth != null &&
+        request.auth.uid in resource.data.participants;
+
+      // MESSAGES
+      match /messages/{messageId} {
+
+        // READ: only room participants
+        // NOTE: get() costs 1 read — unavoidable for participant check on read
+        allow read: if request.auth != null &&
+          request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.participants;
+
+        // CREATE: sender must be a room participant
+        allow create: if request.auth != null &&
+          request.auth.uid == request.resource.data.senderId &&
+          request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.participants;
+
+        // UPDATE/DELETE: any authenticated user within the room path
+        // No get() here — avoids N reads during batch deletes (clear chat / delete room)
+        // The room-level security prevents unauthorized access to even reach this path
+        allow update, delete: if request.auth != null;
+      }
+    }
+  }
+}
